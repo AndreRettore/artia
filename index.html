@@ -11,7 +11,7 @@
       --line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.12);
       --accent:#4ea1ff;--accent2:#7bd3ff;--danger:#ff5c7a;--ok:#42d392;--warn:#ffc861;
       --shadow:0 10px 30px rgba(0,0,0,.35);--radius:14px;
-      --timeColW:80px;--dayMinW:160px;--headerH:64px;--slotH:14px;
+      --timeColW:80px;--dayMinW:160px;--headerH:54px;--slotH:14px;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -23,17 +23,93 @@
       color:var(--text);overflow:hidden;
     }
 
-    header{
-      position:sticky;top:0;z-index:50;height:var(--headerH);
-      display:flex;align-items:center;gap:12px;padding:10px 14px;
+    header.topbar{
+      position:sticky;top:0;z-index:50;
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+      align-items:center;
+      gap:10px;
+      padding:6px 10px;
+      min-height:54px;
       background:linear-gradient(180deg, rgba(18,26,36,.96), rgba(18,26,36,.88));
-      border-bottom:1px solid var(--line);backdrop-filter:blur(10px);
+      border-bottom:1px solid var(--line);
+      backdrop-filter:blur(10px);
     }
+    /* Topbar: evita sobreposição do intervalo com botões */
+    header.topbar .centerGroup{min-width:0}
+    header.topbar .rangeSm{
+      max-width:clamp(220px, 34vw, 420px);
+      min-width:220px;
+      overflow:hidden;
+    }
+    header.topbar .rangeSm strong{
+      display:block;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    header.topbar .leftGroup,
+    header.topbar .rightGroup{
+      min-width:0;
+      flex-wrap:wrap;
+    }
+    header.topbar .rightGroup{gap:8px}
+    header.topbar .navGroup{gap:8px}
+
     .brand{display:flex;align-items:center;gap:10px;min-width:220px}
     .dot{width:10px;height:10px;border-radius:999px;background:var(--accent);box-shadow:0 0 0 4px rgba(78,161,255,.15)}
     .brand h1{margin:0;font-size:14px;font-weight:650;letter-spacing:.2px}
     .sub{font-size:12px;color:var(--muted);margin-left:6px}
-    .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%}
+    .toolbar{display:none}
+
+    .leftGroup,.rightGroup{display:flex;align-items:center;gap:8px;min-width:0}
+    .leftGroup{justify-content:flex-start}
+    .rightGroup{justify-content:flex-end;flex-wrap:wrap;row-gap:6px}
+    .navGroup{display:flex;align-items:center;gap:8px;min-width:0}
+    .centerGroup{display:flex;align-items:center;justify-content:center;min-width:0}
+
+    .baseMini{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:6px 10px;border-radius:999px;
+      border:1px solid var(--line);background:rgba(0,0,0,.18);
+      color:var(--muted);font-size:12px;white-space:nowrap;
+    }
+    .baseMini .miniDot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.20)}
+    .baseMini.ok .miniDot{background:var(--ok);box-shadow:0 0 0 4px rgba(66,211,146,.12)}
+    .baseMini.warn .miniDot{background:var(--warn);box-shadow:0 0 0 4px rgba(255,200,97,.12)}
+
+    .btnSm{padding:7px 10px;font-size:12px;border-radius:9px}
+    .rangeSm{padding:7px 10px;border-radius:10px;min-width:unset}
+    .statusSm{padding:6px 10px;border-radius:999px;font-size:12px}
+
+    /* Mantém tudo em uma linha no desktop sem precisar de scroll */
+    header.topbar .leftGroup, header.topbar .rightGroup{flex-wrap:wrap}
+    header.topbar .rightGroup{gap:10px}
+    header.topbar .navGroup{gap:10px}
+
+
+    .leftGroup,.rightGroup{display:flex;align-items:center;gap:8px;min-width:0}
+    .leftGroup{justify-content:flex-start}
+    .rightGroup{justify-content:flex-end}
+    .navGroup{display:flex;align-items:center;gap:8px;min-width:0}
+    .centerGroup{display:flex;align-items:center;justify-content:center;min-width:0}
+
+    .baseMini{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;
+      border:1px solid var(--line);background:rgba(0,0,0,.18);color:var(--muted);font-size:12px;white-space:nowrap}
+    .baseMini .miniDot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.22)}
+    .baseMini.ok .miniDot{background:var(--ok);box-shadow:0 0 0 4px rgba(66,211,146,.12)}
+    .baseMini.warn .miniDot{background:var(--warn);box-shadow:0 0 0 4px rgba(255,200,97,.12)}
+    .baseMini .miniText{letter-spacing:.2px}
+
+    .btnSm{padding:7px 10px;font-size:12px;border-radius:9px}
+    .rangeSm{padding:7px 10px;min-width:240px;font-size:12px;border-radius:10px}
+    .statusSm{padding:6px 9px;font-size:12px;border-radius:999px}
+    .statusSm .statusDot{width:8px;height:8px}
+
+    .toolbar::-webkit-scrollbar{height:10px}
+    .toolbar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:999px;border:3px solid rgba(0,0,0,0);background-clip:padding-box}
+    .toolbar::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.18);background-clip:padding-box}
+    .spacer{flex:1 1 auto;min-width:12px}
 
     .btn{
       appearance:none;border:1px solid var(--line2);background:rgba(255,255,255,.04);
@@ -47,7 +123,7 @@
     .btn.ghost{background:transparent;border-color:var(--line)}
 
     .range{
-      margin-left:auto;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;
+      display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;
       border:1px solid var(--line);background:rgba(0,0,0,.18);min-width:260px;justify-content:center;font-size:13px;
     }
     .range strong{font-weight:650;letter-spacing:.2px}
@@ -163,6 +239,12 @@
     }
 
     /* ===== Tabela (visão alternativa) ===== */
+    .tableTop{
+      display:flex;justify-content:flex-end;align-items:center;gap:8px;
+      margin:0 2px 10px;
+    }
+    .tableTop .btn{box-shadow:var(--shadow)}
+
     .tableWrap{
       margin-top:10px;border:1px solid var(--line);border-radius:var(--radius);
       background:linear-gradient(180deg, rgba(18,26,36,.72), rgba(18,26,36,.40));
@@ -215,6 +297,84 @@
       display:inline-flex;align-items:center;gap:8px;
     }
 
+
+    /* ===== Botões de visão (Calendário / Tabela / Gantt) ===== */
+    .viewBtns{display:flex;align-items:center;gap:6px;row-gap:6px;min-width:0;flex-wrap:wrap;justify-content:flex-end}
+    .btn.active{
+      border-color:rgba(78,161,255,.60);
+      background:rgba(78,161,255,.18);
+    }
+
+    /* ===== Gantt (visão por projeto) ===== */
+    .ganttControls{
+      margin-top:10px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .ganttControls .ctrlLabel{font-size:12px;color:var(--muted);letter-spacing:.2px}
+    .ganttControls .ctrlSelect{
+      min-width:240px;
+      max-width:360px;
+    }
+    .ganttWrap{
+      margin-top:10px;
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      background:linear-gradient(180deg, rgba(18,26,36,.72), rgba(18,26,36,.40));
+      box-shadow:var(--shadow);
+      overflow:auto;
+    }
+    table.gantt{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      min-width:980px;
+    }
+    table.gantt thead th{
+      position:sticky;top:0;z-index:5;
+      text-align:center;
+      font-size:12px;
+      color:rgba(231,238,247,.92);
+      background:rgba(14,23,34,.98);
+      border-bottom:1px solid var(--line);
+      padding:10px 10px;
+      white-space:nowrap;
+      font-weight:750;
+      letter-spacing:.2px;
+    }
+    table.gantt thead th.left{text-align:left}
+    table.gantt tbody td{
+      padding:10px 10px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      color:rgba(231,238,247,.92);
+      font-size:13px;
+      vertical-align:middle;
+      text-align:center;
+      font-variant-numeric: tabular-nums;
+    }
+    table.gantt tbody td.left{text-align:left}
+    table.gantt tbody tr:hover{background:rgba(78,161,255,.08)}
+    .gCell{
+      border-left:1px solid rgba(255,255,255,.06);
+      border-right:1px solid rgba(255,255,255,.06);
+    }
+    .gCell.on{
+      background:rgba(78,161,255,.22);
+      border-color:rgba(78,161,255,.28);
+      color:#07121f;
+      font-weight:800;
+    }
+    .gCell.on span{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:10px;
+      background:rgba(255,255,255,.65);
+      color:#06121f;
+      border:1px solid rgba(0,0,0,.12);
+    }
+
     .modalBackdrop{
       position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;align-items:center;justify-content:center;
       z-index:999;padding:14px;
@@ -226,6 +386,9 @@
       box-shadow:0 18px 60px rgba(0,0,0,.55);overflow:hidden;
     }
     .modalHeader{display:flex;align-items:flex-start;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);gap:10px}
+
+    .modalActions{display:flex;align-items:center;gap:8px}
+    .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
     .modalHeader h2{margin:0;font-size:14px;font-weight:750;letter-spacing:.2px}
     .modalHeader .when{margin-top:4px;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;line-height:1.25}
     .xBtn{
@@ -275,9 +438,15 @@
     .hidden{display:none !important}
 
     @media (max-width:760px){
+      header.topbar{grid-template-columns:1fr;row-gap:8px}
+      .leftGroup,.centerGroup,.rightGroup{justify-content:flex-start;flex-wrap:wrap}
+      .centerGroup{justify-content:flex-start}
+      .rangeSm{min-width:unset;width:100%}
+
       header{height:auto;padding:10px 12px}
       .brand{min-width:unset}
-      .range{width:100%;margin-left:0;justify-content:flex-start}
+      .range{width:auto;margin-left:0;justify-content:center}
+      .toolbar{overflow-x:auto;flex-wrap:nowrap}
       .toolbar{gap:8px}
       .btn{padding:9px 10px}
       .row.grid2{grid-template-columns:1fr}
@@ -287,30 +456,34 @@
 </head>
 
 <body>
-<header>
-  <div class="brand">
-    <div class="dot"></div>
-    <div><h1>Calendário Semanal <span class="sub">Local</span></h1></div>
+<header class="topbar">
+  <div class="leftGroup">
+    <div class="statusPill warn statusSm" id="baseStatus" title="Base IDs">
+      <span class="statusDot"></span><span id="baseStatusText">Base local</span>
+    </div>
+
+    <div class="navGroup">
+      <button class="btn ghost btnSm" id="btnPrev">‹ Sem. anterior</button>
+      <button class="btn primary btnSm" id="btnToday">Hoje</button>
+      <button class="btn ghost btnSm" id="btnNext">Prox. semana ›</button>
+    </div>
   </div>
 
-  <div class="toolbar">
-    <button class="btn ghost" id="btnPrev">◀ Semana anterior</button>
-    <button class="btn primary" id="btnToday">Hoje</button>
-    <button class="btn ghost" id="btnNext">Próxima semana ▶</button>
+  <div class="centerGroup">
+    <div class="range rangeSm"><strong id="weekRangeText">--/--/---- → --/--/----</strong></div>
+  </div>
 
-    <button class="btn" id="btnToggleView">Visão: Tabela</button>
-
-    <div class="range"><strong id="weekRangeText">--/--/---- → --/--/----</strong></div>
-
-    <button class="btn" id="btnLoadBase">Carregar base IDs</button>
-    <div class="statusPill warn" id="baseStatus">
-      <span class="statusDot"></span><span id="baseStatusText">Base IDs: não carregada</span>
+  <div class="rightGroup">
+    <div class="viewBtns">
+      <button class="btn btnSm active" id="btnViewCalendar">Calendário</button>
+      <button class="btn btnSm" id="btnViewTable">Tabela</button>
+      <button class="btn btnSm" id="btnViewGantt">Gantt</button>
     </div>
+    <button class="btn btnSm" id="btnExportCsv">Exportar CSV</button>
+    <button class="btn btnSm" id="btnLoadBase">Carregar IDs (XLSX)</button>
     <input id="fileBaseInput" type="file" accept=".xlsx" class="hidden" />
-
-    <button class="btn" id="btnExportCsv">Exportar CSV</button>
-    <button class="btn danger" id="btnClearWeek">Limpar semana</button>
-    <button class="btn danger" id="btnClearAll">Limpar tudo</button>
+    <button class="btn danger btnSm" id="btnClearWeek">Limpar Semana</button>
+    <button class="btn danger btnSm" id="btnClearAll">Limpar Tudo</button>
   </div>
 </header>
 
@@ -318,13 +491,14 @@
   <div class="gridWrap" id="gridWrap">
     <div class="daysHeader" id="daysHeader"></div>
 
-    <!-- Visão Calendário -->
     <div id="calendarView">
       <div class="weekGrid" id="weekGrid"></div>
     </div>
 
-    <!-- Visão Tabela -->
     <div id="tableView" class="hidden">
+      <div class="tableTop">
+        <button class="btn primary btnSm" id="btnNewFromTable" type="button">+ Novo apontamento</button>
+      </div>
       <div class="tableWrap">
         <table>
           <thead>
@@ -347,6 +521,33 @@
         Dica: clique em uma linha para editar o evento.
       </div>
     </div>
+
+    <div id="ganttView" class="hidden">
+      <div class="ganttControls">
+        <div class="ctrlLabel">Projeto:</div>
+        <select id="ganttProjectFilter" class="ctrlSelect"></select>
+        <div class="hint">Mostra o total de horas por projeto e por dia na semana atual.</div>
+      </div>
+
+      <div class="ganttWrap">
+        <table class="gantt">
+          <thead>
+            <tr>
+              <th class="left">Projeto</th>
+              <th>Total Horas na Semana</th>
+              <th>seg</th>
+              <th>ter</th>
+              <th>qua</th>
+              <th>qui</th>
+              <th>sex</th>
+              <th>sáb</th>
+              <th>dom</th>
+            </tr>
+          </thead>
+          <tbody id="ganttBody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -357,7 +558,11 @@
         <h2 id="modalTitle">Novo evento</h2>
         <div class="when" id="modalWhen">--/--/---- --:-- → --/--/---- --:--</div>
       </div>
-      <button class="xBtn" id="modalClose" title="Fechar">✕</button>
+      <div class="modalActions">
+        <button class="btn ghost btnSm" id="btnCopyFields" type="button" title="Copiar Projeto/Atividade/ID/Observação">Copiar</button>
+        <button class="btn ghost btnSm" id="btnPasteFields" type="button" title="Colar Projeto/Atividade/ID/Observação">Colar</button>
+        <button class="xBtn" id="modalClose" title="Fechar">✕</button>
+      </div>
     </div>
 
     <div class="modalBody">
@@ -418,6 +623,7 @@
   const LS_EVENTS_KEY="offline_week_calendar_events_v5";
   const LS_IDBASE_KEY="offline_week_calendar_idbase_index_v1";
   const LS_IDBASE_META_KEY="offline_week_calendar_idbase_meta_v1";
+  const LS_CLIP_KEY="offline_week_calendar_clipboard_fields_v1";
   const CONFIG={startHour:0,endHour:24,stepMinutes:10};
   const DAY_NAMES=["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"];
 
@@ -486,7 +692,7 @@
     editingEventId:null,
     idBaseIndex:null,
     idBaseMeta:null,
-    view:"calendar" // "calendar" | "table"
+    view:"calendar" // "calendar" | "table" | "gantt"
   };
 
   function loadEvents(){
@@ -496,6 +702,44 @@
     return false;
   }
   function saveEvents(){localStorage.setItem(LS_EVENTS_KEY, JSON.stringify(state.events));}
+
+  /* ===== Clipboard (copiar/colar campos do evento) ===== */
+  function getClipboardFields(){
+    try{
+      const raw = localStorage.getItem(LS_CLIP_KEY);
+      if(!raw) return null;
+      const obj = JSON.parse(raw);
+      if(!obj || typeof obj!=="object") return null;
+      return {
+        project: String(obj.project??""),
+        activityLabel: String(obj.activityLabel??""),
+        activityId: String(obj.activityId??""),
+        notes: String(obj.notes??"")
+      };
+    }catch{return null;}
+  }
+  function setClipboardFields(obj){
+    try{
+      const payload = {
+        project: String(obj?.project??""),
+        activityLabel: String(obj?.activityLabel??""),
+        activityId: String(obj?.activityId??""),
+        notes: String(obj?.notes??""),
+        savedAt: new Date().toISOString()
+      };
+      localStorage.setItem(LS_CLIP_KEY, JSON.stringify(payload));
+    }catch{}
+  }
+  function ensureSelectHasValue(selectEl, value){
+    const v = String(value??"").trim();
+    if(!v) return;
+    const exists = Array.from(selectEl.options).some(o=>o.value===v);
+    if(!exists){
+      const opt=document.createElement("option");
+      opt.value=v; opt.textContent=v;
+      selectEl.appendChild(opt);
+    }
+  }
 
   function loadIdBaseFromStorage(){
     try{
@@ -517,13 +761,20 @@
   }
 
   const baseStatusEl=document.getElementById("baseStatus");
+  const baseMiniEl=document.getElementById("baseMini");
+  const baseMiniTextEl=document.getElementById("baseMiniText");
   const baseStatusTextEl=document.getElementById("baseStatusText");
   function setBaseStatus(loaded,meta){
     baseStatusEl.classList.remove("ok","warn");
     baseStatusEl.classList.add(loaded?"ok":"warn");
-    if(!loaded){baseStatusTextEl.textContent="Base IDs: não carregada";return;}
+    if(!loaded){baseStatusTextEl.textContent="IDs: não carregada";
+      if(baseMiniEl){baseMiniEl.classList.remove("ok");baseMiniEl.classList.add("warn");}
+      if(baseMiniTextEl){baseMiniTextEl.textContent="Base local";}
+      return;}
     const rows=meta?.rows??"?";const fileName=meta?.fileName??"arquivo";
-    baseStatusTextEl.textContent=`Base IDs: carregada (${rows} linhas)`;baseStatusEl.title=`Fonte: ${fileName}`;
+    baseStatusTextEl.textContent=`IDs: carregada (${rows} linhas)`;
+    if(baseMiniEl){baseMiniEl.classList.remove("warn");baseMiniEl.classList.add("ok");}
+    if(baseMiniTextEl){baseMiniTextEl.textContent="Base local";}baseStatusEl.title=`Fonte: ${fileName}`;
   }
 
   const daysHeaderEl=document.getElementById("daysHeader");
@@ -532,7 +783,12 @@
   const calendarViewEl=document.getElementById("calendarView");
   const tableViewEl=document.getElementById("tableView");
   const tableBodyEl=document.getElementById("tableBody");
-  const btnToggleView=document.getElementById("btnToggleView");
+  const btnViewCalendar=document.getElementById("btnViewCalendar");
+  const btnViewTable=document.getElementById("btnViewTable");
+  const btnViewGantt=document.getElementById("btnViewGantt");
+  const ganttViewEl=document.getElementById("ganttView");
+  const ganttBodyEl=document.getElementById("ganttBody");
+  const ganttProjectFilterEl=document.getElementById("ganttProjectFilter");
 
   let dayCols=[], dayIsoList=[];
 
@@ -1004,20 +1260,144 @@
     }
   }
 
+  
+
+  /* ===== Render Gantt (por projeto na semana) ===== */
+  function getProjectsInWeek(){
+    const inWeek = getWeekEventsSorted();
+    const set = new Set();
+    for(const ev of inWeek){
+      const p = (ev.project||"").trim();
+      if(p) set.add(p);
+    }
+    return Array.from(set).sort((a,b)=>{
+      const na = Number(a), nb = Number(b);
+      if(!Number.isNaN(na) && !Number.isNaN(nb)) return na-nb;
+      return a.localeCompare(b);
+    });
+  }
+
+  function ensureGanttFilterOptions(){
+    const projects = getProjectsInWeek();
+    const prev = ganttProjectFilterEl.value || "ALL";
+
+    ganttProjectFilterEl.innerHTML = "";
+    const optAll = document.createElement("option");
+    optAll.value = "ALL";
+    optAll.textContent = "Todos os projetos";
+    ganttProjectFilterEl.appendChild(optAll);
+
+    for(const p of projects){
+      const o = document.createElement("option");
+      o.value = p;
+      o.textContent = p;
+      ganttProjectFilterEl.appendChild(o);
+    }
+
+    if(prev && (prev==="ALL" || projects.includes(prev))){
+      ganttProjectFilterEl.value = prev;
+    }else{
+      ganttProjectFilterEl.value = "ALL";
+    }
+    return projects;
+  }
+
+  function renderGantt(){
+    if(state.view!=="gantt") return;
+
+    const projects = ensureGanttFilterOptions();
+    const filter = ganttProjectFilterEl.value || "ALL";
+
+    ganttBodyEl.innerHTML = "";
+
+    const ws = state.weekStart;
+    const days = [];
+    for(let i=0;i<7;i++){
+      const d = addDays(ws,i);
+      days.push(toDateOnlyISO(d));
+    }
+
+    const inWeek = getWeekEventsSorted();
+
+    // acumula minutos por projeto/dia
+    const map = new Map(); // project -> { totalWeek, byDay: {dayIso: mins}}
+    for(const ev of inWeek){
+      const p = (ev.project||"").trim();
+      if(!p) continue;
+      if(filter!=="ALL" && p!==filter) continue;
+
+      const start = new Date(ev.start);
+      const end = new Date(ev.end);
+      const dur = Math.max(0, durationMinutes(start,end));
+
+      const m = map.get(p) || { totalWeek:0, byDay:{} };
+      m.totalWeek += dur;
+      m.byDay[ev.day] = (m.byDay[ev.day]||0) + dur;
+      map.set(p,m);
+    }
+
+    const rows = Array.from(map.entries())
+      .sort((a,b)=>{
+        const na=Number(a[0]), nb=Number(b[0]);
+        if(!Number.isNaN(na) && !Number.isNaN(nb)) return na-nb;
+        return a[0].localeCompare(b[0]);
+      });
+
+    if(rows.length===0){
+      const tr=document.createElement("tr");
+      tr.innerHTML = `<td class="left tdMuted" colspan="9">Nenhum evento nesta semana.</td>`;
+      ganttBodyEl.appendChild(tr);
+      return;
+    }
+
+    for(const [project, info] of rows){
+      const tr = document.createElement("tr");
+
+      const totalWeek = minutesToHHMM(info.totalWeek);
+
+      let tds = `
+        <td class="left tdMono">${escapeHtml(project)}</td>
+        <td class="tdMono">${escapeHtml(totalWeek)}</td>
+      `;
+
+      for(const dayIso of days){
+        const mins = info.byDay[dayIso] || 0;
+        if(mins>0){
+          tds += `<td class="gCell on"><span>${escapeHtml(minutesToHHMM(mins))}</span></td>`;
+        }else{
+          tds += `<td class="gCell tdMuted"> </td>`;
+        }
+      }
+
+      tr.innerHTML = tds;
+      ganttBodyEl.appendChild(tr);
+    }
+  }
+
+  function setActiveViewButtons(){
+    btnViewCalendar.classList.toggle("active", state.view==="calendar");
+    btnViewTable.classList.toggle("active", state.view==="table");
+    btnViewGantt.classList.toggle("active", state.view==="gantt");
+  }
+
   function renderAll(){
     renderHeader();
+    setActiveViewButtons();
 
     if(state.view==="calendar"){
+      daysHeaderEl.classList.remove("hidden");
       calendarViewEl.classList.remove("hidden");
       tableViewEl.classList.add("hidden");
+      ganttViewEl.classList.add("hidden");
 
       renderGrid();
       renderEvents();
       renderSelection();
-      btnToggleView.textContent="Visão: Tabela";
-    }else{
+    }else if(state.view==="table"){
+      daysHeaderEl.classList.add("hidden");
       calendarViewEl.classList.add("hidden");
       tableViewEl.classList.remove("hidden");
+      ganttViewEl.classList.add("hidden");
 
       // Evita estados pendentes de drag/selection
       state.selection=null;
@@ -1025,7 +1405,18 @@
       drag.active=false;
 
       renderTable();
-      btnToggleView.textContent="Visão: Calendário";
+    }else{
+      // gantt
+      daysHeaderEl.classList.add("hidden");
+      calendarViewEl.classList.add("hidden");
+      tableViewEl.classList.add("hidden");
+      ganttViewEl.classList.remove("hidden");
+
+      state.selection=null;
+      cancelEventDragState();
+      drag.active=false;
+
+      renderGantt();
     }
   }
 
@@ -1107,6 +1498,8 @@
   const activityNameSelectEl=document.getElementById("activityNameSelect");
   const activityIdInputEl=document.getElementById("activityIdInput");
   const notesInputEl=document.getElementById("notesInput");
+  const btnCopyFieldsEl=document.getElementById("btnCopyFields");
+  const btnPasteFieldsEl=document.getElementById("btnPasteFields");
   const idLookupPill=document.getElementById("idLookupPill");
   const idLookupText=document.getElementById("idLookupText");
   const btnDelete=document.getElementById("btnDelete");
@@ -1115,11 +1508,19 @@
     if(!msg){modalInfoEl.classList.add("hidden");modalInfoTextEl.textContent="";return;}
     modalInfoEl.classList.remove("hidden");modalInfoTextEl.textContent=msg;
   }
+  
+  function updatePasteButtonState(){
+    const clip = getClipboardFields();
+    const has = !!(clip && (clip.project || clip.activityLabel || clip.activityId || clip.notes));
+    if(btnPasteFieldsEl) btnPasteFieldsEl.disabled = !has;
+  }
+
   function showModal(show){
     if(show){
       modalBackdrop.classList.add("show");
       modalBackdrop.setAttribute("aria-hidden","false");
       setModalInfo("");
+      updatePasteButtonState();
       setTimeout(()=>projectInputEl.focus(),0);
     }else{
       modalBackdrop.classList.remove("show");
@@ -1213,10 +1614,13 @@
     if(!state.idBaseIndex){setIdLookupStatus("warn","ID: preencha manualmente (base não consultada)");return;}
     if(!project || !activityName){setIdLookupStatus("warn","ID: selecione projeto e atividade");return;}
     const found=lookupIdFor(project,activityName);
-    if(found){activityIdInputEl.value=found;setIdLookupStatus("ok","ID preenchido automaticamente pela base");}
-    else{
-      if(!activityIdInputEl.value.trim()) setIdLookupStatus("warn","ID não encontrado — preencha manualmente");
-      else setIdLookupStatus("warn","ID não encontrado — mantendo valor manual");
+    if(found){
+      activityIdInputEl.value=found;
+      setIdLookupStatus("ok","ID preenchido automaticamente pela base");
+    }else{
+      // Se a combinação Projeto + Atividade não existir na base carregada, sempre limpa o ID
+      activityIdInputEl.value="";
+      setIdLookupStatus("warn","ID não encontrado — campo limpo");
     }
   }
 
@@ -1231,6 +1635,44 @@
     showModal(true);
     maybeAutoFillId();
   }
+  function openCreateModalFromTable(){
+    // Cria um apontamento "em branco" a partir da visão de tabela
+    state.editingEventId=null;
+    btnDelete.classList.add("hidden");
+    modalTitleEl.textContent="Novo evento";
+
+    // Dia padrão: se "hoje" está na semana exibida, usa hoje; senão, usa o primeiro dia da semana exibida
+    const today=new Date();
+    const weekStart=new Date(state.weekStart);
+    const weekEnd=addDays(weekStart,6);
+    const day=(today>=weekStart && today<=weekEnd) ? today : weekStart;
+
+    // --- CORREÇÃO AQUI: formatISODate(day) não existia. Substituído por toDateOnlyISO(day) ---
+    const dayIso=toDateOnlyISO(day);
+
+    // Hora padrão: arredonda para o próximo step e cria 1h (ou 30min) de duração
+    const nowMin=today.getHours()*60+today.getMinutes();
+    const step=CONFIG.stepMinutes;
+    let startMin=Math.ceil(nowMin/step)*step;
+    startMin=Math.max(CONFIG.startHour*60, Math.min(1430, startMin));
+    let endMin=Math.min(1440, startMin+60);
+    if(endMin<=startMin) endMin=Math.min(1440, startMin+step);
+
+    const dayLocal=parseISOToLocalDate(dayIso);
+    const start=setTimeOnDate(dayLocal, Math.floor(startMin/60), startMin%60);
+    let end;
+    if(endMin===1440){const next=addDays(dayLocal,1); end=setTimeOnDate(next,0,0);}
+    else end=setTimeOnDate(dayLocal, Math.floor(endMin/60), endMin%60);
+
+    state.selection={dayIso,start,end};
+    setTimeSelectorsFromSelection(dayIso,start,end);
+    refreshModalWhen();
+    resetModalFields();
+    showModal(true);
+    maybeAutoFillId();
+  }
+
+
   function openEditModal(eventId){
     const ev=state.events.find(x=>x.id===eventId); if(!ev) return;
     state.editingEventId=eventId;
@@ -1310,6 +1752,30 @@
   projectInputEl.addEventListener("input",()=>{clearTimeout(projectInputEl._t);projectInputEl._t=setTimeout(maybeAutoFillId,120);});
   activityNameSelectEl.addEventListener("change", maybeAutoFillId);
 
+  // Copiar/Colar campos do evento (Projeto/Atividade/ID/Observação)
+  if(btnCopyFieldsEl) btnCopyFieldsEl.addEventListener("click", ()=>{
+    const payload = {
+      project: (projectInputEl.value||"").trim(),
+      activityLabel: (activityNameSelectEl.value||"").trim(),
+      activityId: (activityIdInputEl.value||"").trim(),
+      notes: (notesInputEl.value||"").trim()
+    };
+    setClipboardFields(payload);
+    updatePasteButtonState();
+    setModalInfo("Campos copiados. Abra outro evento e clique em Colar.", false);
+  });
+  if(btnPasteFieldsEl) btnPasteFieldsEl.addEventListener("click", ()=>{
+    const clip = getClipboardFields();
+    if(!clip){ updatePasteButtonState(); return; }
+    projectInputEl.value = clip.project || "";
+    ensureSelectHasValue(activityNameSelectEl, clip.activityLabel || "");
+    if(clip.activityLabel) activityNameSelectEl.value = clip.activityLabel;
+    activityIdInputEl.value = clip.activityId || "";
+    notesInputEl.value = clip.notes || "";
+    setIdLookupStatus("ok","ID colado (não alterado)");
+    setModalInfo("Campos colados.");
+  });
+
   document.getElementById("modalClose").addEventListener("click", closeModalDiscardSelection);
   document.getElementById("btnCancel").addEventListener("click", closeModalDiscardSelection);
   document.getElementById("btnSave").addEventListener("click", onSave);
@@ -1319,14 +1785,18 @@
   window.addEventListener("keydown",(e)=>{ if(e.key==="Escape" && modalBackdrop.classList.contains("show")) closeModalDiscardSelection(); });
 
   /* =========================================================
-     CSV Export (UTF-8 + BOM)
+     CSV Export (UTF-8 + BOM) — compatível com Excel (pt-BR)
+     - Usa ";" como separador (padrão do Excel no Brasil)
+     - Colunas na ordem solicitada
      ========================================================= */
   const btnExportCsv=document.getElementById("btnExportCsv");
   const EXPORT_EMAIL="andre.baptista@exxata.com.br";
 
+  // Escapa valores para CSV com separador ";"
   function csvEscape(v){
     const s=String(v??"");
-    if(/[",\n\r;]/.test(s)) return '"' + s.replaceAll('"','""') + '"';
+    // se contiver aspas, quebras de linha ou o separador, envolve em aspas e duplica aspas internas
+    if(/[\"\n\r;]/.test(s)) return '"' + s.replaceAll('"','""') + '"';
     return s;
   }
   function getStartHHMM(ev){
@@ -1334,32 +1804,92 @@
     const m=clampMinutesToDay(minutesFromDayStart(start, ev.day));
     return formatTimeFromMinutes(m);
   }
+  function getEndHHMM(ev){
+    const end=new Date(ev.end);
+    const m=clampMinutesToDay(minutesFromDayStart(end, ev.day));
+    return formatTimeFromMinutes(m);
+  }
+
   function exportCsv(){
     const rows=[];
-    rows.push(["Data","Hora de início","Projeto","Esforço (duração)","Atividade","ID da Atividade","Observação","Email"]);
+
+    // Cabeçalho na ordem solicitada
+    rows.push([
+      "Data",
+      "Projeto",
+      "Hora Início",
+      "Hora de Término",
+      "Esforço",
+      "Esforço Dia",
+      "Atividade",
+      "Observação",
+      "Artia",
+      "ID da Atividade",
+      "E-mail"
+    ]);
+
     const sorted=[...state.events].sort((a,b)=>new Date(a.start)-new Date(b.start));
+
     for(const ev of sorted){
       const dayDate=parseISOToLocalDate(ev.day);
       const data=formatDateBR(dayDate);
 
       const start=new Date(ev.start);
       const end=new Date(ev.end);
+
       const durMin=Math.max(0,durationMinutes(start,end));
       const esforco=minutesToHHMM(durMin);
 
-      rows.push([data,getStartHHMM(ev),ev.project||"",esforco,ev.activityLabel||"",ev.activityId||"",ev.notes||"",EXPORT_EMAIL]);
+      // soma do total de horas no dia (considerando todos os eventos do mesmo dia)
+      const esforcoDia=formatWorkedHM(sumWorkedMinutesForDay(ev.day));
+
+      rows.push([
+        data,
+        ev.project||"",
+        getStartHHMM(ev),
+        getEndHHMM(ev),
+        esforco,
+        esforcoDia,
+        ev.activityLabel||"",
+        ev.notes||"",
+        "",                 // Artia (em branco)
+        ev.activityId||"",  // ID da Atividade (ID Artia)
+        EXPORT_EMAIL
+      ]);
     }
-    const csvBody=rows.map(r=>r.map(csvEscape).join(",")).join("\n");
+
+    // ";" para abrir em colunas no Excel pt-BR
+    const csvBody=rows.map(r=>r.map(csvEscape).join(";")).join("\n");
     const csvWithBom="\uFEFF"+csvBody;
+
     const blob=new Blob([csvWithBom],{type:"text/csv;charset=utf-8"});
     const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");a.href=url;a.download="calendario_eventos.csv";
-    document.body.appendChild(a);a.click();a.remove();
+    const a=document.createElement("a");
+    a.href=url;
+    a.download="apontamento_horas.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),0);
   }
+
   btnExportCsv.addEventListener("click", exportCsv);
 
-  /* =========================================================
+  // Botão "Novo apontamento" na visão Tabela (robusto para qualquer ordem de carregamento)
+const btnNewFromTable=document.getElementById("btnNewFromTable");
+// Expõe o handler no escopo global para evitar problemas de escopo/ordem em browsers mais chatos
+window.__openCreateModalFromTable = openCreateModalFromTable;
+
+if(btnNewFromTable){
+  btnNewFromTable.type = "button";
+  btnNewFromTable.addEventListener("click", (e)=>{
+    e.preventDefault();
+    e.stopPropagation();
+    openCreateModalFromTable();
+  });
+}
+
+/* =========================================================
      Navegação + Toggle View
      ========================================================= */
   const btnPrev=document.getElementById("btnPrev");
@@ -1383,9 +1913,23 @@
   btnClearWeek.addEventListener("click",()=>{if(confirm("Limpar eventos apenas da semana atual?")) clearWeek();});
   btnClearAll.addEventListener("click",()=>{if(confirm("Limpar TODOS os eventos (todas as semanas)?")) clearAll();});
 
-  btnToggleView.addEventListener("click",()=>{
-    state.view = (state.view==="calendar") ? "table" : "calendar";
+  
+  // Alternância de visão
+  btnViewCalendar.addEventListener("click",()=>{
+    state.view="calendar";
     renderAll();
+  });
+  btnViewTable.addEventListener("click",()=>{
+    state.view="table";
+    renderAll();
+  });
+  btnViewGantt.addEventListener("click",()=>{
+    state.view="gantt";
+    renderAll();
+  });
+
+  ganttProjectFilterEl.addEventListener("change",()=>{
+    if(state.view==="gantt") renderGantt();
   });
 
   /* =========================================================
@@ -1541,6 +2085,7 @@
   function init(){
     buildTimeOptions();
     fillActivityNames();
+    updatePasteButtonState();
     loadIdBaseFromStorage();
 
     const storageWasEmpty=loadEvents();
