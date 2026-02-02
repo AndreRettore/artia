@@ -540,6 +540,7 @@
   
     .btnIcon{display:inline-flex;align-items:center;justify-content:center;margin-right:6px;opacity:.9}
     .btnIcon svg{width:14px;height:14px;display:block;fill:currentColor}
+    .btnIcon svg.iconStroke{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
 </style>
 </head>
@@ -577,12 +578,12 @@
     <button class="btn btnSm" id="btnExportCsv" title="Exportar os dados para CSV (inclui o e-mail informado)"><span class="btnIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a1 1 0 0 1 1 1v9.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4.0 4a1 1 0 0 1-1.4 0l-4-4A1 1 0 1 1 8.7 11.3L11 13.59V4a1 1 0 0 1 1-1Zm-7 16a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1Z"/></svg></span><span>Exportar CSV</span></button>
     <button class="btn btnSm" id="btnImportActivities" title="Importar apontamentos de um arquivo XLSX"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><path d="M7 14l5-5 5 5"/><path d="M5 5h14"/></svg></span><span>Importar Apontamentos (XLSX)</span></button>
     <input id="fileActivitiesInput" type="file" accept=".xlsx" class="hidden" />
-    <button class="btn btnSm" id="btnSetBackupTarget" title="Selecionar a pasta para salvar os backups"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h6l2 2h10v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></span><span>Definir Local de Salvamento</span></button>
-    <button class="btn btnSm" id="btnExportBackupNow" title="Exportar backup XLSX agora"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h13l3 3v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4z"/><path d="M16 4v6H8V4"/><path d="M8 20v-6h8v6"/></svg></span><span>Salvar Dados (XLSX)</span></button>
+    <button class="btn btnSm" id="btnSetBackupTarget" title="Selecionar a pasta para salvar os backups"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="iconStroke"><path d="M3 7h6l2 2h10v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></span><span>Definir Local de Salvamento</span></button>
+    <button class="btn btnSm" id="btnExportBackupNow" title="Exportar backup XLSX agora"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="iconStroke"><path d="M4 4h13l3 3v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4z"/><path d="M16 4v6H8V4"/><path d="M8 20v-6h8v6"/></svg></span><span>Salvar Dados (XLSX)</span></button>
     <button class="btn btnSm" id="btnLoadBase" title="Carregar a base de IDs Artia a partir de um XLSX"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h16"/><path d="M4 15h16"/><path d="M10 3L8 21"/><path d="M16 3l-2 18"/></svg></span><span>Carregar IDs Artia (XLSX)</span></button>
     <input id="fileBaseInput" type="file" accept=".xlsx" class="hidden" />
     <button class="btn danger btnSm" id="btnClearWeek" title="Apagar os apontamentos da semana exibida"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></span><span>Limpar Semana</span></button>
-    <button class="btn danger btnSm" id="btnClearAll" title="Apagar todos os apontamentos"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 16h10l1-16"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></span><span>Limpar Tudo</span></button>
+    <button class="btn danger btnSm" id="btnClearAll" title="Apagar todos os apontamentos"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="iconStroke"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 16h10l1-16"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></span><span>Limpar Tudo</span></button>
   </div>
 </header>
 
@@ -784,9 +785,9 @@
       r.onerror=()=>reject(r.error);
     });
     if(!events || events.length===0){
-      state.events=EXAMPLE_EVENTS.map(e=>({...e}));
-      await saveEventsToDB(); // também agenda backup
-      return true;
+      // Sem eventos de exemplo: inicia vazio
+      state.events=[];
+      return false;
     }
     // normaliza tipos
     state.events=events.map(e=>({
