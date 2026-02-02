@@ -1,0 +1,3087 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Apontamento de Horas - Artia</title>
+
+  <style>
+    :root{
+      --bg:#0f141b;--panel:#121a24;--panel2:#0e1722;--text:#e7eef7;--muted:#9fb0c3;
+      --line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.12);
+      --accent:#4ea1ff;--accent2:#7bd3ff;--danger:#ff5c7a;--ok:#42d392;--warn:#ffc861;
+      --shadow:0 10px 30px rgba(0,0,0,.35);--radius:14px;
+      --timeColW:80px;--dayMinW:160px;--headerH:54px;--slotH:14px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:radial-gradient(1200px 600px at 20% 0%, rgba(78,161,255,.12), transparent 55%),
+                 radial-gradient(900px 500px at 80% 20%, rgba(123,211,255,.10), transparent 55%),
+                 var(--bg);
+      color:var(--text);overflow:hidden;
+    }
+
+    header.topbar{
+      position:sticky;top:0;z-index:50;
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+      align-items:center;
+      gap:10px;
+      padding:6px 10px;
+      min-height:54px;
+      background:linear-gradient(180deg, rgba(18,26,36,.96), rgba(18,26,36,.88));
+      border-bottom:1px solid var(--line);
+      backdrop-filter:blur(10px);
+    }
+    /* Topbar: evita sobreposição do intervalo com botões */
+    header.topbar .centerGroup{min-width:0}
+    header.topbar .rangeSm{
+      max-width:clamp(220px, 34vw, 420px);
+      min-width:220px;
+      overflow:hidden;
+    }
+    header.topbar .rangeSm strong{
+      display:block;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    header.topbar .leftGroup,
+    header.topbar .rightGroup{
+      min-width:0;
+      flex-wrap:wrap;
+    }
+    header.topbar .rightGroup{gap:8px}
+    header.topbar .navGroup{gap:8px}
+
+    .brand{display:flex;align-items:center;gap:10px;min-width:220px}
+    .dot{width:10px;height:10px;border-radius:999px;background:var(--accent);box-shadow:0 0 0 4px rgba(78,161,255,.15)}
+    .brand h1{margin:0;font-size:14px;font-weight:650;letter-spacing:.2px}
+    .sub{font-size:12px;color:var(--muted);margin-left:6px}
+    .toolbar{display:none}
+
+    .leftGroup,.rightGroup{display:flex;align-items:center;gap:8px;min-width:0}
+    .leftGroup{justify-content:flex-start}
+    .rightGroup{justify-content:flex-start;flex-wrap:wrap;row-gap:6px}
+    .navGroup{display:flex;align-items:center;gap:8px;min-width:0}
+    .centerGroup{display:flex;align-items:center;justify-content:center;min-width:0}
+
+    .baseMini{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:6px 10px;border-radius:999px;
+      border:1px solid var(--line);background:rgba(0,0,0,.18);
+      color:var(--muted);font-size:12px;white-space:nowrap;
+    }
+    .baseMini .miniDot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.20)}
+    .baseMini.ok .miniDot{background:var(--ok);box-shadow:0 0 0 4px rgba(66,211,146,.12)}
+    .baseMini.warn .miniDot{background:var(--warn);box-shadow:0 0 0 4px rgba(255,200,97,.12)}
+
+    .btnSm{padding:7px 10px;font-size:12px;border-radius:9px}
+    .rangeSm{padding:7px 10px;border-radius:10px;min-width:unset}
+    .statusSm{padding:6px 10px;border-radius:999px;font-size:12px}
+
+    /* Mantém tudo em uma linha no desktop sem precisar de scroll */
+    header.topbar .leftGroup, header.topbar .rightGroup{flex-wrap:wrap}
+    header.topbar .rightGroup{gap:10px}
+    header.topbar .navGroup{gap:10px}
+
+
+    .leftGroup,.rightGroup{display:flex;align-items:center;gap:8px;min-width:0}
+    .leftGroup{justify-content:flex-start}
+    .rightGroup{justify-content:flex-end}
+    .navGroup{display:flex;align-items:center;gap:8px;min-width:0}
+    .centerGroup{display:flex;align-items:center;justify-content:center;min-width:0}
+
+    .baseMini{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;
+      border:1px solid var(--line);background:rgba(0,0,0,.18);color:var(--muted);font-size:12px;white-space:nowrap}
+    .baseMini .miniDot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.22)}
+    .baseMini.ok .miniDot{background:var(--ok);box-shadow:0 0 0 4px rgba(66,211,146,.12)}
+    .baseMini.warn .miniDot{background:var(--warn);box-shadow:0 0 0 4px rgba(255,200,97,.12)}
+    .baseMini .miniText{letter-spacing:.2px}
+
+    .btnSm{padding:7px 10px;font-size:12px;border-radius:9px}
+    .rangeSm{padding:7px 10px;min-width:240px;font-size:12px;border-radius:10px}
+    .statusSm{padding:6px 9px;font-size:12px;border-radius:999px}
+    .statusSm .statusDot{width:8px;height:8px}
+
+    .toolbar::-webkit-scrollbar{height:10px}
+    .toolbar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:999px;border:3px solid rgba(0,0,0,0);background-clip:padding-box}
+    .toolbar::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.18);background-clip:padding-box}
+    .spacer{flex:1 1 auto;min-width:12px}
+
+    .btn{
+      appearance:none;border:1px solid var(--line2);background:rgba(255,255,255,.04);
+      color:var(--text);padding:9px 12px;border-radius:10px;font-size:13px;cursor:pointer;
+      transition:transform .05s ease, background .15s ease, border-color .15s ease;user-select:none;white-space:nowrap;
+    }
+    .btn:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18)}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{border-color:rgba(78,161,255,.45);background:rgba(78,161,255,.12)}
+    .btn.danger{border-color:rgba(255,92,122,.45);background:rgba(255,92,122,.10)}
+    .btn.ghost{background:transparent;border-color:var(--line)}
+
+    .range{
+      display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;
+      border:1px solid var(--line);background:rgba(0,0,0,.18);min-width:260px;justify-content:center;font-size:13px;
+    }
+    .range strong{font-weight:650;letter-spacing:.2px}
+
+    .statusPill{
+      display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;border:1px solid var(--line);
+      background:rgba(0,0,0,.18);color:var(--muted);font-size:12px;white-space:nowrap;
+    }
+    .statusDot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.22)}
+    .statusPill.ok .statusDot{background:var(--ok);box-shadow:0 0 0 4px rgba(66,211,146,.12)}
+    .statusPill.warn .statusDot{background:var(--warn);box-shadow:0 0 0 4px rgba(255,200,97,.12)}
+
+    .app{
+      /* Ajuste de altura para mobile e desktop */
+      height:calc(100vh - var(--headerH));
+      height:calc(100dvh - var(--headerH)); 
+      display:flex;flex-direction:column;overflow:hidden;
+    }
+    .gridWrap{
+      position:relative;height:100%;overflow:auto;scrollbar-gutter:stable both-edges;
+      /* AUMENTADO PADDING-BOTTOM PARA EVITAR CORTE (era 14px, agora 80px) */
+      padding:10px 12px 80px; 
+    }
+    .gridWrap::-webkit-scrollbar{width:12px;height:12px}
+    .gridWrap::-webkit-scrollbar-thumb{
+      background:rgba(255,255,255,.12);border-radius:999px;border:3px solid rgba(0,0,0,0);background-clip:padding-box;
+    }
+    .gridWrap::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.18);background-clip:padding-box}
+
+    .daysHeader{
+      position:sticky;top:0;z-index:20;display:grid;
+      grid-template-columns:var(--timeColW) repeat(7, minmax(var(--dayMinW), 1fr));
+      background:linear-gradient(180deg, rgba(14,23,34,.98), rgba(14,23,34,.92));
+      border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);
+    }
+    .daysHeader .cell{
+      padding:10px 10px;border-right:1px solid var(--line);
+      display:flex;flex-direction:column;gap:2px;justify-content:center;min-height:66px;
+    }
+    .daysHeader .cell:last-child{border-right:none}
+    .daysHeader .timeHead{
+      color:var(--muted);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;align-items:flex-start;
+    }
+    .dayName{font-size:12px;color:var(--muted);letter-spacing:.2px}
+    .dayDate{font-size:14px;font-weight:650}
+    .todayPill{display:inline-flex;align-items:center;gap:6px;margin-top:3px;color:var(--accent2);font-size:11px;font-weight:650;letter-spacing:.2px}
+    .todayPill span{width:6px;height:6px;border-radius:999px;background:var(--accent2);box-shadow:0 0 0 4px rgba(123,211,255,.12)}
+
+    .worked{
+      margin-top:6px;display:flex;align-items:center;gap:8px;font-size:11px;color:rgba(231,238,247,.88);letter-spacing:.2px;
+    }
+    .worked b{font-weight:750;color:var(--accent2);font-variant-numeric: tabular-nums;}
+    .worked .chip{
+      display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.18);color:rgba(231,238,247,.88);white-space:nowrap;
+    }
+    .worked .chip .miniDot{
+      width:6px;height:6px;border-radius:999px;background:rgba(66,211,146,.9);box-shadow:0 0 0 4px rgba(66,211,146,.12)
+    }
+
+    .weekGrid{
+      margin-top:10px;position:relative;display:grid;
+      grid-template-columns:var(--timeColW) repeat(7, minmax(var(--dayMinW), 1fr));
+      border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+      background:linear-gradient(180deg, rgba(18,26,36,.65), rgba(18,26,36,.35));
+      box-shadow:var(--shadow);user-select:none;
+    }
+    .timeCol{background:rgba(0,0,0,.20);border-right:1px solid var(--line);position:relative;z-index:2}
+    .dayCol{position:relative;border-right:1px solid var(--line);background:rgba(0,0,0,.10)}
+    .dayCol:last-child{border-right:none}
+    .slots{position:relative}
+    .slotRow{height:var(--slotH);border-top:1px solid var(--line);position:relative}
+    .slotRow.major{border-top-color:rgba(255,255,255,.14)}
+    .timeLabel{
+      height:calc(var(--slotH) * 6);border-top:1px solid rgba(255,255,255,.14);
+      display:flex;align-items:flex-start;justify-content:flex-end;padding:6px 10px 0 8px;
+      color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;letter-spacing:.2px;
+    }
+
+    .selectionBlock{
+      position:absolute;left:6px;right:6px;border-radius:12px;background:rgba(78,161,255,.16);
+      border:1px solid rgba(78,161,255,.45);box-shadow:0 0 0 4px rgba(78,161,255,.08);pointer-events:none;z-index:6;
+    }
+    .selectionHint{
+      position:absolute;top:-28px;left:6px;background:rgba(0,0,0,.55);border:1px solid var(--line2);
+      padding:6px 8px;border-radius:10px;font-size:12px;color:var(--text);pointer-events:none;white-space:nowrap;box-shadow:var(--shadow);
+    }
+
+    .event{
+      position:absolute;left:6px;right:6px;border-radius:12px;background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);box-shadow:0 8px 20px rgba(0,0,0,.28);
+      padding:8px 10px;cursor:pointer;z-index:8;overflow:hidden;
+    }
+    .event:hover{border-color:rgba(78,161,255,.35);background:rgba(78,161,255,.10)}
+    .event.dragging{
+      opacity:.92;border-color:rgba(123,211,255,.55);background:rgba(78,161,255,.16);
+      box-shadow:0 10px 24px rgba(0,0,0,.45);z-index:30;
+    }
+    .event .topline{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:4px}
+
+    .badge{
+      display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;
+      background:rgba(78,161,255,.14);border:1px solid rgba(78,161,255,.30);color:var(--accent2);
+      font-size:11px;font-weight:700;letter-spacing:.2px;white-space:nowrap;
+    }
+    .badge[data-pcolor="0"]{background:rgba(66,211,146,.18);border-color:#42d392;color:#42d392;}
+    .badge[data-pcolor="1"]{background:rgba(255,200,97,.20);border-color:#ffc861;color:#ffc861;}
+    .badge[data-pcolor="2"]{background:rgba(255,159,67,.22);border-color:#ff9f43;color:#ff9f43;}
+    .badge[data-pcolor="3"]{background:rgba(78,161,255,.22);border-color:#4ea1ff;color:#4ea1ff;}
+    .badge[data-pcolor="4"]{background:rgba(155,89,182,.22);border-color:#9b59b6;color:#9b59b6;}
+    .badge[data-pcolor="5"]{background:rgba(52,152,219,.22);border-color:#3498db;color:#3498db;}
+    .badge[data-pcolor="6"]{background:rgba(231,76,60,.22);border-color:#e74c3c;color:#e74c3c;}
+    .badge[data-pcolor="7"]{background:rgba(26,188,156,.22);border-color:#1abc9c;color:#1abc9c;}
+    .badge[data-pcolor="8"]{background:rgba(241,196,15,.22);border-color:#f1c40f;color:#f1c40f;}
+    .badge[data-pcolor="9"]{background:rgba(149,165,166,.22);border-color:#95a5a6;color:#95a5a6;}
+
+    .times{color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .title{font-size:12px;font-weight:650;letter-spacing:.2px;margin-bottom:2px}
+    .notes{
+      font-size:12px;color:rgba(231,238,247,.86);line-height:1.2;display:-webkit-box;
+      -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+    }
+
+    /* ===== Tabela (visão alternativa) ===== */
+    .tableTop{
+      display:flex;justify-content:flex-end;align-items:center;gap:8px;
+      margin:0 2px 10px;
+    }
+    .tableTop .btn{box-shadow:var(--shadow)}
+
+    .tableWrap{
+      margin-top:10px;border:1px solid var(--line);border-radius:var(--radius);
+      background:linear-gradient(180deg, rgba(18,26,36,.72), rgba(18,26,36,.40));
+      box-shadow:var(--shadow);
+      overflow:auto;
+    }
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      min-width:980px;
+    }
+    thead th{
+      position:sticky;top:0;z-index:5;
+      text-align:left;
+      font-size:12px;
+      color:rgba(231,238,247,.92);
+      background:rgba(14,23,34,.98);
+      border-bottom:1px solid var(--line);
+      padding:10px 10px;
+      white-space:nowrap;
+      font-weight:750;
+      letter-spacing:.2px;
+    }
+    tbody td{
+      padding:10px 10px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      color:rgba(231,238,247,.92);
+      font-size:13px;
+      vertical-align:top;
+    }
+    tbody tr{
+      cursor:pointer;
+      transition:background .12s ease;
+    }
+    tbody tr:hover{
+      background:rgba(78,161,255,.10);
+    }
+    .tdMuted{color:rgba(159,176,195,.92);font-size:12px;white-space:nowrap}
+    .tdMono{font-variant-numeric: tabular-nums;white-space:nowrap}
+    .tdNotes{
+      color:rgba(231,238,247,.88);
+      max-width:520px;
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
+    .tagProject{
+      display:inline-flex;align-items:center;gap:8px;
+    }
+
+
+    /* ===== Botões de visão (Calendário / Tabela / Gantt) ===== */
+    .viewBtns{display:flex;align-items:center;gap:6px;row-gap:6px;min-width:0;flex-wrap:wrap;justify-content:flex-end}
+    .btn.active{
+      border-color:rgba(78,161,255,.60);
+      background:rgba(78,161,255,.18);
+    }
+
+    /* ===== Gantt (visão por projeto) ===== */
+    .ganttControls{
+      margin-top:10px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .ganttControls .ctrlLabel{font-size:12px;color:var(--muted);letter-spacing:.2px}
+    .ganttControls .ctrlSelect{
+      min-width:240px;
+      max-width:360px;
+    }
+    .ganttWrap{
+      margin-top:10px;
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      background:linear-gradient(180deg, rgba(18,26,36,.72), rgba(18,26,36,.40));
+      box-shadow:var(--shadow);
+      overflow:auto;
+    }
+    table.gantt{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      min-width:980px;
+    }
+    table.gantt thead th{
+      position:sticky;top:0;z-index:5;
+      text-align:center;
+      font-size:12px;
+      color:rgba(231,238,247,.92);
+      background:rgba(14,23,34,.98);
+      border-bottom:1px solid var(--line);
+      padding:10px 10px;
+      white-space:nowrap;
+      font-weight:750;
+      letter-spacing:.2px;
+    }
+    table.gantt thead th.left{text-align:left}
+    table.gantt tbody td{
+      padding:10px 10px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      color:rgba(231,238,247,.92);
+      font-size:13px;
+      vertical-align:middle;
+      text-align:center;
+      font-variant-numeric: tabular-nums;
+    }
+    table.gantt tbody td.left{text-align:left}
+    table.gantt tbody tr:hover{background:rgba(78,161,255,.08)}
+    .gCell{
+      border-left:1px solid rgba(255,255,255,.06);
+      border-right:1px solid rgba(255,255,255,.06);
+    }
+    .gCell.on{
+      background:rgba(78,161,255,.22);
+      border-color:rgba(78,161,255,.28);
+      color:#07121f;
+      font-weight:800;
+    }
+    .gCell.on span{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:10px;
+      background:rgba(255,255,255,.65);
+      color:#06121f;
+      border:1px solid rgba(0,0,0,.12);
+    }
+
+    /* ===== Filtros da Tabela (Projeto + Atividade) ===== */
+    .tableFilters{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-right:auto;
+    }
+    .tableFilters .ctrlSelect{ min-width:240px; max-width:360px; }
+
+    /* ===== Gantt com cabeçalho em 2 linhas (igual Calendário) ===== */
+    table.gantt thead th{
+      vertical-align:bottom;
+      white-space:normal;
+    }
+    table.gantt thead th.gDayHead{
+      text-align:left;
+      padding:10px 10px 8px;
+    }
+    .gDayName{font-size:12px;color:var(--muted);letter-spacing:.2px}
+    .gDayDate{font-size:14px;font-weight:750;letter-spacing:.2px}
+    .gDayWorked{
+      margin-top:6px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:11px;
+      color:rgba(231,238,247,.88);
+      letter-spacing:.2px;
+    }
+    .gDayWorked .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:3px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.18);
+      white-space:nowrap;
+    }
+    .gDayWorked .chip .miniDot{
+      width:6px;height:6px;border-radius:999px;background:rgba(66,211,146,.9);
+      box-shadow:0 0 0 4px rgba(66,211,146,.12);
+    }
+
+    /* Sticky coluna Projeto no Gantt (igual lista da Tabela) */
+    table.gantt thead th.left{
+      position:sticky;
+      left:0;
+      z-index:6;
+      background:rgba(14,23,34,.98);
+    }
+    table.gantt tbody td.left{
+      position:sticky;
+      left:0;
+      z-index:4;
+      background:linear-gradient(180deg, rgba(18,26,36,.82), rgba(18,26,36,.55));
+      border-right:1px solid rgba(255,255,255,.06);
+    }
+
+    .modalBackdrop{
+      position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;align-items:center;justify-content:center;
+      z-index:999;padding:14px;
+    }
+    .modalBackdrop.show{display:flex}
+    .modal{
+      width:min(720px, 100%);border-radius:18px;border:1px solid rgba(255,255,255,.10);
+      background:linear-gradient(180deg, rgba(18,26,36,.98), rgba(14,23,34,.94));
+      box-shadow:0 18px 60px rgba(0,0,0,.55);overflow:hidden;
+    }
+    .modalHeader{display:flex;align-items:flex-start;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);gap:10px}
+
+    .modalActions{display:flex;align-items:center;gap:8px}
+    .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+    .modalHeader h2{margin:0;font-size:14px;font-weight:750;letter-spacing:.2px}
+    .modalHeader .when{margin-top:4px;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;line-height:1.25}
+    .xBtn{
+      appearance:none;border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--text);
+      border-radius:12px;width:38px;height:38px;cursor:pointer;font-size:16px;line-height:1;
+    }
+    .xBtn:hover{background:rgba(255,255,255,.06)}
+    .modalBody{padding:14px 16px 10px;display:grid;gap:12px}
+    .row{display:grid;gap:8px}
+    .row.grid2{grid-template-columns:1fr 1fr;gap:10px}
+    label{font-size:12px;color:var(--muted);letter-spacing:.2px}
+
+    /* Contraste melhor nos selects (horários + atividades) */
+    select{
+      background:#e8eef6 !important;
+      color:#000 !important;
+      border:1px solid rgba(0,0,0,.18) !important;
+    }
+    select:focus{
+      border-color: rgba(78,161,255,.60) !important;
+      box-shadow: 0 0 0 4px rgba(78,161,255,.12) !important;
+    }
+    select option{ color:#000; background:#fff; }
+
+    textarea, input[type="text"]{
+      width:100%;background:rgba(0,0,0,.18);border:1px solid var(--line2);color:var(--text);
+      border-radius:12px;padding:10px 12px;outline:none;font-size:13px;
+    }
+    textarea:focus, input[type="text"]:focus{
+      border-color:rgba(78,161,255,.50);box-shadow:0 0 0 4px rgba(78,161,255,.10)
+    }
+    textarea{min-height:88px;resize:vertical;line-height:1.25}
+    .hint{font-size:12px;color:rgba(159,176,195,.85);line-height:1.25}
+
+    .idAutoPill{
+      display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border-radius:999px;border:1px solid var(--line);
+      background:rgba(0,0,0,.14);color:var(--muted);font-size:12px;
+    }
+    .idAutoPill.ok{border-color:rgba(66,211,146,.35);background:rgba(66,211,146,.10);color:rgba(214,255,236,.92)}
+    .idAutoPill.warn{border-color:rgba(255,200,97,.35);background:rgba(255,200,97,.10);color:rgba(255,240,210,.92)}
+    .idAutoPill .b{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.20)}
+    .idAutoPill.ok .b{background:var(--ok);box-shadow:0 0 0 4px rgba(66,211,146,.12)}
+    .idAutoPill.warn .b{background:var(--warn);box-shadow:0 0 0 4px rgba(255,200,97,.12)}
+
+    .modalFooter{display:flex;gap:10px;justify-content:flex-end;padding:12px 16px 16px;border-top:1px solid var(--line)}
+    .pill{margin-right:auto;display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px}
+    .hidden{display:none !important}
+
+
+    .emailWrap{
+      display:flex;align-items:center;gap:8px;
+      padding:6px 10px;border-radius:12px;
+      border:1px solid var(--line);background:rgba(0,0,0,.18);
+      color:var(--muted);font-size:12px;white-space:nowrap;
+      max-width:360px;
+    }
+    .emailLbl{font-size:12px;color:var(--muted);letter-spacing:.2px}
+    .emailInput{
+      width:220px;max-width:28vw;
+      background:transparent;border:none;outline:none;color:var(--text);
+      font-size:12px;
+    }
+    .emailInput::placeholder{color:rgba(159,176,195,.65)}
+
+    @media (max-width:760px){
+      header.topbar{grid-template-columns:1fr;row-gap:8px}
+      .leftGroup,.centerGroup,.rightGroup{justify-content:flex-start;flex-wrap:wrap}
+      .centerGroup{justify-content:flex-start}
+      .rangeSm{min-width:unset;width:100%}
+
+      header{height:auto;padding:10px 12px}
+      .brand{min-width:unset}
+      .range{width:auto;margin-left:0;justify-content:center}
+      .toolbar{overflow-x:auto;flex-wrap:nowrap}
+      .toolbar{gap:8px}
+      .btn{padding:9px 10px}
+      .row.grid2{grid-template-columns:1fr}
+      table{min-width:940px}
+    }
+  
+    .btnIcon{display:inline-flex;align-items:center;justify-content:center;margin-right:6px;opacity:.9}
+    .btnIcon svg{width:14px;height:14px;display:block;fill:currentColor}
+
+</style>
+</head>
+
+<body>
+<header class="topbar">
+  <div class="leftGroup">
+    <div class="viewBtns" aria-label="Navegação de páginas">
+      <button class="btn btnSm active" id="btnViewCalendar" title="Mudar para a Visão Calendário"><span class="btnIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1.5A2.5 2.5 0 0 1 22 6.5v14A2.5 2.5 0 0 1 19.5 23h-15A2.5 2.5 0 0 1 2 20.5v-14A2.5 2.5 0 0 1 4.5 4H6V3a1 1 0 0 1 1-1Zm12.5 7H4.5v11.5c0 .28.22.5.5.5h14.5a.5.5 0 0 0 .5-.5V9ZM6 6H4.5a.5.5 0 0 0-.5.5V7h16v-.5a.5.5 0 0 0-.5-.5H18v1a1 1 0 1 1-2 0V6H8v1a1 1 0 1 1-2 0V6Z"/></svg></span><span>Calendário</span></button>
+      <button class="btn btnSm" id="btnViewTable" title="Mudar para a Visão Tabela"><span class="btnIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm0 4v4h5V7H4Zm7 0v4h9V7h-9ZM4 13v6h5v-6H4Zm7 0v6h9v-6h-9Z"/></svg></span><span>Tabela</span></button>
+      <button class="btn btnSm" id="btnViewGantt" title="Mudar para a Visão Gantt"><span class="btnIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm1 3v5.17l3.59 2.08a1 1 0 0 1-1 1.74l-4.09-2.37A1 1 0 0 1 11 13V7a1 1 0 1 1 2 0Z"/></svg></span><span>Gantt</span></button>
+    </div>
+
+    <div class="statusPill warn statusSm" id="baseStatus" title="Base IDs">
+      <span class="statusDot"></span><span id="baseStatusText">Base local</span>
+    </div>
+
+    <div class="navGroup">
+      <button class="btn ghost btnSm" id="btnPrev">‹ Sem. anterior</button>
+      <button class="btn primary btnSm" id="btnToday">Hoje</button>
+      <button class="btn ghost btnSm" id="btnNext">Prox. semana ›</button>
+    </div>
+  </div>
+
+  <div class="centerGroup">
+    <div class="range rangeSm"><strong id="weekRangeText">--/--/---- → --/--/----</strong></div>
+  </div>
+
+  <div class="rightGroup">
+    <div class="emailWrap" title="E-mail usado no CSV">
+      <span class="emailLbl">E-mail</span>
+      <input class="emailInput" id="csvEmailInput" type="email" placeholder="seu.email@exxata.com.br" autocomplete="email" title="E-mail que será incluído no CSV" />
+    </div>
+
+    <button class="btn btnSm" id="btnExportCsv" title="Exportar os dados para CSV (inclui o e-mail informado)"><span class="btnIcon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a1 1 0 0 1 1 1v9.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4.0 4a1 1 0 0 1-1.4 0l-4-4A1 1 0 1 1 8.7 11.3L11 13.59V4a1 1 0 0 1 1-1Zm-7 16a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1Z"/></svg></span><span>Exportar CSV</span></button>
+    <button class="btn btnSm" id="btnImportActivities" title="Importar apontamentos de um arquivo XLSX"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><path d="M7 14l5-5 5 5"/><path d="M5 5h14"/></svg></span><span>Importar Apontamentos (XLSX)</span></button>
+    <input id="fileActivitiesInput" type="file" accept=".xlsx" class="hidden" />
+    <button class="btn btnSm" id="btnSetBackupTarget" title="Selecionar a pasta para salvar os backups"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h6l2 2h10v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></span><span>Definir Local de Salvamento</span></button>
+    <button class="btn btnSm" id="btnExportBackupNow" title="Exportar backup XLSX agora"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h13l3 3v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4z"/><path d="M16 4v6H8V4"/><path d="M8 20v-6h8v6"/></svg></span><span>Salvar Dados (XLSX)</span></button>
+    <button class="btn btnSm" id="btnLoadBase" title="Carregar a base de IDs Artia a partir de um XLSX"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h16"/><path d="M4 15h16"/><path d="M10 3L8 21"/><path d="M16 3l-2 18"/></svg></span><span>Carregar IDs Artia (XLSX)</span></button>
+    <input id="fileBaseInput" type="file" accept=".xlsx" class="hidden" />
+    <button class="btn danger btnSm" id="btnClearWeek" title="Apagar os apontamentos da semana exibida"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></span><span>Limpar Semana</span></button>
+    <button class="btn danger btnSm" id="btnClearAll" title="Apagar todos os apontamentos"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 16h10l1-16"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></span><span>Limpar Tudo</span></button>
+  </div>
+</header>
+
+<div class="app">
+  <div class="gridWrap" id="gridWrap">
+    <div class="daysHeader" id="daysHeader"></div>
+
+    <div id="calendarView">
+      <div class="weekGrid" id="weekGrid"></div>
+    </div>
+
+    <div id="tableView" class="hidden">
+      <div class="tableTop">
+        <div class="tableFilters">
+          <div class="ctrlLabel">Projeto:</div>
+          <select id="tableProjectFilter" class="ctrlSelect"></select>
+          <div class="ctrlLabel">Atividade:</div>
+          <select id="tableActivityFilter" class="ctrlSelect"></select>
+        </div>
+        <button class="btn primary btnSm" id="btnNewFromTable" type="button">+ Novo apontamento</button>
+      </div>
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Projeto</th>
+              <th>Hora Início</th>
+              <th>Hora de Término</th>
+              <th>Esforço</th>
+              <th>Esforço Dia</th>
+              <th>Atividade</th>
+              <th>Observação</th>
+              <th>ID</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="hint" style="margin-top:10px;">
+        Dica: clique em uma linha para editar o evento.
+      </div>
+    </div>
+
+    <div id="ganttView" class="hidden">
+      <div class="ganttControls">
+        <div class="ctrlLabel">Projeto:</div>
+        <select id="ganttProjectFilter" class="ctrlSelect"></select>
+        <div class="hint">Mostra o total de horas por projeto e por dia na semana atual.</div>
+      </div>
+
+      <div class="ganttWrap">
+        <table class="gantt">
+          <thead>
+            <tr id="ganttHeadRow">
+              <th class="left">Projeto</th>
+              <th>Total Horas na Semana</th>
+              <th class="gDayHead" data-dayidx="0">seg</th>
+              <th class="gDayHead" data-dayidx="1">ter</th>
+              <th class="gDayHead" data-dayidx="2">qua</th>
+              <th class="gDayHead" data-dayidx="3">qui</th>
+              <th class="gDayHead" data-dayidx="4">sex</th>
+              <th class="gDayHead" data-dayidx="5">sáb</th>
+              <th class="gDayHead" data-dayidx="6">dom</th>
+            </tr>
+          </thead>
+          <tbody id="ganttBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modalBackdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="modal">
+    <div class="modalHeader">
+      <div>
+        <h2 id="modalTitle">Novo evento</h2>
+        <div class="when" id="modalWhen">--/--/---- --:-- → --/--/---- --:--</div>
+      </div>
+      <div class="modalActions">
+        <button class="btn ghost btnSm" id="btnCopyFields" type="button" title="Copiar Projeto/Atividade/ID/Observação">Copiar</button>
+        <button class="btn ghost btnSm" id="btnPasteFields" type="button" title="Colar Projeto/Atividade/ID/Observação">Colar</button>
+        <button class="xBtn" id="modalClose" title="Fechar">✕</button>
+      </div>
+    </div>
+
+    <div class="modalBody">
+      <div class="row grid2">
+        <div class="row">
+          <label for="startTimeSelect">Início (HH:MM)</label>
+          <select id="startTimeSelect"></select>
+        </div>
+        <div class="row">
+          <label for="endTimeSelect">Fim (HH:MM)</label>
+          <select id="endTimeSelect"></select>
+        </div>
+      </div>
+      <div class="hint">Os horários são em intervalos de 10 minutos. “24:00” representa o final do dia.</div>
+
+      <div class="row">
+        <label for="projectInput">Projeto (nº do projeto)</label>
+        <input type="text" id="projectInput" placeholder="Ex.: 1360" autocomplete="off" />
+      </div>
+
+      <div class="row">
+        <label for="activityNameInput">Atividade (Nome)</label>
+        <input type="text" id="activityNameInput" placeholder="Digite para buscar..." autocomplete="off" list="activityDatalist" />
+        <datalist id="activityDatalist"></datalist>
+      </div>
+
+      <div class="row grid2">
+        <div class="row">
+          <label for="activityIdInput">ID Artia (varia por projeto e por atividade)</label>
+          <input type="text" id="activityIdInput" placeholder="Preenchido automaticamente se existir na base" autocomplete="off" />
+        </div>
+        <div class="row" style="align-content:end;">
+          <div class="idAutoPill warn" id="idLookupPill">
+            <span class="b"></span>
+            <span id="idLookupText">ID: preencha manualmente (base não consultada)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <label for="notesInput">Observação</label>
+        <textarea id="notesInput" placeholder="Escreva observações..."></textarea>
+      </div>
+    </div>
+
+    <div class="modalFooter">
+      <div class="pill">
+        <span id="modalInfo" class="hidden">⚠</span>
+        <span id="modalInfoText"></span>
+      </div>
+      <button class="btn danger hidden" id="btnDelete">Apagar</button>
+      <button class="btn ghost" id="btnCancel">Cancelar</button>
+      <button class="btn primary" id="btnSave">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const LS_EVENTS_KEY="offline_week_calendar_events_v5";
+  const LS_IDBASE_KEY="offline_week_calendar_idbase_index_v1";
+  const LS_IDBASE_META_KEY="offline_week_calendar_idbase_meta_v1";
+  const LS_CLIP_KEY="offline_week_calendar_clipboard_fields_v1";
+
+  /* ===== Armazenamento seguro (IndexedDB) + Backup XLSX ===== */
+  const DB_NAME="artia_offline_db_v1";
+  const DB_VERSION=1;
+
+  let _dbPromise=null;
+  function openDB(){
+    if(_dbPromise) return _dbPromise;
+    _dbPromise=new Promise((resolve,reject)=>{
+      const req=indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded=()=>{
+        const db=req.result;
+        if(!db.objectStoreNames.contains("events")){
+          db.createObjectStore("events",{keyPath:"id"});
+        }
+        if(!db.objectStoreNames.contains("kv")){
+          db.createObjectStore("kv",{keyPath:"key"});
+        }
+      };
+      req.onsuccess=()=>resolve(req.result);
+      req.onerror=()=>reject(req.error||new Error("Falha ao abrir IndexedDB"));
+    });
+    return _dbPromise;
+  }
+  async function kvGet(key){
+    const db=await openDB();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction("kv","readonly");
+      const st=tx.objectStore("kv");
+      const r=st.get(key);
+      r.onsuccess=()=>resolve(r.result ? r.result.value : undefined);
+      r.onerror=()=>reject(r.error);
+    });
+  }
+  async function kvSet(key,value){
+    const db=await openDB();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction("kv","readwrite");
+      tx.oncomplete=()=>resolve(true);
+      tx.onerror=()=>reject(tx.error);
+      tx.objectStore("kv").put({key,value});
+    });
+  }
+
+  async function loadEventsFromDB(){
+    const db=await openDB();
+    const events=await new Promise((resolve,reject)=>{
+      const tx=db.transaction("events","readonly");
+      const st=tx.objectStore("events");
+      const r=st.getAll();
+      r.onsuccess=()=>resolve(Array.isArray(r.result)?r.result:[]);
+      r.onerror=()=>reject(r.error);
+    });
+    if(!events || events.length===0){
+      state.events=EXAMPLE_EVENTS.map(e=>({...e}));
+      await saveEventsToDB(); // também agenda backup
+      return true;
+    }
+    // normaliza tipos
+    state.events=events.map(e=>({
+      id:String(e.id),
+      start:String(e.start),
+      end:String(e.end),
+      day:String(e.day),
+      project:String(e.project??""),
+      activityId:String(e.activityId??""),
+      activityLabel:String(e.activityLabel??""),
+      notes:String(e.notes??"")
+    }));
+    return false;
+  }
+
+  async function saveEventsToDB(){
+    const db=await openDB();
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction("events","readwrite");
+      const st=tx.objectStore("events");
+      const clearReq=st.clear();
+      clearReq.onerror=()=>reject(clearReq.error);
+      clearReq.onsuccess=()=>{
+        for(const ev of state.events){
+          st.put(ev);
+        }
+      };
+      tx.oncomplete=()=>resolve(true);
+      tx.onerror=()=>reject(tx.error);
+    });
+    markBackupDirty();
+  }
+
+  // ===== Backup XLSX (sobrescrever) =====
+  let backupDirty=false;
+  let backupTimer=null;
+
+  function markBackupDirty(){
+    backupDirty=true;
+    // debounce: evita gerar XLSX a cada clique
+    if(backupTimer) clearTimeout(backupTimer);
+    backupTimer=setTimeout(()=>{ exportBackupXLSX({reason:"autosave"}).catch(()=>{}); }, 2500);
+  }
+
+  // --- Funções auxiliares para o backup XLSX ---
+  function parseISOToLocalDateTime(s){ return s ? new Date(s) : null; }
+  function toHHMM(d){ return pad2(d.getHours())+":"+pad2(d.getMinutes()); }
+  
+  function buildBackupRows(){
+    const rowsEvents = state.events
+      .slice()
+      .sort((a,b)=>String(a.start).localeCompare(String(b.start)))
+      .map(ev=>{
+        const startD=parseISOToLocalDateTime(ev.start);
+        const endD=parseISOToLocalDateTime(ev.end);
+        const dayISO=ev.day || toDateOnlyISO(startD||new Date());
+        const hIni=startD?toHHMM(startD):"";
+        const hFim=endD?toHHMM(endD):"";
+        const effort = (startD && endD) ? durationMinutes(startD,endD)/60 : "";
+        return {
+          "Data": dayISO,
+          "Projeto": ev.project||"",
+          "Hora Início": hIni,
+          "Hora de Término": hFim,
+          "Esforço": (effort===""? "" : Number(effort.toFixed(2))),
+          "Atividade": ev.activityLabel||"",
+          "Observação": ev.notes||"",
+          "ID": ev.activityId||""
+        };
+      });
+
+    // Removida a lógica que gerava rowsActs (atividades)
+    const meta=[{
+      "Gerado em": new Date().toISOString(),
+      "Eventos": rowsEvents.length,
+      "Arquivo Base": state.idBaseMeta?.fileName || ""
+    }];
+
+    return {rowsEvents, meta};
+  }
+
+  /* =========================================================
+     XLSX Writer (100% offline, sem libs)
+     - Gera um .xlsx real (ZIP + XML) com 2 abas: Eventos e Meta
+     ========================================================= */
+
+  function _xmlEscape(s){
+    return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");
+  }
+  function _colName(n){
+    // 1 -> A, 26 -> Z, 27 -> AA
+    let s="";
+    while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); }
+    return s;
+  }
+  function _isNumeric(v){
+    return typeof v==="number" && Number.isFinite(v);
+  }
+  function _cellXml(r, c, v){
+    const ref=_colName(c)+String(r);
+    if(v===null || v===undefined || v===""){
+      return `<c r="${ref}"/>`;
+    }
+    if(_isNumeric(v)){
+      return `<c r="${ref}"><v>${String(v)}</v></c>`;
+    }
+    // força string
+    return `<c r="${ref}" t="inlineStr"><is><t>${_xmlEscape(v)}</t></is></c>`;
+  }
+  function _sheetXmlFromTable(name, headers, rows){
+    // rows = array of objects (header->value)
+    let xml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
+      `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" `+
+      `xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">`+
+      `<sheetData>`;
+
+    // Header row
+    xml+=`<row r="1">`;
+    for(let i=0;i<headers.length;i++){
+      xml+=_cellXml(1, i+1, headers[i]);
+    }
+    xml+=`</row>`;
+
+    // Data rows
+    for(let ri=0;ri<rows.length;ri++){
+      const rnum=ri+2;
+      xml+=`<row r="${rnum}">`;
+      for(let ci=0;ci<headers.length;ci++){
+        const h=headers[ci];
+        xml+=_cellXml(rnum, ci+1, rows[ri]?.[h] ?? "");
+      }
+      xml+=`</row>`;
+    }
+
+    xml+=`</sheetData></worksheet>`;
+    return xml;
+  }
+
+  // ---- CRC32 (para ZIP)
+  const _crcTable=(()=>{
+    const t=new Uint32Array(256);
+    for(let i=0;i<256;i++){
+      let c=i;
+      for(let k=0;k<8;k++) c = (c & 1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1);
+      t[i]=c>>>0;
+    }
+    return t;
+  })();
+  function _crc32(u8){
+    let c=0xFFFFFFFF;
+    for(let i=0;i<u8.length;i++){
+      c=_crcTable[(c ^ u8[i]) & 0xFF] ^ (c>>>8);
+    }
+    return (c ^ 0xFFFFFFFF)>>>0;
+  }
+
+  function _u16(n){ return Uint8Array.of(n & 255, (n>>>8)&255); }
+  function _u32(n){ return Uint8Array.of(n & 255, (n>>>8)&255, (n>>>16)&255, (n>>>24)&255); }
+
+  function _encodeUtf8(str){
+    return new TextEncoder().encode(str);
+  }
+
+  function _zipStore(entries){
+    // entries: [{name, data(Uint8Array)}] - store (sem compressão)
+    let offset=0;
+    const fileParts=[];
+    const centralParts=[];
+
+    for(const e of entries){
+      const nameBytes=_encodeUtf8(e.name);
+      const data=e.data instanceof Uint8Array ? e.data : new Uint8Array(e.data);
+      const crc=_crc32(data);
+      const compSize=data.length;
+      const uncompSize=data.length;
+
+      // Local file header
+      const lf = [];
+      lf.push(_u32(0x04034b50));      // signature
+      lf.push(_u16(20));             // version needed
+      lf.push(_u16(0));              // flags
+      lf.push(_u16(0));              // compression = 0 (store)
+      lf.push(_u16(0));              // mod time
+      lf.push(_u16(0));              // mod date
+      lf.push(_u32(crc));
+      lf.push(_u32(compSize));
+      lf.push(_u32(uncompSize));
+      lf.push(_u16(nameBytes.length));
+      lf.push(_u16(0));              // extra len
+      fileParts.push(...lf, nameBytes, data);
+
+      // Central directory header
+      const cd = [];
+      cd.push(_u32(0x02014b50));      // signature
+      cd.push(_u16(20));             // version made by
+      cd.push(_u16(20));             // version needed
+      cd.push(_u16(0));              // flags
+      cd.push(_u16(0));              // compression
+      cd.push(_u16(0));              // mod time
+      cd.push(_u16(0));              // mod date
+      cd.push(_u32(crc));
+      cd.push(_u32(compSize));
+      cd.push(_u32(uncompSize));
+      cd.push(_u16(nameBytes.length));
+      cd.push(_u16(0));              // extra
+      cd.push(_u16(0));              // comment
+      cd.push(_u16(0));              // disk start
+      cd.push(_u16(0));              // int attrs
+      cd.push(_u32(0));              // ext attrs
+      cd.push(_u32(offset));         // local header offset
+      centralParts.push(...cd, nameBytes);
+
+      // update offset: local header (30) + name + data
+      offset += 30 + nameBytes.length + data.length;
+    }
+
+    const centralStart=offset;
+
+    // Central directory bytes length
+    let centralLen=0;
+    for(const part of centralParts) centralLen += part.length;
+
+    // End of central directory
+    const eocd = [];
+    eocd.push(_u32(0x06054b50));
+    eocd.push(_u16(0)); // disk
+    eocd.push(_u16(0)); // start disk
+    eocd.push(_u16(entries.length));
+    eocd.push(_u16(entries.length));
+    eocd.push(_u32(centralLen));
+    eocd.push(_u32(centralStart));
+    eocd.push(_u16(0)); // comment len
+
+    const allParts=[...fileParts, ...centralParts, ...eocd];
+    const totalLen=allParts.reduce((s,p)=>s+p.length,0);
+    const out=new Uint8Array(totalLen);
+    let p=0;
+    for(const part of allParts){ out.set(part,p); p+=part.length; }
+    return out;
+  }
+
+  function buildBackupXlsxBytes(){
+    const {rowsEvents, meta} = buildBackupRows();
+
+    const headersE=["Data","Projeto","Hora Início","Hora de Término","Esforço","Atividade","Observação","ID"];
+    const headersM=["Gerado em","Atividades","Arquivo Base"];
+
+    // Gera XML das abas
+    const sheet1=_sheetXmlFromTable("atividades", headersE, rowsEvents);
+    const sheet2=_sheetXmlFromTable("Meta", headersM, meta);
+
+    // Ajusta workbook para ter apenas 2 sheets (removendo a antiga sheet2 de atividades)
+    const workbook=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
+      `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" `+
+      `xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">`+
+      `<sheets>`+
+      `<sheet name="atividades" sheetId="1" r:id="rId1"/>`+
+      `<sheet name="Meta" sheetId="2" r:id="rId2"/>`+
+      `</sheets></workbook>`;
+
+    // Ajusta relacionamentos para 2 sheets
+    const workbookRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
+      `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`+
+      `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>`+
+      `<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>`+
+      `<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`+
+      `</Relationships>`;
+
+    const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
+      `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">`+
+      `<fonts count="1"><font><sz val="11"/><color theme="1"/><name val="Calibri"/><family val="2"/></font></fonts>`+
+      `<fills count="1"><fill><patternFill patternType="none"/></fill></fills>`+
+      `<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>`+
+      `<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>`+
+      `<cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>`+
+      `<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>`+
+      `</styleSheet>`;
+
+    // Ajusta content types para 2 sheets
+    const contentTypes=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
+      `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">`+
+      `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>`+
+      `<Default Extension="xml" ContentType="application/xml"/>`+
+      `<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>`+
+      `<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`+
+      `<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`+
+      `<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>`+
+      `</Types>`;
+
+    const rels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
+      `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`+
+      `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>`+
+      `</Relationships>`;
+
+    const entries=[
+      {name:"[Content_Types].xml", data:_encodeUtf8(contentTypes)},
+      {name:"_rels/.rels", data:_encodeUtf8(rels)},
+      {name:"xl/workbook.xml", data:_encodeUtf8(workbook)},
+      {name:"xl/_rels/workbook.xml.rels", data:_encodeUtf8(workbookRels)},
+      {name:"xl/styles.xml", data:_encodeUtf8(styles)},
+      {name:"xl/worksheets/sheet1.xml", data:_encodeUtf8(sheet1)},
+      {name:"xl/worksheets/sheet2.xml", data:_encodeUtf8(sheet2)},
+    ];
+
+    return _zipStore(entries);
+  }
+
+  async function writeBackupViaHandle(fileHandle){
+    if(fileHandle?.requestPermission){
+      const perm = await fileHandle.requestPermission({mode:"readwrite"});
+      if(perm!=="granted") throw new Error("Permissão negada para gravar o backup.");
+    }
+    const bytes=buildBackupXlsxBytes();
+    const blob = new Blob([bytes], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    const writable = await fileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+  }
+
+  function downloadBackupFallback(){
+    const bytes=buildBackupXlsxBytes();
+    const blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download="backup_artia.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),0);
+  }
+
+  async function exportBackupXLSX({reason="manual"}={}){
+    if(!backupDirty && reason!=="manual") return;
+    backupDirty=false;
+
+    try{
+      const handle = await kvGet("backupFileHandle");
+      if(handle){
+        await writeBackupViaHandle(handle);
+        setModalInfo("Backup XLSX atualizado (sobrescrito) ✅", true);
+        return true;
+      }
+      // sem handle: fallback (download)
+      downloadBackupFallback();
+      setModalInfo("Backup XLSX exportado. Dica: use “Definir destino do Backup” para sobrescrever sempre ✅", true);
+      return true;
+    }catch(err){
+      console.warn(err);
+      // fallback
+      try{
+        downloadBackupFallback();
+        setModalInfo("Backup XLSX exportado (modo download). Para sobrescrever sempre, use “Definir destino do Backup”.", true);
+      }catch{}
+      return false;
+    }
+  }
+  const CONFIG={startHour:0,endHour:24,stepMinutes:10};
+  const DAY_NAMES=["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"];
+
+  function pad2(n){return String(n).padStart(2,"0")}
+  function toDateOnlyISO(d){return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate())}
+  // yyyy-mm-dd (ISO) a partir de Date local (sem timezone)
+  function formatDateISO(d){return toDateOnlyISO(d)}
+  function formatDateBR(d){return pad2(d.getDate())+"/"+pad2(d.getMonth()+1)+"/"+d.getFullYear()}
+  function parseISOToLocalDate(iso){const [y,m,da]=iso.split("-").map(Number);return new Date(y,m-1,da,0,0,0,0)}
+  function addDays(d,days){const nd=new Date(d);nd.setDate(nd.getDate()+days);return nd}
+  function startOfWeekMonday(date){
+    const d=new Date(date.getFullYear(),date.getMonth(),date.getDate(),0,0,0,0);
+    const dow=d.getDay();const diff=(dow===0)?-6:(1-dow);d.setDate(d.getDate()+diff);return d;
+  }
+  function setTimeOnDate(dateOnly,hh,mm){return new Date(dateOnly.getFullYear(),dateOnly.getMonth(),dateOnly.getDate(),hh,mm,0,0)}
+  function minutesFromDayStart(dateTime,dayIso){const base=parseISOToLocalDate(dayIso);return Math.round((dateTime.getTime()-base.getTime())/60000)}
+  function durationMinutes(a,b){return (b.getTime()-a.getTime())/60000}
+  function normalizeToStepMinutes(m){const step=CONFIG.stepMinutes;return Math.round(m/step)*step}
+  function clampMinutesToDay(m){ if(m<0)m=0; if(m>1440)m=1440; return normalizeToStepMinutes(m); }
+  function formatTimeFromMinutes(m){
+    m = clampMinutesToDay(m);
+    if(m===1440) return "24:00";
+    const hh=Math.floor(m/60), mm=m%60;
+    return pad2(hh)+":"+pad2(mm);
+  }
+  function formatDateTimeBRFromDay(dateTime,dayIso){
+    const base=parseISOToLocalDate(dayIso);
+    const m=clampMinutesToDay(minutesFromDayStart(dateTime,dayIso));
+    return formatDateBR(base)+" "+formatTimeFromMinutes(m);
+  }
+  function escapeHtml(s){
+    return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+  function normKey(s){
+    return String(s??"").trim().toLowerCase().replace(/\s+/g," ").replace(/[–—]/g,"-").replace(/\s*-\s*/g," - ").replace(/\u00A0/g," ");
+  }
+  function extractProjectFromC(valC){
+    const s=String(valC??"").trim();const m=s.match(/\b(\d{3,})\b/);return m?m[1]:"";
+  }
+  function projectColorDigit(project){
+    const m = String(project||"").match(/(\d)\s*$/);
+    return m ? m[1] : "0";
+  }
+
+  const ACTIVITY_NAMES=[
+    "1.5 - Leitura da documentação","1.1 - Organização de Documentos","2.1 - Reuniões com Cliente",
+    "3.6 - Levantamento de Medições","4.3 - Linha do Tempo","5.1 - Narrativa Problemas",
+    "5.3 - Adequação e Revisão do Pleito","5.2 - Capítulo de Custos","6.6 - Redação de Carta a Pedido do Cliente",
+    "107 - Outros (especificar nos comentários)","105 - Comunicação Interna","4.1 - Levantamento de Impactos",
+    "2.4 - Gerenciamento","1.7 - Desenhos ou Layouts","8.1 - Realinhamento dos Preços do Contrato",
+    "6.2 - Relatório de Acompanhamento","6 - Elaboração de Demandas Específicas","7.10 - Elaboração de Apresentação",
+    "4.2 - Estudo de Cronograma","2.2 - Contato com Cliente","2.3 - Consultoria com Outros Membros da Empresa",
+    "6.9 - Visita de Acompanhamento","0000.2.1 - Criação e Atualização do Artia","8.1 - Reequilíbrio Econômico-Financeiro"
+  ];
+
+  const EXAMPLE_EVENTS=[
+    {id:"ex1",start:"2026-01-19T09:00:00",end:"2026-01-19T10:00:00",day:"2026-01-19",project:"1360",activityId:"R01",activityLabel:"Reunião",notes:"Alinhamento de reajuste contratual"},
+    {id:"ex2",start:"2026-01-20T14:00:00",end:"2026-01-20T16:00:00",day:"2026-01-20",project:"1377",activityId:"A10",activityLabel:"Análise",notes:"Análise preliminar de documentos"},
+    {id:"ex3",start:"2026-01-21T08:30:00",end:"2026-01-21T11:00:00",day:"2026-01-21",project:"1182",activityId:"P20",activityLabel:"Parecer",notes:"Parecer técnico – versão preliminar"},
+    {id:"ex4",start:"2026-01-22T15:00:00",end:"2026-01-22T17:30:00",day:"2026-01-22",project:"1401",activityId:"V30",activityLabel:"Valuation/PPA",notes:"Discussão de premissas do PPA"}
+  ];
+
+  let state={
+    weekStart:startOfWeekMonday(new Date()),
+    events:[],
+    selection:null,
+    editingEventId:null,
+    idBaseIndex:null,
+    idBaseMeta:null,
+    view:"calendar" // "calendar" | "table" | "gantt"
+  };
+
+  async function loadEvents(){
+    // Mantém nome para compatibilidade com o resto do código
+    return await loadEventsFromDB();
+  }
+  async function saveEvents(){
+    await saveEventsToDB();
+  }
+
+  /* ===== Clipboard (copiar/colar campos do evento) ===== */
+  function getClipboardFields(){
+    try{
+      const raw = localStorage.getItem(LS_CLIP_KEY);
+      if(!raw) return null;
+      const obj = JSON.parse(raw);
+      if(!obj || typeof obj!=="object") return null;
+      return {
+        project: String(obj.project??""),
+        activityLabel: String(obj.activityLabel??""),
+        activityId: String(obj.activityId??""),
+        notes: String(obj.notes??"")
+      };
+    }catch{return null;}
+  }
+  function setClipboardFields(obj){
+    try{
+      const payload = {
+        project: String(obj?.project??""),
+        activityLabel: String(obj?.activityLabel??""),
+        activityId: String(obj?.activityId??""),
+        notes: String(obj?.notes??""),
+        savedAt: new Date().toISOString()
+      };
+      localStorage.setItem(LS_CLIP_KEY, JSON.stringify(payload));
+    }catch{}
+  }
+  function ensureSelectHasValue(selectEl, value){
+    const v = String(value??"").trim();
+    if(!v) return;
+    const exists = Array.from(selectEl.options).some(o=>o.value===v);
+    if(!exists){
+      const opt=document.createElement("option");
+      opt.value=v; opt.textContent=v;
+      selectEl.appendChild(opt);
+    }
+  }
+
+  function loadIdBaseFromStorage(){
+    try{
+      const idx=JSON.parse(localStorage.getItem(LS_IDBASE_KEY)||"null");
+      const meta=JSON.parse(localStorage.getItem(LS_IDBASE_META_KEY)||"null");
+      if(idx && typeof idx==="object"){state.idBaseIndex=idx;state.idBaseMeta=meta;setBaseStatus(true,meta);return true;}
+    }catch{}
+    state.idBaseIndex=null;state.idBaseMeta=null;setBaseStatus(false,null);return false;
+  }
+  function saveIdBaseToStorage(indexObj,metaObj){
+    localStorage.setItem(LS_IDBASE_KEY, JSON.stringify(indexObj));
+    localStorage.setItem(LS_IDBASE_META_KEY, JSON.stringify(metaObj));
+    state.idBaseIndex=indexObj;state.idBaseMeta=metaObj;setBaseStatus(true,metaObj);
+  }
+  async function clearAll(){state.events=[];await saveEvents();renderAll();}
+  function clearWeek(){
+    const ws=toDateOnlyISO(state.weekStart), we=toDateOnlyISO(addDays(state.weekStart,6));
+    state.events=state.events.filter(ev=>!(ev.day>=ws && ev.day<=we));saveEvents();renderAll();
+  }
+
+  const baseStatusEl=document.getElementById("baseStatus");
+  const baseMiniEl=document.getElementById("baseMini");
+  const baseMiniTextEl=document.getElementById("baseMiniText");
+  const baseStatusTextEl=document.getElementById("baseStatusText");
+  function setBaseStatus(loaded,meta){
+    baseStatusEl.classList.remove("ok","warn");
+    baseStatusEl.classList.add(loaded?"ok":"warn");
+    if(!loaded){baseStatusTextEl.textContent="IDs: não carregada";
+      if(baseMiniEl){baseMiniEl.classList.remove("ok");baseMiniEl.classList.add("warn");}
+      if(baseMiniTextEl){baseMiniTextEl.textContent="Base local";}
+      return;}
+    const rows=meta?.rows??"?";const fileName=meta?.fileName??"arquivo";
+    baseStatusTextEl.textContent=`IDs: carregada (${rows} linhas)`;
+    if(baseMiniEl){baseMiniEl.classList.remove("warn");baseMiniEl.classList.add("ok");}
+    if(baseMiniTextEl){baseMiniTextEl.textContent="Base local";}baseStatusEl.title=`Fonte: ${fileName}`;
+  }
+
+  const daysHeaderEl=document.getElementById("daysHeader");
+  const weekGridEl=document.getElementById("weekGrid");
+  const weekRangeTextEl=document.getElementById("weekRangeText");
+  const calendarViewEl=document.getElementById("calendarView");
+  const tableViewEl=document.getElementById("tableView");
+  const tableBodyEl=document.getElementById("tableBody");
+  const btnViewCalendar=document.getElementById("btnViewCalendar");
+  const btnViewTable=document.getElementById("btnViewTable");
+  const btnViewGantt=document.getElementById("btnViewGantt");
+  const ganttViewEl=document.getElementById("ganttView");
+  const ganttBodyEl=document.getElementById("ganttBody");
+  const ganttProjectFilterEl=document.getElementById("ganttProjectFilter");
+  const ganttHeadRowEl=document.getElementById("ganttHeadRow");
+  const tableProjectFilterEl=document.getElementById("tableProjectFilter");
+  const tableActivityFilterEl=document.getElementById("tableActivityFilter");
+
+  let dayCols=[], dayIsoList=[];
+
+  function computeWeekDays(){
+    dayIsoList=[];const ws=state.weekStart;
+    for(let i=0;i<7;i++) dayIsoList.push(toDateOnlyISO(addDays(ws,i)));
+  }
+
+  function sumWorkedMinutesForDay(dayIso){
+    let total=0;
+    for(const ev of state.events){
+      if(ev.day!==dayIso) continue;
+      total += Math.max(0, durationMinutes(new Date(ev.start), new Date(ev.end)));
+    }
+    return Math.round(total);
+  }
+  function formatWorkedHM(mins){
+    const h=Math.floor(mins/60);
+    const m=mins%60;
+    return pad2(h)+":"+pad2(m);
+  }
+
+  function renderHeader(){
+    computeWeekDays();
+    const ws=state.weekStart, we=addDays(ws,6);
+    weekRangeTextEl.textContent=`${formatDateBR(ws)} → ${formatDateBR(we)}`;
+    daysHeaderEl.innerHTML="";
+
+    const timeHead=document.createElement("div");
+    timeHead.className="cell timeHead";
+    timeHead.textContent="Horários";
+    daysHeaderEl.appendChild(timeHead);
+
+    const todayIso=toDateOnlyISO(new Date());
+    for(let i=0;i<7;i++){
+      const dayIso=dayIsoList[i];
+      const d=parseISOToLocalDate(dayIso);
+
+      const cell=document.createElement("div");
+      cell.className="cell";
+
+      const nm=document.createElement("div");nm.className="dayName";nm.textContent=DAY_NAMES[i];
+      const dt=document.createElement("div");dt.className="dayDate";dt.textContent=formatDateBR(d);
+      cell.appendChild(nm);cell.appendChild(dt);
+
+      if(dayIso===todayIso){
+        const pill=document.createElement("div");
+        pill.className="todayPill";
+        pill.innerHTML="<span></span>Hoje";
+        cell.appendChild(pill);
+      }
+
+      const workedMin = sumWorkedMinutesForDay(dayIso);
+      const worked = document.createElement("div");
+      worked.className = "worked";
+      worked.innerHTML = `<span class="chip"><span class="miniDot"></span>Tempo Trabalhado: <b>${formatWorkedHM(workedMin)}</b></span>`;
+      cell.appendChild(worked);
+
+      daysHeaderEl.appendChild(cell);
+    }
+  }
+
+  function buildTimeColumn(){
+    const col=document.createElement("div");col.className="timeCol";
+    const slotsWrap=document.createElement("div");slotsWrap.className="slots";
+    for(let h=CONFIG.startHour;h<CONFIG.endHour;h++){
+      const label=document.createElement("div");label.className="timeLabel";label.textContent=pad2(h)+":00";
+      slotsWrap.appendChild(label);
+    }
+    col.appendChild(slotsWrap);return col;
+  }
+  function buildDayColumn(dayIso,totalSlots){
+    const col=document.createElement("div");col.className="dayCol";col.dataset.dayIso=dayIso;
+    const slotsWrap=document.createElement("div");slotsWrap.className="slots";
+    for(let i=0;i<totalSlots;i++){
+      const row=document.createElement("div");row.className="slotRow";
+      if(i%6===0) row.classList.add("major");
+      row.dataset.slotIndex=String(i);
+      slotsWrap.appendChild(row);
+    }
+    col.appendChild(slotsWrap);return col;
+  }
+  function renderGrid(){
+    weekGridEl.innerHTML="";dayCols=[];
+    const totalMinutes=(CONFIG.endHour-CONFIG.startHour)*60;
+    const totalSlots=Math.floor(totalMinutes/CONFIG.stepMinutes);
+    weekGridEl.appendChild(buildTimeColumn());
+    for(const dayIso of dayIsoList){
+      const col=buildDayColumn(dayIso,totalSlots);
+      dayCols.push(col);weekGridEl.appendChild(col);
+    }
+    const slotH=parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--slotH"));
+    const gridHeightPx=totalSlots*slotH;
+    for(const c of [weekGridEl.querySelector(".timeCol"), ...dayCols]) c.style.minHeight=gridHeightPx+"px";
+  }
+
+  function yFromMinutes(mins){
+    const slotH=parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--slotH"));
+    return (mins/CONFIG.stepMinutes)*slotH;
+  }
+  function setEventElementGeometry(el, startM, endM){
+    const topY = yFromMinutes(startM);
+    const hY = yFromMinutes(Math.max(0, endM - startM));
+    el.style.top = (topY+2) + "px";
+    el.style.height = Math.max(18, hY-4) + "px";
+  }
+
+  function overlapsExistingMinutes(dayIso, startM, endM, ignoreId=null){
+    for(const ev of state.events){
+      if(ev.id===ignoreId) continue;
+      if(ev.day!==dayIso) continue;
+      const es=clampMinutesToDay(minutesFromDayStart(new Date(ev.start), dayIso));
+      const ee=clampMinutesToDay(minutesFromDayStart(new Date(ev.end), dayIso));
+      if(startM < ee && endM > es) return true;
+    }
+    return false;
+  }
+
+  function getSlotsRectForDay(dayIso){
+    const col = dayCols.find(c=>c.dataset.dayIso===dayIso);
+    if(!col) return null;
+    const slots = col.querySelector(".slots");
+    const rect = slots.getBoundingClientRect();
+    return {col, slots, rect};
+  }
+  function minutesFromClientY(dayIso, clientY){
+    const info = getSlotsRectForDay(dayIso);
+    if(!info) return 0;
+    const slotH=parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--slotH"));
+    let y = clientY - info.rect.top;
+    if (y < 0) y = 0;
+    const maxY = info.rect.height;
+    if (y > maxY) y = maxY;
+    const rawMins = (y / slotH) * CONFIG.stepMinutes;
+    return clampMinutesToDay(rawMins);
+  }
+
+  /* ===== Selection highlight ===== */
+  function renderSelection(){
+    if(state.view!=="calendar") return;
+    for(const col of dayCols) col.querySelectorAll(".selectionBlock").forEach(n=>n.remove());
+    if(!state.selection) return;
+    const {dayIso,start,end}=state.selection;
+    const col=dayCols.find(c=>c.dataset.dayIso===dayIso); if(!col) return;
+
+    const topM=clampMinutesToDay(minutesFromDayStart(start,dayIso));
+    const endM=clampMinutesToDay(minutesFromDayStart(end,dayIso));
+    const durM=Math.max(0,endM-topM);
+
+    const block=document.createElement("div");
+    block.className="selectionBlock";
+    block.style.top=(yFromMinutes(topM)+2)+"px";
+    block.style.height=Math.max(18,yFromMinutes(durM)-4)+"px";
+
+    const hint=document.createElement("div");
+    hint.className="selectionHint";
+    hint.textContent=`${formatTimeFromMinutes(topM)} → ${formatTimeFromMinutes(endM)}`;
+    block.appendChild(hint);
+    col.appendChild(block);
+  }
+
+  /* =========================================================
+     Drag/Resize em eventos
+     ========================================================= */
+  const EDGE_PX = 10;
+  const DRAG_THRESHOLD_PX = 3;
+
+  const eventDrag = {
+    pending:false,
+    active:false,
+    mode:null,          // "move" | "resize-top" | "resize-bottom"
+    evId:null,
+    dayIso:null,
+    el:null,
+    origStartM:0,
+    origEndM:0,
+    downClientY:0,
+    pointerStartM:0,
+    lastStartM:0,
+    lastEndM:0,
+    justFinished:false
+  };
+
+  function beginEventPending(e, el, ev){
+    if(state.view!=="calendar") return;
+    const r = el.getBoundingClientRect();
+    const y = e.clientY - r.top;
+
+    let mode="move";
+    if (y <= EDGE_PX) mode="resize-top";
+    else if (y >= r.height - EDGE_PX) mode="resize-bottom";
+
+    const dayIso = ev.day;
+    const startM = clampMinutesToDay(minutesFromDayStart(new Date(ev.start), dayIso));
+    const endM   = clampMinutesToDay(minutesFromDayStart(new Date(ev.end), dayIso));
+    const pointerM = minutesFromClientY(dayIso, e.clientY);
+
+    eventDrag.pending=true;
+    eventDrag.active=false;
+    eventDrag.mode=mode;
+    eventDrag.evId=ev.id;
+    eventDrag.dayIso=dayIso;
+    eventDrag.el=el;
+    eventDrag.origStartM=startM;
+    eventDrag.origEndM=endM;
+    eventDrag.downClientY=e.clientY;
+    eventDrag.pointerStartM=pointerM;
+    eventDrag.lastStartM=startM;
+    eventDrag.lastEndM=endM;
+
+    drag.active=false;
+    state.selection=null;
+    renderSelection();
+  }
+
+  function activateEventDrag(){
+    if(!eventDrag.pending || eventDrag.active) return;
+    eventDrag.active=true;
+    eventDrag.el.classList.add("dragging");
+  }
+
+  function cancelEventDragState(){
+    eventDrag.pending=false;
+    eventDrag.active=false;
+    eventDrag.mode=null;
+    eventDrag.evId=null;
+    eventDrag.dayIso=null;
+    eventDrag.el=null;
+    eventDrag.origStartM=0;
+    eventDrag.origEndM=0;
+    eventDrag.downClientY=0;
+    eventDrag.pointerStartM=0;
+    eventDrag.lastStartM=0;
+    eventDrag.lastEndM=0;
+  }
+
+  function onEventDragMove(e){
+    if(state.view!=="calendar") return;
+    if(!eventDrag.pending) return;
+
+    const movedPx = Math.abs(e.clientY - eventDrag.downClientY);
+    if(!eventDrag.active){
+      if(movedPx < DRAG_THRESHOLD_PX) return;
+      activateEventDrag();
+    }
+
+    e.preventDefault();
+
+    const dayIso = eventDrag.dayIso;
+    const curPointerM = minutesFromClientY(dayIso, e.clientY);
+    let deltaM = normalizeToStepMinutes(curPointerM - eventDrag.pointerStartM);
+
+    const step = CONFIG.stepMinutes;
+    let newStart = eventDrag.origStartM;
+    let newEnd   = eventDrag.origEndM;
+
+    if(eventDrag.mode==="move"){
+      const dur = eventDrag.origEndM - eventDrag.origStartM;
+      newStart = eventDrag.origStartM + deltaM;
+      newEnd   = newStart + dur;
+
+      if(newStart < 0){ newStart = 0; newEnd = dur; }
+      if(newEnd > 1440){ newEnd = 1440; newStart = 1440 - dur; }
+
+      newStart = clampMinutesToDay(newStart);
+      newEnd   = clampMinutesToDay(newStart + dur);
+      if(newEnd > 1440){ newEnd = 1440; newStart = 1440 - dur; newStart = clampMinutesToDay(newStart); }
+    }else if(eventDrag.mode==="resize-top"){
+      newStart = eventDrag.origStartM + deltaM;
+      newStart = clampMinutesToDay(newStart);
+      if(newStart > newEnd - step) newStart = newEnd - step;
+      if(newStart < 0) newStart = 0;
+      newStart = clampMinutesToDay(newStart);
+    }else if(eventDrag.mode==="resize-bottom"){
+      newEnd = eventDrag.origEndM + deltaM;
+      newEnd = clampMinutesToDay(newEnd);
+      if(newEnd < newStart + step) newEnd = newStart + step;
+      if(newEnd > 1440) newEnd = 1440;
+      newEnd = clampMinutesToDay(newEnd);
+    }
+
+    eventDrag.lastStartM = newStart;
+    eventDrag.lastEndM   = newEnd;
+
+    setEventElementGeometry(eventDrag.el, newStart, newEnd);
+
+    const timesEl = eventDrag.el.querySelector(".times");
+    if(timesEl) timesEl.textContent = `${formatTimeFromMinutes(newStart)} → ${formatTimeFromMinutes(newEnd)}`;
+  }
+
+  function onEventDragEnd(){
+    if(state.view!=="calendar") { cancelEventDragState(); return; }
+    if(!eventDrag.pending) return;
+
+    const wasDragging = eventDrag.active;
+    const el = eventDrag.el;
+    const evId = eventDrag.evId;
+    const dayIso = eventDrag.dayIso;
+
+    if(!wasDragging){
+      const id = evId;
+      cancelEventDragState();
+      openEditModal(id);
+      return;
+    }
+
+    const newStartM = eventDrag.lastStartM;
+    const newEndM   = eventDrag.lastEndM;
+
+    const step = CONFIG.stepMinutes;
+    const okDuration = (newEndM - newStartM) >= step;
+    let ok = okDuration;
+
+    if(ok && overlapsExistingMinutes(dayIso, newStartM, newEndM, evId)){
+      ok=false;
+      alert("Conflito: já existe evento nesse intervalo (sobreposição não permitida).");
+    }
+    if(!okDuration){
+      ok=false;
+      alert("Não é permitido evento com duração zero.");
+    }
+
+    if(ok){
+      const idx = state.events.findIndex(x=>x.id===evId);
+      if(idx>=0){
+        const day = parseISOToLocalDate(dayIso);
+        const start = setTimeOnDate(day, Math.floor(newStartM/60), newStartM%60);
+        let end;
+        if(newEndM===1440){
+          const next = addDays(day,1);
+          end = setTimeOnDate(next,0,0);
+        }else{
+          end = setTimeOnDate(day, Math.floor(newEndM/60), newEndM%60);
+        }
+        state.events[idx] = {...state.events[idx], start:start.toISOString(), end:end.toISOString()};
+        saveEvents();
+      }
+    }else{
+      setEventElementGeometry(el, eventDrag.origStartM, eventDrag.origEndM);
+      const timesEl = el.querySelector(".times");
+      if(timesEl) timesEl.textContent = `${formatTimeFromMinutes(eventDrag.origStartM)} → ${formatTimeFromMinutes(eventDrag.origEndM)}`;
+    }
+
+    el.classList.remove("dragging");
+    cancelEventDragState();
+
+    eventDrag.justFinished=true;
+    setTimeout(()=>{eventDrag.justFinished=false;}, 120);
+
+    renderAll();
+  }
+
+  /* ===== Render events ===== */
+  function renderEvents(){
+    if(state.view!=="calendar") return;
+    for(const col of dayCols) col.querySelectorAll(".event").forEach(e=>e.remove());
+    const wsIso=toDateOnlyISO(state.weekStart), weIso=toDateOnlyISO(addDays(state.weekStart,6));
+    const inWeek=state.events.filter(ev=>ev.day>=wsIso && ev.day<=weIso);
+
+    for(const ev of inWeek){
+      const col=dayCols.find(c=>c.dataset.dayIso===ev.day); if(!col) continue;
+      const start=new Date(ev.start), end=new Date(ev.end);
+      const topM=clampMinutesToDay(minutesFromDayStart(start,ev.day));
+      const endM=clampMinutesToDay(minutesFromDayStart(end,ev.day));
+
+      const el=document.createElement("div");
+      el.className="event";
+      el.dataset.eventId=ev.id;
+      el.dataset.dayIso=ev.day;
+      setEventElementGeometry(el, topM, endM);
+
+      const pDigit = projectColorDigit(ev.project);
+
+      el.innerHTML=`
+        <div class="topline">
+          <div class="badge" data-pcolor="${pDigit}">Projeto ${escapeHtml(ev.project||"")}</div>
+          <div class="times">${formatTimeFromMinutes(topM)} → ${formatTimeFromMinutes(endM)}</div>
+        </div>
+        <div class="title">${escapeHtml(ev.activityLabel||"")}${ev.activityId?(" · ID "+escapeHtml(ev.activityId)):""}</div>
+        <div class="notes">${escapeHtml(ev.notes||"")}</div>
+      `;
+
+      el.addEventListener("mousemove",(e)=>{
+        if(eventDrag.active) return;
+        const r = el.getBoundingClientRect();
+        const y = e.clientY - r.top;
+        if (y <= EDGE_PX || y >= r.height - EDGE_PX) el.style.cursor = "ns-resize";
+        else el.style.cursor = "grab";
+      });
+      el.addEventListener("mouseleave",()=>{ if(!eventDrag.active) el.style.cursor="pointer"; });
+
+      el.addEventListener("mousedown",(e)=>{
+        if(e.button !== 0) return;
+        if(modalBackdrop.classList.contains("show")) return;
+        e.stopPropagation();
+        beginEventPending(e, el, ev);
+      });
+
+      el.addEventListener("click",(e)=>{
+        if(eventDrag.justFinished) return;
+        e.stopPropagation();
+        openEditModal(ev.id);
+      });
+
+      col.appendChild(el);
+    }
+  }
+
+  /* ===== Render tabela (visão alternativa) ===== */
+  function minutesToHHMM(mins){
+    mins=Math.max(0,Math.round(mins));
+    const hh=Math.floor(mins/60), mm=mins%60;
+    return pad2(hh)+":"+pad2(mm);
+  }
+  function getWeekEventsSorted(){
+    const wsIso=toDateOnlyISO(state.weekStart), weIso=toDateOnlyISO(addDays(state.weekStart,6));
+    return state.events
+      .filter(ev=>ev.day>=wsIso && ev.day<=weIso)
+      .slice()
+      .sort((a,b)=>new Date(a.start)-new Date(b.start));
+  }
+  function renderTable(){
+    if(state.view!=="table") return;
+
+    ensureTableFilterOptions();
+    const pFilter = (tableProjectFilterEl && tableProjectFilterEl.value) ? tableProjectFilterEl.value : "ALL";
+    const aFilter = (tableActivityFilterEl && tableActivityFilterEl.value) ? tableActivityFilterEl.value : "ALL";
+
+    tableBodyEl.innerHTML="";
+    const inWeek = getWeekEventsSorted()
+      .filter(ev=>{
+        const p=(ev.project||"").trim();
+        const a=(ev.activityLabel||"").trim();
+        if(pFilter!=="ALL" && p!==pFilter) return false;
+        if(aFilter!=="ALL" && a!==aFilter) return false;
+        return true;
+      });
+
+    for(const ev of inWeek){
+      const day = parseISOToLocalDate(ev.day);
+      const start = new Date(ev.start);
+      const end = new Date(ev.end);
+
+      const sM = clampMinutesToDay(minutesFromDayStart(start, ev.day));
+      const eM = clampMinutesToDay(minutesFromDayStart(end, ev.day));
+
+      const data = formatDateBR(day);
+      const horaIni = formatTimeFromMinutes(sM);
+      const horaFim = formatTimeFromMinutes(eM);
+      const esforco = minutesToHHMM(Math.max(0, durationMinutes(start,end)));
+      const esforcoDia = formatWorkedHM(sumWorkedMinutesForDay(ev.day));
+
+      const pDigit = projectColorDigit(ev.project);
+
+      const tr = document.createElement("tr");
+      tr.dataset.eventId = ev.id;
+      tr.innerHTML = `
+        <td class="tdMono">${escapeHtml(data)}</td>
+        <td>
+          <span class="tagProject">
+            <span class="badge" data-pcolor="${pDigit}">Projeto ${escapeHtml(ev.project||"")}</span>
+          </span>
+        </td>
+        <td class="tdMono">${escapeHtml(horaIni)}</td>
+        <td class="tdMono">${escapeHtml(horaFim)}</td>
+        <td class="tdMono">${escapeHtml(esforco)}</td>
+        <td class="tdMono">${escapeHtml(esforcoDia)}</td>
+        <td>${escapeHtml(ev.activityLabel||"")}</td>
+        <td class="tdNotes">${escapeHtml(ev.notes||"")}</td>
+        <td class="tdMono">${escapeHtml(ev.activityId||"")}</td>
+      `;
+      tr.addEventListener("click",()=>openEditModal(ev.id));
+      tableBodyEl.appendChild(tr);
+    }
+
+    if(inWeek.length===0){
+      const tr=document.createElement("tr");
+      tr.innerHTML=`<td colspan="9" class="tdMuted">Nenhum evento nesta semana com os filtros atuais.</td>`;
+      tableBodyEl.appendChild(tr);
+    }
+  }
+
+
+
+  
+
+  /* ===== Render Gantt (por projeto na semana) ===== */
+  function getProjectsInWeek(){
+    const inWeek = getWeekEventsSorted();
+    const set = new Set();
+    for(const ev of inWeek){
+      const p = (ev.project||"").trim();
+      if(p) set.add(p);
+    }
+    return Array.from(set).sort((a,b)=>{
+      const na = Number(a), nb = Number(b);
+      if(!Number.isNaN(na) && !Number.isNaN(nb)) return na-nb;
+      return a.localeCompare(b);
+    });
+  }
+
+  function getActivitiesInWeek(projectFilter="ALL"){
+    const inWeek = getWeekEventsSorted();
+    const set = new Set();
+    for(const ev of inWeek){
+      const p=(ev.project||"").trim();
+      if(projectFilter!=="ALL" && p!==projectFilter) continue;
+      const a=(ev.activityLabel||"").trim();
+      if(a) set.add(a);
+    }
+    return Array.from(set).sort((a,b)=>a.localeCompare(b));
+  }
+
+  function ensureTableFilterOptions(){
+    if(!tableProjectFilterEl || !tableActivityFilterEl) return;
+
+    const projects = getProjectsInWeek();
+    const prevP = tableProjectFilterEl.value || "ALL";
+
+    tableProjectFilterEl.innerHTML = "";
+    const optAllP = document.createElement("option");
+    optAllP.value = "ALL";
+    optAllP.textContent = "Todos os projetos";
+    tableProjectFilterEl.appendChild(optAllP);
+
+    for(const p of projects){
+      const o=document.createElement("option");
+      o.value=p;
+      o.textContent=p;
+      tableProjectFilterEl.appendChild(o);
+    }
+
+    if(prevP && (prevP==="ALL" || projects.includes(prevP))){
+      tableProjectFilterEl.value = prevP;
+    }else{
+      tableProjectFilterEl.value = "ALL";
+    }
+
+    // Atividades dependem do projeto escolhido
+    const pSel = tableProjectFilterEl.value || "ALL";
+    const activities = getActivitiesInWeek(pSel);
+    const prevA = tableActivityFilterEl.value || "ALL";
+
+    tableActivityFilterEl.innerHTML = "";
+    const optAllA = document.createElement("option");
+    optAllA.value = "ALL";
+    optAllA.textContent = "Todas as atividades";
+    tableActivityFilterEl.appendChild(optAllA);
+
+    for(const a of activities){
+      const o=document.createElement("option");
+      o.value=a;
+      o.textContent=a;
+      tableActivityFilterEl.appendChild(o);
+    }
+
+    if(prevA && (prevA==="ALL" || activities.includes(prevA))){
+      tableActivityFilterEl.value = prevA;
+    }else{
+      tableActivityFilterEl.value = "ALL";
+    }
+  }
+
+  function updateGanttHeader(daysIso){
+    const heads = ganttViewEl.querySelectorAll("th.gDayHead");
+    const dayNames = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"];
+    heads.forEach((th,idx)=>{
+      const iso = daysIso[idx];
+      const d = parseISOToLocalDate(iso);
+      const worked = formatWorkedHM(sumWorkedMinutesForDay(iso));
+      th.innerHTML = `
+        <div class="gDayName">${dayNames[idx]}</div>
+        <div class="gDayDate">${escapeHtml(formatDateBR(d))}</div>
+        <div class="gDayWorked">
+          <span class="chip"><span class="miniDot"></span>Tempo Trabalhado: <b>${escapeHtml(worked)}</b></span>
+        </div>
+      `;
+    });
+  }
+
+  function ensureGanttFilterOptions(){
+    const projects = getProjectsInWeek();
+    const prev = ganttProjectFilterEl.value || "ALL";
+
+    ganttProjectFilterEl.innerHTML = "";
+    const optAll = document.createElement("option");
+    optAll.value = "ALL";
+    optAll.textContent = "Todos os projetos";
+    ganttProjectFilterEl.appendChild(optAll);
+
+    for(const p of projects){
+      const o = document.createElement("option");
+      o.value = p;
+      o.textContent = p;
+      ganttProjectFilterEl.appendChild(o);
+    }
+
+    if(prev && (prev==="ALL" || projects.includes(prev))){
+      ganttProjectFilterEl.value = prev;
+    }else{
+      ganttProjectFilterEl.value = "ALL";
+    }
+    return projects;
+  }
+
+  function renderGantt(){
+    if(state.view!=="gantt") return;
+
+    ensureGanttFilterOptions();
+    const filter = ganttProjectFilterEl.value || "ALL";
+
+    ganttBodyEl.innerHTML = "";
+
+    const ws = state.weekStart;
+    const daysIso = [];
+    for(let i=0;i<7;i++){
+      const d = addDays(ws,i);
+      daysIso.push(toDateOnlyISO(d));
+    }
+
+    updateGanttHeader(daysIso);
+
+    const inWeek = getWeekEventsSorted();
+
+    // acumula minutos por projeto/dia
+    const map = new Map(); // project -> { totalWeek, byDay: {dayIso: mins}}
+    for(const ev of inWeek){
+      const p = (ev.project||"").trim();
+      if(!p) continue;
+      if(filter!=="ALL" && p!==filter) continue;
+
+      const start = new Date(ev.start);
+      const end = new Date(ev.end);
+      const dur = Math.max(0, durationMinutes(start,end));
+
+      const m = map.get(p) || { totalWeek:0, byDay:{} };
+      m.totalWeek += dur;
+      m.byDay[ev.day] = (m.byDay[ev.day]||0) + dur;
+      map.set(p,m);
+    }
+
+    const rows = Array.from(map.entries())
+      .sort((a,b)=>{
+        const na=Number(a[0]), nb=Number(b[0]);
+        if(!Number.isNaN(na) && !Number.isNaN(nb)) return na-nb;
+        return a[0].localeCompare(b[0]);
+      });
+
+    if(rows.length===0){
+      const tr=document.createElement("tr");
+      tr.innerHTML = `<td class="left tdMuted" colspan="9">Nenhum evento nesta semana.</td>`;
+      ganttBodyEl.appendChild(tr);
+      return;
+    }
+
+    for(const [project, info] of rows){
+      const tr = document.createElement("tr");
+      const pDigit = projectColorDigit(project);
+
+      let tds = "";
+      tds += `<td class="left"><span class="tagProject"><span class="badge" data-pcolor="${pDigit}">Projeto ${escapeHtml(project)}</span></span></td>`;
+      tds += `<td class="tdMono"><b>${escapeHtml(formatWorkedHM(info.totalWeek))}</b></td>`;
+
+      for(const dayIso of daysIso){
+        const mins = info.byDay[dayIso] || 0;
+        if(mins>0){
+          tds += `<td class="gCell on"><span>${escapeHtml(minutesToHHMM(mins))}</span></td>`;
+        }else{
+          tds += `<td class="gCell tdMuted"> </td>`;
+        }
+      }
+
+      tr.innerHTML = tds;
+      ganttBodyEl.appendChild(tr);
+    }
+  }
+
+  function setActiveViewButtons(){
+    btnViewCalendar.classList.toggle("active", state.view==="calendar");
+    btnViewTable.classList.toggle("active", state.view==="table");
+    btnViewGantt.classList.toggle("active", state.view==="gantt");
+  }
+
+  function renderAll(){
+    renderHeader();
+    setActiveViewButtons();
+
+    if(state.view==="calendar"){
+      daysHeaderEl.classList.remove("hidden");
+      calendarViewEl.classList.remove("hidden");
+      tableViewEl.classList.add("hidden");
+      ganttViewEl.classList.add("hidden");
+
+      renderGrid();
+      renderEvents();
+      renderSelection();
+    }else if(state.view==="table"){
+      daysHeaderEl.classList.add("hidden");
+      calendarViewEl.classList.add("hidden");
+      tableViewEl.classList.remove("hidden");
+      ganttViewEl.classList.add("hidden");
+
+      // Evita estados pendentes de drag/selection
+      state.selection=null;
+      cancelEventDragState();
+      drag.active=false;
+
+      ensureTableFilterOptions();
+      renderTable();
+    }else{
+      // gantt
+      daysHeaderEl.classList.add("hidden");
+      calendarViewEl.classList.add("hidden");
+      tableViewEl.classList.add("hidden");
+      ganttViewEl.classList.remove("hidden");
+
+      state.selection=null;
+      cancelEventDragState();
+      drag.active=false;
+
+      renderGantt();
+    }
+  }
+
+  /* ===== Selection by drag on empty grid ===== */
+  let drag={active:false,dayIso:null,startSlot:null,currentSlot:null};
+  function slotFromEventTarget(target){
+    const row=target.closest(".slotRow"); if(!row) return null;
+    const col=row.closest(".dayCol"); if(!col) return null;
+    return {dayIso:col.dataset.dayIso, slotIndex:parseInt(row.dataset.slotIndex,10)};
+  }
+  function dateFromDayAndSlot(dayIso,slotIndex){
+    const day=parseISOToLocalDate(dayIso);
+    const mins=slotIndex*CONFIG.stepMinutes;
+    if(mins===1440){const next=addDays(day,1);return setTimeOnDate(next,0,0);}
+    return setTimeOnDate(day, Math.floor(mins/60), mins%60);
+  }
+
+  const weekGridElRef=weekGridEl;
+  let handlersBound=false;
+  function bindGlobalHandlersOnce(){
+    if(handlersBound) return; handlersBound=true;
+
+    weekGridElRef.addEventListener("mousedown", onMouseDownGrid);
+    window.addEventListener("mousemove", onMouseMoveGlobal);
+    window.addEventListener("mouseup", onMouseUpGlobal);
+
+    window.addEventListener("mousemove", onEventDragMove, {passive:false});
+    window.addEventListener("mouseup", onEventDragEnd);
+
+    // Backup automático: tenta salvar antes de sair
+    window.addEventListener("pagehide", ()=>{ exportBackupXLSX({reason:"pagehide"}).catch(()=>{}); });
+    document.addEventListener("visibilitychange", ()=>{
+      if(document.visibilityState==="hidden"){
+        exportBackupXLSX({reason:"visibility"}).catch(()=>{});
+      }
+    });
+  }
+
+  function onMouseDownGrid(e){
+    if(state.view!=="calendar") return;
+    if(e.target.closest(".event")) return;
+    if(eventDrag.pending) return;
+    const hit=slotFromEventTarget(e.target); if(!hit) return;
+    e.preventDefault();
+    drag.active=true;drag.dayIso=hit.dayIso;drag.startSlot=hit.slotIndex;drag.currentSlot=hit.slotIndex;
+    const start=dateFromDayAndSlot(drag.dayIso,drag.startSlot);
+    const end=dateFromDayAndSlot(drag.dayIso,drag.startSlot+1);
+    state.selection={dayIso:drag.dayIso,start,end};renderSelection();
+  }
+  function onMouseMoveGlobal(e){
+    if(state.view!=="calendar") return;
+    if(!drag.active) return;
+    const hit=slotFromEventTarget(e.target); if(!hit || hit.dayIso!==drag.dayIso) return;
+    drag.currentSlot=hit.slotIndex;
+
+    const totalSlots=Math.floor(((CONFIG.endHour-CONFIG.startHour)*60)/CONFIG.stepMinutes);
+    const a=drag.startSlot, b=drag.currentSlot;
+    let startSlot=Math.min(a,b), endSlot=Math.max(a,b)+1;
+    startSlot=Math.max(0,Math.min(totalSlots-1,startSlot));
+    endSlot=Math.max(1,Math.min(totalSlots,endSlot));
+
+    const start=dateFromDayAndSlot(drag.dayIso,startSlot);
+    const end=dateFromDayAndSlot(drag.dayIso,endSlot);
+    state.selection={dayIso:drag.dayIso,start,end};renderSelection();
+  }
+  function onMouseUpGlobal(){
+    if(state.view!=="calendar") return;
+    if(!drag.active) return;
+    drag.active=false;
+    if(!state.selection) return;
+    if(durationMinutes(state.selection.start,state.selection.end)<=0){state.selection=null;renderSelection();return;}
+    openCreateModalFromSelection();
+  }
+
+  /* =========================================================
+     Modal
+     ========================================================= */
+  const modalBackdrop=document.getElementById("modalBackdrop");
+  const modalTitleEl=document.getElementById("modalTitle");
+  const modalWhenEl=document.getElementById("modalWhen");
+  const modalInfoEl=document.getElementById("modalInfo");
+  const modalInfoTextEl=document.getElementById("modalInfoText");
+
+  const startTimeSelectEl=document.getElementById("startTimeSelect");
+  const endTimeSelectEl=document.getElementById("endTimeSelect");
+  const projectInputEl=document.getElementById("projectInput");
+  const activityNameInputEl=document.getElementById("activityNameInput");
+  const activityDatalistEl=document.getElementById("activityDatalist");
+  const activityIdInputEl=document.getElementById("activityIdInput");
+  const notesInputEl=document.getElementById("notesInput");
+  const btnCopyFieldsEl=document.getElementById("btnCopyFields");
+  const btnPasteFieldsEl=document.getElementById("btnPasteFields");
+  const idLookupPill=document.getElementById("idLookupPill");
+  const idLookupText=document.getElementById("idLookupText");
+  const btnDelete=document.getElementById("btnDelete");
+
+  function setModalInfo(msg){
+    if(!msg){modalInfoEl.classList.add("hidden");modalInfoTextEl.textContent="";return;}
+    modalInfoEl.classList.remove("hidden");modalInfoTextEl.textContent=msg;
+  }
+  
+  function updatePasteButtonState(){
+    const clip = getClipboardFields();
+    const has = !!(clip && (clip.project || clip.activityLabel || clip.activityId || clip.notes));
+    if(btnPasteFieldsEl) btnPasteFieldsEl.disabled = !has;
+  }
+
+  function showModal(show){
+    if(show){
+      modalBackdrop.classList.add("show");
+      modalBackdrop.setAttribute("aria-hidden","false");
+      setModalInfo("");
+      updatePasteButtonState();
+      setTimeout(()=>projectInputEl.focus(),0);
+    }else{
+      modalBackdrop.classList.remove("show");
+      modalBackdrop.setAttribute("aria-hidden","true");
+    }
+  }
+  function setIdLookupStatus(kind,text){
+    idLookupPill.classList.remove("ok","warn");
+    idLookupPill.classList.add(kind==="ok"?"ok":"warn");
+    idLookupText.textContent=text;
+  }
+  function buildTimeOptions(){
+    startTimeSelectEl.innerHTML=""; endTimeSelectEl.innerHTML="";
+    for(let m=0;m<=1430;m+=CONFIG.stepMinutes){
+      const opt=document.createElement("option");opt.value=String(m);opt.textContent=formatTimeFromMinutes(m);
+      startTimeSelectEl.appendChild(opt);
+    }
+    for(let m=10;m<=1440;m+=CONFIG.stepMinutes){
+      const opt=document.createElement("option");opt.value=String(m);opt.textContent=formatTimeFromMinutes(m);
+      endTimeSelectEl.appendChild(opt);
+    }
+  }
+  function fillActivityNames(){
+    activityDatalistEl.innerHTML="";
+    for(const name of ACTIVITY_NAMES){
+      const opt=document.createElement("option");
+      opt.value=name;
+      activityDatalistEl.appendChild(opt);
+    }
+
+  }
+  function resetModalFields(){
+    projectInputEl.value="";
+    activityNameInputEl.value="";
+    activityIdInputEl.value="";
+    notesInputEl.value="";
+    setIdLookupStatus("warn", state.idBaseIndex ? "ID: selecione projeto e atividade" : "ID: preencha manualmente (base não consultada)");
+  }
+  function setTimeSelectorsFromSelection(dayIso,start,end){
+    const sM=clampMinutesToDay(minutesFromDayStart(start,dayIso));
+    const eM=clampMinutesToDay(minutesFromDayStart(end,dayIso));
+    startTimeSelectEl.value=String(Math.min(1430,sM));
+    endTimeSelectEl.value=String(Math.max(10,Math.min(1440,eM)));
+  }
+  function selectionFromTimeSelectors(dayIso){
+    let sM=clampMinutesToDay(parseInt(startTimeSelectEl.value||"0",10));
+    let eM=clampMinutesToDay(parseInt(endTimeSelectEl.value||"10",10));
+    if(sM>=1440) sM=1430;
+    if(eM<=0) eM=10;
+    if(eM<=sM) eM=Math.min(1440, sM+CONFIG.stepMinutes);
+
+    const day=parseISOToLocalDate(dayIso);
+    const start=setTimeOnDate(day, Math.floor(sM/60), sM%60);
+    let end;
+    if(eM===1440){const next=addDays(day,1); end=setTimeOnDate(next,0,0);}
+    else end=setTimeOnDate(day, Math.floor(eM/60), eM%60);
+    return {dayIso,start,end};
+  }
+  function refreshModalWhen(){
+    if(!state.selection) return;
+    const sel=state.selection;
+    modalWhenEl.textContent=`${formatDateTimeBRFromDay(sel.start,sel.dayIso)} → ${formatDateTimeBRFromDay(sel.end,sel.dayIso)}`;
+  }
+  function overlapsExisting(dayIso,start,end,ignoreId=null){
+    const s=minutesFromDayStart(start,dayIso), e=minutesFromDayStart(end,dayIso);
+    for(const ev of state.events){
+      if(ev.id===ignoreId) continue;
+      if(ev.day!==dayIso) continue;
+      const es=minutesFromDayStart(new Date(ev.start),dayIso);
+      const ee=minutesFromDayStart(new Date(ev.end),dayIso);
+      if(s<ee && e>es) return true;
+    }
+    return false;
+  }
+  function genId(){return "ev_"+Math.random().toString(16).slice(2)+"_"+Date.now().toString(16)}
+
+  function lookupIdFor(project,activityName){
+    if(!state.idBaseIndex) return "";
+    const p=normKey(project), a=normKey(activityName);
+    if(!p || !a) return "";
+    const hit1=state.idBaseIndex[`${p}||${a}`];
+    if(hit1) return String(hit1);
+    const pn=String(project).match(/\b(\d{3,})\b/)?.[1]||"";
+    if(pn){
+      const hit2=state.idBaseIndex[`${normKey(pn)}||${a}`];
+      if(hit2) return String(hit2);
+    }
+    return "";
+  }
+  function maybeAutoFillId(){
+    const project=(projectInputEl.value||"").trim();
+    const activityName=(activityNameInputEl.value||"").trim();
+    if(!state.idBaseIndex){setIdLookupStatus("warn","ID: preencha manualmente (base não consultada)");return;}
+    if(!project || !activityName){setIdLookupStatus("warn","ID: selecione projeto e atividade");return;}
+    const found=lookupIdFor(project,activityName);
+    if(found){
+      activityIdInputEl.value=found;
+      setIdLookupStatus("ok","ID preenchido automaticamente pela base");
+    }else{
+      // Se a combinação Projeto + Atividade não existir na base carregada, sempre limpa o ID
+      activityIdInputEl.value="";
+      setIdLookupStatus("warn","ID não encontrado — campo limpo");
+    }
+  }
+
+  function openCreateModalFromSelection(){
+    state.editingEventId=null;
+    btnDelete.classList.add("hidden");
+    modalTitleEl.textContent="Novo evento";
+    const sel=state.selection; if(!sel) return;
+    setTimeSelectorsFromSelection(sel.dayIso,sel.start,sel.end);
+    refreshModalWhen();
+    resetModalFields();
+    showModal(true);
+    maybeAutoFillId();
+  }
+  function openCreateModalFromTable(){
+    // Cria um apontamento "em branco" a partir da visão de tabela
+    state.editingEventId=null;
+    btnDelete.classList.add("hidden");
+    modalTitleEl.textContent="Novo evento";
+
+    // Dia padrão: se "hoje" está na semana exibida, usa hoje; senão, usa o primeiro dia da semana exibida
+    const today=new Date();
+    const weekStart=new Date(state.weekStart);
+    const weekEnd=addDays(weekStart,6);
+    const day=(today>=weekStart && today<=weekEnd) ? today : weekStart;
+
+    // --- CORREÇÃO AQUI: formatISODate(day) não existia. Substituído por toDateOnlyISO(day) ---
+    const dayIso=toDateOnlyISO(day);
+
+    // Hora padrão: arredonda para o próximo step e cria 1h (ou 30min) de duração
+    const nowMin=today.getHours()*60+today.getMinutes();
+    const step=CONFIG.stepMinutes;
+    let startMin=Math.ceil(nowMin/step)*step;
+    startMin=Math.max(CONFIG.startHour*60, Math.min(1430, startMin));
+    let endMin=Math.min(1440, startMin+60);
+    if(endMin<=startMin) endMin=Math.min(1440, startMin+step);
+
+    const dayLocal=parseISOToLocalDate(dayIso);
+    const start=setTimeOnDate(dayLocal, Math.floor(startMin/60), startMin%60);
+    let end;
+    if(endMin===1440){const next=addDays(dayLocal,1); end=setTimeOnDate(next,0,0);}
+    else end=setTimeOnDate(dayLocal, Math.floor(endMin/60), endMin%60);
+
+    state.selection={dayIso,start,end};
+    setTimeSelectorsFromSelection(dayIso,start,end);
+    refreshModalWhen();
+    resetModalFields();
+    showModal(true);
+    maybeAutoFillId();
+  }
+
+
+  function openEditModal(eventId){
+    const ev=state.events.find(x=>x.id===eventId); if(!ev) return;
+    state.editingEventId=eventId;
+    btnDelete.classList.remove("hidden");
+    modalTitleEl.textContent="Editar evento";
+    const start=new Date(ev.start), end=new Date(ev.end);
+    state.selection={dayIso:ev.day,start,end};
+    setTimeSelectorsFromSelection(ev.day,start,end);
+    refreshModalWhen();
+    if(state.view==="calendar") renderSelection();
+
+    projectInputEl.value=ev.project||"";
+    const act=ev.activityLabel||"";
+    if(act && !ACTIVITY_NAMES.includes(act)){
+      const opt=document.createElement("option");opt.value=act;opt.textContent=act;
+      activityDatalistEl.appendChild(opt);
+    }
+    activityNameInputEl.value=act || (ACTIVITY_NAMES[0]||"");
+    activityIdInputEl.value=ev.activityId||"";
+    notesInputEl.value=ev.notes||"";
+    showModal(true);
+    maybeAutoFillId();
+  }
+  function closeModalDiscardSelection(){
+    showModal(false);
+    if(!state.editingEventId){state.selection=null; if(state.view==="calendar") renderSelection();}
+    state.editingEventId=null;
+  }
+
+  function onSave(){
+    if(!state.selection){setModalInfo("Seleção inválida. Feche e selecione novamente.");return;}
+    const dayIso=state.selection.dayIso;
+    const sel=selectionFromTimeSelectors(dayIso);
+    state.selection=sel;
+    if(durationMinutes(sel.start,sel.end)<=0){setModalInfo("Não é permitido evento com duração zero.");return;}
+
+    const project=(projectInputEl.value||"").trim();
+    const activityLabel=(activityNameInputEl.value||"").trim();
+    const activityId=(activityIdInputEl.value||"").trim();
+    const notes=(notesInputEl.value||"").trim();
+
+    if(!project){setModalInfo("Informe o projeto.");return;}
+    if(!activityLabel){setModalInfo("Selecione uma atividade.");return;}
+    if(!activityId){setModalInfo("Informe o ID da atividade.");return;}
+    if(overlapsExisting(dayIso,sel.start,sel.end,state.editingEventId)){
+      setModalInfo("Conflito: já existe evento nesse intervalo (sobreposição não permitida).");return;
+    }
+
+    if(state.editingEventId){
+      const idx=state.events.findIndex(e=>e.id===state.editingEventId);
+      if(idx>=0){
+        state.events[idx]={...state.events[idx],start:sel.start.toISOString(),end:sel.end.toISOString(),day:dayIso,project,activityId,activityLabel,notes};
+      }
+    }else{
+      state.events.push({id:genId(),start:sel.start.toISOString(),end:sel.end.toISOString(),day:dayIso,project,activityId,activityLabel,notes});
+    }
+
+    saveEvents();
+    showModal(false);
+    state.selection=null;
+    state.editingEventId=null;
+    renderAll();
+  }
+
+  function onDelete(){
+    if(!state.editingEventId) return;
+    state.events=state.events.filter(e=>e.id!==state.editingEventId);
+    saveEvents();
+    showModal(false);
+    state.selection=null;
+    state.editingEventId=null;
+    renderAll();
+  }
+
+  startTimeSelectEl.addEventListener("change",()=>{if(!state.selection)return;state.selection=selectionFromTimeSelectors(state.selection.dayIso);refreshModalWhen(); if(state.view==="calendar") renderSelection();});
+  endTimeSelectEl.addEventListener("change",()=>{if(!state.selection)return;state.selection=selectionFromTimeSelectors(state.selection.dayIso);refreshModalWhen(); if(state.view==="calendar") renderSelection();});
+  projectInputEl.addEventListener("input",()=>{clearTimeout(projectInputEl._t);projectInputEl._t=setTimeout(maybeAutoFillId,120);});
+  activityNameInputEl.addEventListener("input",()=>{clearTimeout(activityNameInputEl._t);activityNameInputEl._t=setTimeout(maybeAutoFillId,120);});
+
+  // Copiar/Colar campos do evento (Projeto/Atividade/ID/Observação)
+  if(btnCopyFieldsEl) btnCopyFieldsEl.addEventListener("click", ()=>{
+    const payload = {
+      project: (projectInputEl.value||"").trim(),
+      activityLabel: (activityNameInputEl.value||"").trim(),
+      activityId: (activityIdInputEl.value||"").trim(),
+      notes: (notesInputEl.value||"").trim()
+    };
+    setClipboardFields(payload);
+    updatePasteButtonState();
+    setModalInfo("Campos copiados. Abra outro evento e clique em Colar.", false);
+  });
+  if(btnPasteFieldsEl) btnPasteFieldsEl.addEventListener("click", ()=>{
+    const clip = getClipboardFields();
+    if(!clip){ updatePasteButtonState(); return; }
+    projectInputEl.value = clip.project || "";
+    ensureSelectHasValue(activityDatalistEl, clip.activityLabel || "");
+    if(clip.activityLabel) activityNameInputEl.value = clip.activityLabel;
+    activityIdInputEl.value = clip.activityId || "";
+    notesInputEl.value = clip.notes || "";
+    setIdLookupStatus("ok","ID colado (não alterado)");
+    setModalInfo("Campos colados.");
+  });
+
+  document.getElementById("modalClose").addEventListener("click", closeModalDiscardSelection);
+  document.getElementById("btnCancel").addEventListener("click", closeModalDiscardSelection);
+  document.getElementById("btnSave").addEventListener("click", onSave);
+  document.getElementById("btnDelete").addEventListener("click", onDelete);
+
+  modalBackdrop.addEventListener("click",(e)=>{ if(e.target===modalBackdrop) closeModalDiscardSelection(); });
+  window.addEventListener("keydown",(e)=>{ if(e.key==="Escape" && modalBackdrop.classList.contains("show")) closeModalDiscardSelection(); });
+
+  /* =========================================================
+     CSV Export (UTF-8 + BOM) — compatível com Excel (pt-BR)
+     - Usa ";" como separador (padrão do Excel no Brasil)
+     - Colunas na ordem solicitada
+     ========================================================= */
+  const btnExportCsv=document.getElementById("btnExportCsv");
+  const csvEmailInput=document.getElementById("csvEmailInput");
+  let EXPORT_EMAIL = (localStorage.getItem("exportEmail")||"").trim();
+  if(csvEmailInput){ csvEmailInput.value = EXPORT_EMAIL; csvEmailInput.addEventListener("input", ()=>{
+    EXPORT_EMAIL = (csvEmailInput.value||"").trim();
+    localStorage.setItem("exportEmail", EXPORT_EMAIL);
+    try{ kvSet && kvSet("exportEmail", EXPORT_EMAIL).catch(()=>{}); }catch{}
+  });
+    // tenta carregar do IndexedDB (se existir) sem travar a UI
+    try{ kvGet && kvGet("exportEmail").then(v=>{
+      const s = String(v||"").trim();
+      if(s && s!==EXPORT_EMAIL){ EXPORT_EMAIL=s; localStorage.setItem("exportEmail", EXPORT_EMAIL); csvEmailInput.value=EXPORT_EMAIL; }
+    }).catch(()=>{});}catch{}
+  }
+
+  // Escapa valores para CSV com separador ";"
+  function csvEscape(v){
+    const s=String(v??"");
+    // se contiver aspas, quebras de linha ou o separador, envolve em aspas e duplica aspas internas
+    if(/["\n\r;]/.test(s)) return '"' + s.replaceAll('"','""') + '"';
+    return s;
+  }
+  function getStartHHMM(ev){
+    const start=new Date(ev.start);
+    const m=clampMinutesToDay(minutesFromDayStart(start, ev.day));
+    return formatTimeFromMinutes(m);
+  }
+  function getEndHHMM(ev){
+    const end=new Date(ev.end);
+    const m=clampMinutesToDay(minutesFromDayStart(end, ev.day));
+    return formatTimeFromMinutes(m);
+  }
+
+  function exportCsv(){
+    const rows=[];
+
+    // Cabeçalho na ordem solicitada
+    rows.push([
+      "Data",
+      "Projeto",
+      "Hora Início",
+      "Hora de Término",
+      "Esforço",
+      "Esforço Dia",
+      "Atividade",
+      "Observação",
+      "Artia",
+      "ID da Atividade",
+      "E-mail"
+    ]);
+
+    const sorted=[...state.events].sort((a,b)=>new Date(a.start)-new Date(b.start));
+
+    for(const ev of sorted){
+      const dayDate=parseISOToLocalDate(ev.day);
+      const data=formatDateBR(dayDate);
+
+      const start=new Date(ev.start);
+      const end=new Date(ev.end);
+
+      const durMin=Math.max(0,durationMinutes(start,end));
+      const esforco=minutesToHHMM(durMin);
+
+      // soma do total de horas no dia (considerando todos os eventos do mesmo dia)
+      const esforcoDia=formatWorkedHM(sumWorkedMinutesForDay(ev.day));
+
+      rows.push([
+        data,
+        ev.project||"",
+        getStartHHMM(ev),
+        getEndHHMM(ev),
+        esforco,
+        esforcoDia,
+        ev.activityLabel||"",
+        ev.notes||"",
+        "",                 // Artia (em branco)
+        ev.activityId||"",  // ID da Atividade (ID Artia)
+        EXPORT_EMAIL
+      ]);
+    }
+
+    // ";" para abrir em colunas no Excel pt-BR
+    const csvBody=rows.map(r=>r.map(csvEscape).join(";")).join("\n");
+    const csvWithBom="\uFEFF"+csvBody;
+
+    const blob=new Blob([csvWithBom],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download="apontamento_horas.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),0);
+  }
+
+  btnExportCsv.addEventListener("click", exportCsv);
+
+  // Botão "Novo apontamento" na visão Tabela (robusto para qualquer ordem de carregamento)
+const btnNewFromTable=document.getElementById("btnNewFromTable");
+// Expõe o handler no escopo global para evitar problemas de escopo/ordem em browsers mais chatos
+window.__openCreateModalFromTable = openCreateModalFromTable;
+
+if(btnNewFromTable){
+  btnNewFromTable.type = "button";
+  btnNewFromTable.addEventListener("click", (e)=>{
+    e.preventDefault();
+    e.stopPropagation();
+    openCreateModalFromTable();
+  });
+}
+
+/* =========================================================
+     Navegação + Toggle View
+     ========================================================= */
+  const btnPrev=document.getElementById("btnPrev");
+  const btnToday=document.getElementById("btnToday");
+  const btnNext=document.getElementById("btnNext");
+  const btnClearWeek=document.getElementById("btnClearWeek");
+  const btnClearAll=document.getElementById("btnClearAll");
+
+  function goWeek(deltaWeeks){
+    state.weekStart=addDays(state.weekStart, deltaWeeks*7);
+    state.selection=null;state.editingEventId=null;renderAll();
+  }
+  function goToday(){
+    state.weekStart=startOfWeekMonday(new Date());
+    state.selection=null;state.editingEventId=null;renderAll();
+    document.getElementById("gridWrap").scrollTop=0;
+  }
+  btnPrev.addEventListener("click",()=>goWeek(-1));
+  btnNext.addEventListener("click",()=>goWeek(1));
+  btnToday.addEventListener("click",()=>goToday());
+  btnClearWeek.addEventListener("click",()=>{if(confirm("Limpar eventos apenas da semana atual?")) clearWeek();});
+  btnClearAll.addEventListener("click",()=>{if(confirm("Limpar TODOS os eventos (todas as semanas)?")) clearAll();});
+
+  
+  // Alternância de visão
+  btnViewCalendar.addEventListener("click",()=>{
+    state.view="calendar";
+    renderAll();
+  });
+  btnViewTable.addEventListener("click",()=>{
+    state.view="table";
+    renderAll();
+  });
+  btnViewGantt.addEventListener("click",()=>{
+    state.view="gantt";
+    renderAll();
+  });
+
+  ganttProjectFilterEl.addEventListener("change",()=>{
+    if(state.view==="gantt") renderGantt();
+  });
+
+  if(tableProjectFilterEl) tableProjectFilterEl.addEventListener("change",()=>{
+    if(state.view!=="table") return;
+    ensureTableFilterOptions();
+    renderTable();
+  });
+  if(tableActivityFilterEl) tableActivityFilterEl.addEventListener("change",()=>{
+    if(state.view==="table") renderTable();
+  });
+
+  /* =========================================================
+     XLSX Import (sem libs)
+     ========================================================= */
+  const btnLoadBase=document.getElementById("btnLoadBase");
+  const fileBaseInput=document.getElementById("fileBaseInput");
+  btnLoadBase.addEventListener("click",()=>fileBaseInput.click());
+
+  fileBaseInput.addEventListener("change", async ()=>{
+    const file=fileBaseInput.files && fileBaseInput.files[0];
+    if(!file) return;
+    try{
+      setBaseStatus(false,null);baseStatusTextEl.textContent="Base IDs: carregando...";
+      const buf=await file.arrayBuffer();
+      const zip=await readZipEntries(buf);
+      const sharedXml=await zipReadText(zip,"xl/sharedStrings.xml");
+      const sheetXml=await zipReadText(zip,"xl/worksheets/sheet1.xml") || await zipReadText(zip,"xl/worksheets/sheet.xml");
+      if(!sheetXml) throw new Error("Não encontrei xl/worksheets/sheet1.xml (primeira aba).");
+
+      const shared=sharedXml?parseSharedStrings(sharedXml):[];
+      const rows=parseSheetRows(sheetXml, shared);
+
+      const index={};
+      for(const r of rows){
+        const actA=(r.A??"").trim();
+        const idB=(r.B??"").trim();
+        const cVal=(r.C??"").trim();
+        if(!actA || !idB) continue;
+
+        const proj=extractProjectFromC(cVal)||"";
+        if(proj){
+          const k=`${normKey(proj)}||${normKey(actA)}`;
+          if(!index[k]) index[k]=idB;
+        }
+        if(proj && cVal){
+          const rest=cVal.replace(new RegExp("\\b"+proj+"\\b"),"").replace(/^[-–—\s]+/,"").trim();
+          if(rest){
+            const k2=`${normKey(proj)}||${normKey(rest)}`;
+            if(!index[k2]) index[k2]=idB;
+          }
+        }
+      }
+
+      const meta={rows:rows.length,indexed:Object.keys(index).length,loadedAt:new Date().toISOString(),fileName:file.name};
+      saveIdBaseToStorage(index,meta);
+      setIdLookupStatus("warn","ID: selecione projeto e atividade");
+      maybeAutoFillId();
+    }catch(err){
+      console.error(err);
+      setBaseStatus(false,null);
+      alert("Falha ao ler a base XLSX.\n\nConfirme: A=Atividade, B=ID, C=Projeto+Nome.\n\nErro: "+(err?.message||err));
+    }finally{
+      fileBaseInput.value="";
+    }
+
+  });
+
+
+
+  /* =========================================================
+     Importar eventos da aba "atividades" (XLSX)
+     - Lê a aba "atividades" da planilha e cria eventos no calendário
+     - Colunas esperadas (cabeçalho): Data, Projeto, Hora Início, Hora de Término, Atividade, Observação, ID da Atividade
+     ========================================================= */
+  const btnImportActivities=document.getElementById("btnImportActivities");
+  const fileActivitiesInput=document.getElementById("fileActivitiesInput");
+
+  if(btnImportActivities && fileActivitiesInput){
+    btnImportActivities.addEventListener("click",()=>fileActivitiesInput.click());
+
+    fileActivitiesInput.addEventListener("change", async ()=>{
+      const file=fileActivitiesInput.files && fileActivitiesInput.files[0];
+      if(!file) return;
+
+      // OK = substituir tudo | Cancel = mesclar
+      const replaceAll = confirm(
+        'Importar eventos da aba "atividades"?\n\nOK = substituir TODOS os eventos atuais\nCancelar = mesclar (manter os eventos atuais e adicionar os importados)'
+      );
+
+      try{
+        const buf=await file.arrayBuffer();
+        const zip=await readZipEntries(buf);
+
+        const sharedXml=await zipReadText(zip,"xl/sharedStrings.xml");
+        const shared=sharedXml?parseSharedStrings(sharedXml):[];
+
+        const sheetPath = await findWorksheetPathByName(zip, "atividades");
+        if(!sheetPath) throw new Error('Não encontrei a aba "atividades" dentro do XLSX.');
+
+        const sheetXml=await zipReadText(zip, sheetPath);
+        if(!sheetXml) throw new Error('Não consegui ler o conteúdo da aba "atividades".');
+
+        const rows=parseSheetRowsAny(sheetXml, shared);
+        if(!rows.length) throw new Error("A aba parece vazia.");
+
+        const {headerRowIndex, colMap}=findHeaderMapping(rows);
+        if(headerRowIndex<0) throw new Error('Não encontrei o cabeçalho (linha com "Data" e "Projeto").');
+
+        const imported = buildEventsFromRows(rows, headerRowIndex, colMap);
+
+        if(!imported.length) throw new Error("Não encontrei linhas válidas para importar.");
+
+        if(replaceAll){
+          state.events = imported;
+        }else{
+          // mescla: evita duplicados óbvios (mesmo day + start + end + project + activityId + notes)
+          const sig = (e)=>`${e.day}|${e.start}|${e.end}|${e.project}|${e.activityId}|${e.notes}`;
+          const existing = new Set(state.events.map(sig));
+          for(const ev of imported){
+            const s = sig(ev);
+            if(!existing.has(s)){
+              existing.add(s);
+              state.events.push(ev);
+            }
+          }
+        }
+
+        saveEvents();
+        renderAll();
+        alert(`Importação concluída.\n\nEventos importados: ${imported.length}`);
+      }catch(err){
+        console.error(err);
+        alert("Falha ao importar a aba atividades.\n\nErro: "+(err?.message||err));
+      }finally{
+        fileActivitiesInput.value="";
+      }
+    });
+  }
+
+
+  /* ===== Backup (XLSX) ===== */
+  const btnSetBackupTarget=document.getElementById("btnSetBackupTarget");
+  const btnExportBackupNow=document.getElementById("btnExportBackupNow");
+
+  if(btnSetBackupTarget){
+    btnSetBackupTarget.addEventListener("click", async ()=>{
+      try{
+        if(!window.showSaveFilePicker){
+          alert("Seu navegador não suporta sobrescrever arquivo automaticamente.\n\nUse o botão “Exportar Backup agora” (download) ou abra no Chrome/Edge.");
+          return;
+        }
+        const handle = await window.showSaveFilePicker({
+          suggestedName: "backup_artia.xlsx",
+          types: [{
+            description: "Planilha Excel",
+            accept: {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":[".xlsx"]}
+          }]
+        });
+        await kvSet("backupFileHandle", handle);
+        await exportBackupXLSX({reason:"manual"});
+        alert("Destino definido. A partir de agora o backup será sobrescrito automaticamente ao fechar a página.");
+      }catch(err){
+        if(err && err.name==="AbortError") return;
+        console.error(err);
+        alert("Não foi possível definir o destino do backup.\n\nErro: "+(err?.message||err));
+      }
+    });
+  }
+
+  if(btnExportBackupNow){
+    btnExportBackupNow.addEventListener("click", async ()=>{
+      await exportBackupXLSX({reason:"manual"});
+    });
+  }
+
+  async function findWorksheetPathByName(zip, targetName){
+    const wbXml = await zipReadText(zip, "xl/workbook.xml");
+    if(!wbXml) return "";
+    const relsXml = await zipReadText(zip, "xl/_rels/workbook.xml.rels");
+    if(!relsXml) return "";
+
+    const wbDoc = new DOMParser().parseFromString(wbXml,"application/xml");
+    const relDoc = new DOMParser().parseFromString(relsXml,"application/xml");
+
+    const sheets = Array.from(wbDoc.getElementsByTagName("sheet"));
+    const targetNorm = String(targetName||"").trim().toLowerCase();
+
+    let rId = "";
+    for(const sh of sheets){
+      const name = (sh.getAttribute("name")||"").trim().toLowerCase();
+      if(name===targetNorm){
+        rId = sh.getAttribute("r:id") || sh.getAttribute("id") || "";
+        break;
+      }
+    }
+    if(!rId) return "";
+
+    const rels = Array.from(relDoc.getElementsByTagName("Relationship"));
+    for(const r of rels){
+      if((r.getAttribute("Id")||"")===rId){
+        const tgt = r.getAttribute("Target")||"";
+        if(!tgt) return "";
+        // Target normalmente: "worksheets/sheet2.xml"
+        return tgt.startsWith("xl/") ? tgt : ("xl/"+tgt.replace(/^\/+/,""));
+      }
+    }
+    return "";
+  }
+
+  function parseSheetRowsAny(sheetXml,sharedStrings){
+    const doc=new DOMParser().parseFromString(sheetXml,"application/xml");
+    const rows=doc.getElementsByTagName("row");
+    const out=[];
+    for(const row of rows){
+      const cells=row.getElementsByTagName("c");
+      const obj={}; // colLetter -> value (string)
+      for(const c of cells){
+        const r=c.getAttribute("r")||"";
+        const col=(r.match(/^[A-Z]+/)||[""])[0];
+        if(!col) continue;
+
+        const t=c.getAttribute("t");
+        let value="";
+
+        if(t==="s"){
+          const v=c.getElementsByTagName("v")[0]?.textContent ?? "";
+          value = sharedStrings[parseInt(v,10)] ?? "";
+        }else if(t==="inlineStr"){
+          const tt=c.getElementsByTagName("t");
+          let s=""; for(const x of tt) s+=x.textContent||"";
+          value=s;
+        }else{
+          const v=c.getElementsByTagName("v")[0]?.textContent ?? "";
+          value=v;
+        }
+
+        obj[col]=String(value??"").trim();
+      }
+      // guarda só se tiver algo
+      if(Object.keys(obj).length) out.push(obj);
+    }
+    return out;
+  }
+
+  function findHeaderMapping(rows){
+    const want = (s)=>normKey(String(s||""));
+    const headerLabels = {
+      data: ["data"],
+      projeto: ["projeto"],
+      inicio: ["hora início","hora inicio","início","inicio"],
+      fim: ["hora de término","hora de termino","término","termino","fim"],
+      atividade: ["atividade"],
+      observacao: ["observação","observacao"],
+      id: ["id da atividade","id","id atividade"],
+    };
+
+    for(let i=0;i<rows.length;i++){
+      const r=rows[i];
+      const entries=Object.entries(r);
+      const normEntries=entries.map(([col,val])=>[col,want(val)]);
+      const hasData=normEntries.some(([,v])=>v==="data");
+      const hasProj=normEntries.some(([,v])=>v==="projeto");
+      if(!hasData || !hasProj) continue;
+
+      const colMap={}; // field -> colLetter
+      for(const [col,v] of normEntries){
+        for(const [field,opts] of Object.entries(headerLabels)){
+          if(opts.includes(v) && !colMap[field]) colMap[field]=col;
+        }
+      }
+      return {headerRowIndex:i, colMap};
+    }
+    return {headerRowIndex:-1, colMap:{}};
+  }
+
+  function buildEventsFromRows(rows, headerRowIndex, colMap){
+    const imported=[];
+    for(let i=headerRowIndex+1;i<rows.length;i++){
+      const r=rows[i];
+
+      const rawDate = getByCol(r,colMap.data);
+      const rawProj = getByCol(r,colMap.projeto);
+      const rawIni  = getByCol(r,colMap.inicio);
+      const rawFim  = getByCol(r,colMap.fim);
+      const rawAtv  = getByCol(r,colMap.atividade);
+      const rawObs  = getByCol(r,colMap.observacao);
+      const rawId   = getByCol(r,colMap.id);
+
+      // pula linhas vazias
+      if(!rawDate && !rawProj && !rawIni && !rawFim && !rawAtv && !rawObs && !rawId) continue;
+
+      const dayIso = parseAnyDateToISO(rawDate);
+      if(!dayIso) continue;
+
+      const sMin = parseAnyTimeToMinutes(rawIni);
+      const eMin = parseAnyTimeToMinutes(rawFim);
+
+      if(sMin==null || eMin==null) continue;
+
+      const day=parseISOToLocalDate(dayIso);
+      const start=setTimeOnDate(day, Math.floor(sMin/60), sMin%60);
+
+      let end;
+      if(eMin===1440){
+        const next=addDays(day,1);
+        end=setTimeOnDate(next,0,0);
+      }else{
+        end=setTimeOnDate(day, Math.floor(eMin/60), eMin%60);
+      }
+      if(end<=start){
+        // força ao menos 10 min
+        end=new Date(start.getTime()+CONFIG.stepMinutes*60*1000);
+      }
+
+      imported.push({
+        id: genId(),
+        start: start.toISOString(),
+        end: end.toISOString(),
+        day: dayIso,
+        project: String(rawProj||"").trim(),
+        activityId: String(rawId||"").trim(),
+        activityLabel: String(rawAtv||"").trim(),
+        notes: String(rawObs||"").trim(),
+      });
+    }
+    return imported;
+  }
+
+  function getByCol(rowObj, col){
+    if(!col) return "";
+    return String(rowObj[col]??"").trim();
+  }
+
+  function parseAnyDateToISO(v){
+    const s=String(v||"").trim();
+    if(!s) return "";
+
+    // dd/mm/aaaa
+    const m1=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(m1){
+      const dd=String(m1[1]).padStart(2,"0");
+      const mm=String(m1[2]).padStart(2,"0");
+      const yyyy=m1[3];
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    // yyyy-mm-dd
+    const m2=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if(m2){
+      const yyyy=m2[1], mm=String(m2[2]).padStart(2,"0"), dd=String(m2[3]).padStart(2,"0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    // Excel serial (ex: "45678")
+    const n = Number(s.replace(",","."));
+    if(Number.isFinite(n) && n>20000 && n<90000){
+      const d = excelSerialToLocalDate(n);
+      return formatDateISO(d);
+    }
+    return "";
+  }
+
+  function excelSerialToLocalDate(serial){
+    // Excel (Windows) tem base 1899-12-30
+    const base = new Date(1899,11,30);
+    const ms = Math.round(serial*86400000);
+    return new Date(base.getTime()+ms);
+  }
+
+  function parseAnyTimeToMinutes(v){
+    const s=String(v||"").trim();
+    if(!s) return null;
+
+    if(s==="24:00" || s==="24:0" || s==="24") return 1440;
+
+    // "HH:MM"
+    const m=s.match(/^(\d{1,2}):(\d{2})$/);
+    if(m){
+      const hh=parseInt(m[1],10), mm=parseInt(m[2],10);
+      if(!Number.isFinite(hh)||!Number.isFinite(mm)) return null;
+      return Math.max(0, Math.min(1440, hh*60+mm));
+    }
+
+    // número: 0..1 fração do dia ou minutos
+    const n=Number(s.replace(",","."));
+    if(!Number.isFinite(n)) return null;
+
+    if(n>=0 && n<=1){
+      const mins = Math.round(n*24*60);
+      return Math.max(0, Math.min(1440, mins));
+    }
+    // se vier já em minutos
+    if(n>=0 && n<=1440) return Math.round(n);
+
+    return null;
+  }
+
+  function u32(view,off){return view.getUint32(off,true)}
+  function u16(view,off){return view.getUint16(off,true)}
+  async function readZipEntries(arrayBuffer){
+    const view=new DataView(arrayBuffer);
+    const len=view.byteLength;
+    let eocd=-1;
+    for(let i=len-22;i>=Math.max(0,len-65557);i--){if(u32(view,i)===0x06054b50){eocd=i;break;}}
+    if(eocd<0) throw new Error("ZIP inválido: EOCD não encontrado.");
+
+    const cdSize=u32(view,eocd+12);
+    const cdOff=u32(view,eocd+16);
+    let ptr=cdOff;
+    const entries=new Map();
+
+    while(ptr<cdOff+cdSize){
+      if(u32(view,ptr)!==0x02014b50) break;
+      const compMethod=u16(view,ptr+10);
+      const compSize=u32(view,ptr+20);
+      const uncompSize=u32(view,ptr+24);
+      const nameLen=u16(view,ptr+28);
+      const extraLen=u16(view,ptr+30);
+      const commLen=u16(view,ptr+32);
+      const localOff=u32(view,ptr+42);
+
+      const nameBytes=new Uint8Array(arrayBuffer,ptr+46,nameLen);
+      const name=new TextDecoder().decode(nameBytes);
+
+      entries.set(name,{name,compMethod,compSize,uncompSize,localOff});
+      ptr+=46+nameLen+extraLen+commLen;
+    }
+    return {buffer:arrayBuffer,view:new DataView(arrayBuffer),entries};
+  }
+  async function zipReadText(zip,path){
+    const entry=zip.entries.get(path);
+    if(!entry) return "";
+    const data=await zipReadEntry(zip,entry);
+    return new TextDecoder("utf-8").decode(data);
+  }
+  async function zipReadEntry(zip,entry){
+    const {view,buffer}=zip;
+    const lo=entry.localOff;
+    if(u32(view,lo)!==0x04034b50) throw new Error("ZIP inválido: local header ausente para "+entry.name);
+    const nameLen=u16(view,lo+26);
+    const extraLen=u16(view,lo+28);
+    const dataStart=lo+30+nameLen+extraLen;
+    const comp=new Uint8Array(buffer,dataStart,entry.compSize);
+
+    if(entry.compMethod===0) return comp;
+    if(entry.compMethod===8){
+      if(typeof DecompressionStream!=="undefined"){
+        const ds=new DecompressionStream("deflate-raw");
+        const stream=new Response(comp).body.pipeThrough(ds);
+        const ab=await new Response(stream).arrayBuffer();
+        return new Uint8Array(ab);
+      }
+      throw new Error("Seu navegador não suporta DecompressionStream (deflate).");
+    }
+    throw new Error("Método de compressão ZIP não suportado: "+entry.compMethod);
+  }
+
+  function parseSharedStrings(xmlText){
+    const doc=new DOMParser().parseFromString(xmlText,"application/xml");
+    const sis=doc.getElementsByTagName("si");
+    const out=[];
+    for(const si of sis){
+      const ts=si.getElementsByTagName("t");
+      let s=""; for(const t of ts) s+=t.textContent||"";
+      out.push(s);
+    }
+    return out;
+  }
+  function parseSheetRows(sheetXml,sharedStrings){
+    const doc=new DOMParser().parseFromString(sheetXml,"application/xml");
+    const rows=doc.getElementsByTagName("row");
+    const out=[];
+    for(const row of rows){
+      const cells=row.getElementsByTagName("c");
+      const obj={A:"",B:"",C:""};
+      for(const c of cells){
+        const r=c.getAttribute("r")||"";
+        const col=(r.match(/^[A-Z]+/)||[""])[0];
+        if(col!=="A" && col!=="B" && col!=="C") continue;
+        const t=c.getAttribute("t");
+        const v=c.getElementsByTagName("v")[0]?.textContent ?? "";
+        let value="";
+        if(t==="s"){value=sharedStrings[parseInt(v,10)] ?? "";}
+        else value=v;
+        obj[col]=String(value??"").trim();
+      }
+      if(obj.A || obj.B || obj.C) out.push(obj);
+    }
+    return out;
+  }
+
+  /* ===== init ===== */
+  async function init(){
+    buildTimeOptions();
+    fillActivityNames();
+    updatePasteButtonState();
+    loadIdBaseFromStorage();
+
+    const storageWasEmpty=await loadEvents();
+    if(storageWasEmpty){
+      state.weekStart=startOfWeekMonday(parseISOToLocalDate("2026-01-19"));
+    }else{
+      const hasExampleWeek=state.events.some(e=>e.day==="2026-01-19");
+      if(hasExampleWeek) state.weekStart=startOfWeekMonday(parseISOToLocalDate("2026-01-19"));
+    }
+
+    bindGlobalHandlersOnce();
+    renderAll();
+  }
+
+  init();
+</script>
+</body>
+</html>
