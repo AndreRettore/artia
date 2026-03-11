@@ -35,18 +35,21 @@
     </g>
   </g>
 
-  <text x="320" y="205" font-size="58" font-weight="800" font-family="Manrope, Segoe UI, Arial, sans-serif" fill="#151b2c">
-    Apontamento de Horas - Artia
+  <text x="320" y="198" font-size="56" font-weight="800" font-family="Manrope, Segoe UI, Arial, sans-serif" fill="#151b2c">
+    Apontamento de Horas
   </text>
-  <text x="320" y="270" font-size="33" font-weight="500" font-family="Manrope, Segoe UI, Arial, sans-serif" fill="#31405f">
+  <text x="320" y="258" font-size="52" font-weight="800" font-family="Manrope, Segoe UI, Arial, sans-serif" fill="#151b2c">
+    - Artia
+  </text>
+  <text x="320" y="330" font-size="33" font-weight="500" font-family="Manrope, Segoe UI, Arial, sans-serif" fill="#31405f">
     Calendário semanal, edição de eventos, IDs Artia,
   </text>
-  <text x="320" y="317" font-size="33" font-weight="500" font-family="Manrope, Segoe UI, Arial, sans-serif" fill="#31405f">
+  <text x="320" y="377" font-size="33" font-weight="500" font-family="Manrope, Segoe UI, Arial, sans-serif" fill="#31405f">
     visão Tabela, Gantt e Gráficos.
   </text>
 
-  <rect x="320" y="363" width="446" height="56" rx="14" fill="#e9efff" stroke="#ccd7f8"/>
-  <text x="342" y="401" font-size="26" font-weight="700" font-family="Manrope, Segoe UI, Arial, sans-serif" fill="#204ca8">
+  <rect x="320" y="420" width="500" height="56" rx="14" fill="#e9efff" stroke="#ccd7f8"/>
+  <text x="342" y="458" font-size="24" font-weight="700" font-family="Manrope, Segoe UI, Arial, sans-serif" fill="#204ca8">
     exxata • controle de apontamentos
   </text>
 </svg>
