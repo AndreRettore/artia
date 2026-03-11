@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Apontamento de Horas - Artia">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f3f6fb"/>
+      <stop offset="100%" stop-color="#e8edf6"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f7f9fd"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="52" y="52" width="1096" height="526" rx="30" fill="url(#card)" stroke="#d8e0ee" filter="url(#shadow)"/>
+
+  <g transform="translate(110 140)">
+    <rect x="0" y="0" width="170" height="170" rx="34" fill="#ffffff" stroke="#d8deea"/>
+    <g transform="translate(18 18) scale(0.262)">
+      <circle cx="256" cy="256" r="240" fill="#8e1212"/>
+      <circle cx="256" cy="256" r="208" fill="#e8a6a6"/>
+      <g fill="#8e1212">
+        <circle cx="256" cy="32" r="16"/>
+        <circle cx="256" cy="480" r="16"/>
+        <circle cx="32" cy="256" r="16"/>
+        <circle cx="480" cy="256" r="16"/>
+        <circle cx="97.6" cy="97.6" r="16"/>
+        <circle cx="414.4" cy="97.6" r="16"/>
+        <circle cx="97.6" cy="414.4" r="16"/>
+        <circle cx="414.4" cy="414.4" r="16"/>
+        <path d="M256 112c8.837 0 16 7.163 16 16v115.373l67.314 67.313c6.249 6.249 6.249 16.379 0 22.627-6.248 6.249-16.378 6.249-22.627 0l-72-72A15.996 15.996 0 0 1 240 250V128c0-8.837 7.163-16 16-16Z"/>
+      </g>
+    </g>
+  </g>
+
+  <text x="320" y="205" font-size="58" font-weight="800" font-family="Manrope, Segoe UI, Arial, sans-serif" fill="#151b2c">
+    Apontamento de Horas - Artia
+  </text>
+  <text x="320" y="270" font-size="33" font-weight="500" font-family="Manrope, Segoe UI, Arial, sans-serif" fill="#31405f">
+    Calendário semanal, edição de eventos, IDs Artia,
+  </text>
+  <text x="320" y="317" font-size="33" font-weight="500" font-family="Manrope, Segoe UI, Arial, sans-serif" fill="#31405f">
+    visão Tabela, Gantt e Gráficos.
+  </text>
+
+  <rect x="320" y="363" width="446" height="56" rx="14" fill="#e9efff" stroke="#ccd7f8"/>
+  <text x="342" y="401" font-size="26" font-weight="700" font-family="Manrope, Segoe UI, Arial, sans-serif" fill="#204ca8">
+    exxata • controle de apontamentos
+  </text>
+</svg>
