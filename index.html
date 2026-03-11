@@ -5,7 +5,26 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Apontamento de Horas - Artia</title>
+  <meta name="description"
+    content="Sistema de apontamento de horas com calendário semanal, edição de eventos, IDs Artia, tabela, Gantt e gráficos." />
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Apontamento de Horas - Artia" />
+  <meta property="og:description"
+    content="Sistema de apontamento de horas com calendário semanal, edição de eventos, IDs Artia, tabela, Gantt e gráficos." />
+  <meta property="og:image" content="./share-preview.png" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:image:alt" content="Ícone do sistema Apontamento de Horas - Artia" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Apontamento de Horas - Artia" />
+  <meta name="twitter:description"
+    content="Sistema de apontamento de horas com calendário semanal, edição de eventos, IDs Artia, tabela, Gantt e gráficos." />
+  <meta name="twitter:image" content="./share-preview.png" />
   <link rel="icon" type="image/svg+xml" href="./favicon-exxata-clock-red.svg" />
+  <link rel="icon" type="image/png" href="./share-preview.png" />
+  <link rel="apple-touch-icon" href="./share-preview.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet" />
@@ -339,8 +358,8 @@
     }
 
     html.light .modalBackdrop {
-      /* Fundo de modal mais suave no tema claro */
-      background: rgba(0, 0, 0, .45);
+      /* No tema claro, fundo mais escuro para destacar melhor o popup */
+      background: rgba(0, 0, 0, .62);
     }
 
     html.light .modal {
@@ -384,7 +403,7 @@
     }
 
     html.light .helpBackdrop {
-      background: rgba(0, 0, 0, .30);
+      background: rgba(0, 0, 0, .62);
     }
 
     html.light .helpModal {
@@ -1787,6 +1806,12 @@
       font-weight: 600;
     }
 
+    .artiaLaunchHint {
+      font-weight: 400;
+      font-size: .92em;
+      color: var(--muted);
+    }
+
     .artiaLaunchField input {
       position: absolute;
       opacity: 0;
@@ -1872,12 +1897,14 @@
     .modalBackdrop {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, .62);
+      background: rgba(0, 0, 0, .72);
       display: none;
       align-items: center;
       justify-content: center;
       z-index: 999;
-      padding: 14px;
+      padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+      overflow: auto;
+      box-sizing: border-box;
     }
 
     .modalBackdrop.show {
@@ -1886,10 +1913,13 @@
 
     .modal {
       width: min(720px, 100%);
+      max-height: calc(100dvh - 20px);
+      display: flex;
+      flex-direction: column;
       border-radius: 18px;
-      border: 1px solid rgba(255, 255, 255, .10);
-      background: linear-gradient(180deg, rgba(18, 26, 36, .98), rgba(14, 23, 34, .94));
-      box-shadow: 0 18px 60px rgba(0, 0, 0, .55);
+      border: 1px solid rgba(148, 186, 229, .24);
+      background: linear-gradient(180deg, rgba(30, 42, 56, .98), rgba(24, 35, 48, .96));
+      box-shadow: 0 20px 64px rgba(0, 0, 0, .62);
       overflow: hidden;
     }
 
@@ -1999,6 +2029,85 @@
       color: var(--muted);
       font-size: 12px;
       line-height: 1.3;
+    }
+
+    .importConfigModal {
+      width: min(900px, 100%);
+      max-height: calc(100dvh - 20px);
+    }
+
+    .importConfigBody {
+      flex: 1 1 auto;
+      padding: 14px 16px 10px;
+      display: grid;
+      gap: 12px;
+      overflow: auto;
+      min-height: 0;
+    }
+
+    .importMappingWrap {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, .12);
+    }
+
+    .importMappingHead,
+    .importMappingRow {
+      display: grid;
+      grid-template-columns: minmax(190px, 230px) 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 8px 10px;
+    }
+
+    .importMappingHead {
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, .04);
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: .2px;
+    }
+
+    .importMappingRow {
+      border-bottom: 1px solid var(--line);
+    }
+
+    .importMappingRow:last-child {
+      border-bottom: none;
+    }
+
+    .importSiteField {
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .importSiteField small {
+      margin-left: 6px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .importHeaderInput {
+      width: 100%;
+      background: rgba(0, 0, 0, .18);
+      border: 1px solid var(--line2);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px 10px;
+      outline: none;
+      font-size: 12px;
+    }
+
+    .importHeaderInput:focus {
+      border-color: rgba(78, 161, 255, .50);
+      box-shadow: 0 0 0 4px rgba(78, 161, 255, .10);
+    }
+
+    .importHeaderInput.invalid {
+      border-color: rgba(255, 110, 110, .75);
+      box-shadow: 0 0 0 4px rgba(255, 110, 110, .12);
     }
 
     .xBtn {
@@ -2167,6 +2276,282 @@
       border-top: 1px solid var(--line)
     }
 
+    /* Modal de evento: layout mais compacto + barra colorida por projeto */
+    .eventModal {
+      --eventModalHeader: #4ea1ff;
+      --eventModalHeaderEdge: #2f6fd8;
+      --eventModalHeaderText: #f5fbff;
+      width: min(640px, 100%);
+      border-radius: 16px;
+      /* No tema escuro, deixa o corpo do popup um pouco mais claro */
+      border-color: rgba(148, 186, 229, .24);
+      background: linear-gradient(180deg, rgba(30, 42, 56, .98), rgba(24, 35, 48, .96));
+      box-shadow: 0 20px 64px rgba(0, 0, 0, .62);
+    }
+
+    .eventModal[data-pcolor="0"] {
+      --eventModalHeader: #42d392;
+      --eventModalHeaderEdge: #1f9366;
+    }
+
+    .eventModal[data-pcolor="1"] {
+      --eventModalHeader: #ffc861;
+      --eventModalHeaderEdge: #d99a1f;
+      --eventModalHeaderText: #151c26;
+    }
+
+    .eventModal[data-pcolor="2"] {
+      --eventModalHeader: #ff9f43;
+      --eventModalHeaderEdge: #cd6b18;
+    }
+
+    .eventModal[data-pcolor="3"] {
+      --eventModalHeader: #4ea1ff;
+      --eventModalHeaderEdge: #2f6fd8;
+    }
+
+    .eventModal[data-pcolor="4"] {
+      --eventModalHeader: #9b59b6;
+      --eventModalHeaderEdge: #6f3f88;
+    }
+
+    .eventModal[data-pcolor="5"] {
+      --eventModalHeader: #3498db;
+      --eventModalHeaderEdge: #216fa1;
+    }
+
+    .eventModal[data-pcolor="6"] {
+      --eventModalHeader: #e74c3c;
+      --eventModalHeaderEdge: #a63228;
+    }
+
+    .eventModal[data-pcolor="7"] {
+      --eventModalHeader: #1abc9c;
+      --eventModalHeaderEdge: #14836d;
+    }
+
+    .eventModal[data-pcolor="8"] {
+      --eventModalHeader: #f1c40f;
+      --eventModalHeaderEdge: #ba940a;
+      --eventModalHeaderText: #151c26;
+    }
+
+    .eventModal[data-pcolor="9"] {
+      --eventModalHeader: #95a5a6;
+      --eventModalHeaderEdge: #697677;
+      --eventModalHeaderText: #151c26;
+    }
+
+    .eventModal[data-pcolor="1"] .modalActions .btn.btnSm,
+    .eventModal[data-pcolor="1"] .modalActions .xBtn,
+    .eventModal[data-pcolor="8"] .modalActions .btn.btnSm,
+    .eventModal[data-pcolor="8"] .modalActions .xBtn,
+    .eventModal[data-pcolor="9"] .modalActions .btn.btnSm,
+    .eventModal[data-pcolor="9"] .modalActions .xBtn {
+      border-color: rgba(21, 28, 38, .35);
+      background: rgba(255, 255, 255, .42);
+    }
+
+    .eventModal[data-pcolor="1"] .ctrlDate--compact,
+    .eventModal[data-pcolor="8"] .ctrlDate--compact,
+    .eventModal[data-pcolor="9"] .ctrlDate--compact {
+      border-color: rgba(21, 28, 38, .30);
+      background: rgba(255, 255, 255, .46);
+    }
+
+    .eventModal .modalHeader {
+      padding: 10px 12px 11px;
+      gap: 8px;
+      border-bottom: none;
+      background: linear-gradient(135deg, var(--eventModalHeader), var(--eventModalHeaderEdge));
+      color: var(--eventModalHeaderText);
+    }
+
+    .eventModal .modalHeader h2,
+    .eventModal .modalHeader .when,
+    .eventModal .modalDuration {
+      color: var(--eventModalHeaderText);
+    }
+
+    .eventModal .modalHeaderMeta {
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .eventModal .modalHeader h2 {
+      font-size: 15px;
+    }
+
+    .eventModal .modalDateRow {
+      margin: 1px 0 0;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .eventModal .ctrlDate--compact {
+      height: 28px;
+      padding: 3px 8px;
+      border-radius: 9px;
+      border-color: rgba(255, 255, 255, .45);
+      background: rgba(255, 255, 255, .16);
+      color: inherit;
+    }
+
+    .eventModal .when {
+      font-size: 11px;
+      opacity: .95;
+    }
+
+    .eventModal .modalDuration {
+      margin-top: 1px;
+      font-size: 11px;
+      opacity: .9;
+    }
+
+    .eventModal .modalActions {
+      gap: 6px;
+      align-self: flex-start;
+    }
+
+    .eventModal .modalActions .btn.btnSm {
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 9px;
+      font-size: 12px;
+      border-color: rgba(255, 255, 255, .45);
+      background: rgba(8, 14, 22, .20);
+      color: inherit;
+    }
+
+    .eventModal .modalActions .xBtn {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      border-color: rgba(255, 255, 255, .45);
+      background: rgba(8, 14, 22, .20);
+      color: inherit;
+      font-size: 15px;
+    }
+
+    .eventModal .modalActions .btn.btnSm:hover,
+    .eventModal .modalActions .xBtn:hover {
+      background: rgba(8, 14, 22, .30);
+    }
+
+    .eventModal .modalBody {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      padding: 10px 12px 8px;
+      gap: 9px;
+    }
+
+    .eventModal .row {
+      gap: 5px;
+    }
+
+    .eventModal .row.grid2 {
+      gap: 8px;
+    }
+
+    .eventModal label {
+      font-size: 11px;
+      letter-spacing: .1px;
+    }
+
+    .eventModal .hint {
+      font-size: 11px;
+      line-height: 1.23;
+    }
+
+    .eventModal select,
+    .eventModal textarea,
+    .eventModal input[type="text"],
+    .eventModal input.timeManualInput {
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+
+    .eventModal textarea {
+      min-height: 72px;
+    }
+
+    .eventModal .idAutoPill {
+      padding: 5px 8px;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .eventModal .modalFooter {
+      padding: 10px 12px 12px;
+      gap: 8px;
+    }
+
+    .eventModal .modalFooter .pill {
+      font-size: 11px;
+    }
+
+    @media (max-width: 720px) {
+      .eventModal .modalHeader {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .eventModal .modalActions {
+        align-self: flex-end;
+        justify-content: flex-end;
+      }
+
+      .eventModal .row.grid2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    html.light .eventModal .modalHeader h2,
+    html.light .eventModal .modalHeader .when,
+    html.light .eventModal .modalDuration {
+      color: var(--eventModalHeaderText);
+    }
+
+    html.light .eventModal {
+      /* Mantém o popup claro no modo claro */
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, .25);
+    }
+
+    html.light .eventModal .ctrlDate--compact {
+      /* Garante leitura da data em qualquer cor de cabeçalho */
+      color: #111827;
+      background: rgba(255, 255, 255, .86);
+      border-color: rgba(15, 23, 42, .28);
+      color-scheme: light;
+    }
+
+    @media (max-width: 900px) {
+      .importMappingHead,
+      .importMappingRow {
+        grid-template-columns: minmax(140px, 180px) 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .importConfigBody .row.grid2 {
+        grid-template-columns: 1fr;
+      }
+
+      .importMappingHead,
+      .importMappingRow {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+
+      .importSiteField small {
+        margin-left: 4px;
+      }
+    }
+
     .helpBackdrop {
       position: fixed;
       inset: 0;
@@ -2175,7 +2560,7 @@
       align-items: center;
       justify-content: center;
       padding: 18px;
-      background: rgba(0, 0, 0, .62);
+      background: rgba(0, 0, 0, .72);
     }
 
     .helpBackdrop.show {
@@ -2188,9 +2573,9 @@
       display: flex;
       flex-direction: column;
       border-radius: 18px;
-      border: 1px solid rgba(255, 255, 255, .10);
-      background: linear-gradient(180deg, rgba(18, 26, 36, .98), rgba(14, 23, 34, .94));
-      box-shadow: 0 18px 60px rgba(0, 0, 0, .55);
+      border: 1px solid rgba(148, 186, 229, .24);
+      background: linear-gradient(180deg, rgba(30, 42, 56, .98), rgba(24, 35, 48, .96));
+      box-shadow: 0 20px 64px rgba(0, 0, 0, .62);
       overflow: hidden;
     }
 
@@ -3169,6 +3554,60 @@
     </div>
   </div>
 
+  <div class="modalBackdrop" id="importConfigBackdrop" role="dialog" aria-modal="true" aria-hidden="true"
+    aria-labelledby="importConfigTitle" aria-describedby="importConfigHint">
+    <div class="modal importConfigModal" role="document">
+      <div class="modalHeader">
+        <div class="modalHeaderMeta">
+          <h2 id="importConfigTitle">Importar apontamentos (XLSX)</h2>
+          <div class="when when--compact" id="importConfigFileName">Arquivo: -</div>
+        </div>
+        <div class="modalActions">
+          <button class="xBtn" id="importConfigClose" type="button" title="Fechar" aria-label="Fechar configuração de importação">✕</button>
+        </div>
+      </div>
+      <div class="importConfigBody">
+        <div class="row grid2">
+          <div class="row">
+            <label for="importSheetSelect">Aba da planilha</label>
+            <select id="importSheetSelect"></select>
+          </div>
+          <div class="row">
+            <label for="importModeSelect">Modo de importação</label>
+            <select id="importModeSelect">
+              <option value="replace">Substituir todos os eventos atuais</option>
+              <option value="merge">Mesclar com os eventos atuais</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <label for="importHeaderRowSelect">Linha do cabeçalho</label>
+          <select id="importHeaderRowSelect"></select>
+          <div class="hint">Escolha a linha que contém os títulos das colunas da sua planilha.</div>
+        </div>
+
+        <div class="row">
+          <label>Compatibilização de cabeçalhos</label>
+          <div class="importMappingWrap">
+            <div class="importMappingHead">
+              <div>Campo no site</div>
+              <div>Cabeçalho na sua planilha</div>
+            </div>
+            <div id="importHeaderMap"></div>
+          </div>
+          <div class="hint">Informe o nome exato do cabeçalho da sua planilha e com qual informação ele se compatibiliza no site.</div>
+        </div>
+
+        <div class="hint" id="importConfigHint">Selecione a aba e revise o mapeamento antes de importar.</div>
+      </div>
+      <div class="modalFooter">
+        <button class="btn ghost" id="importConfigCancel" type="button">Cancelar</button>
+        <button class="btn primary" id="importConfigApply" type="button">Importar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modalBackdrop" id="roundingBackdrop" role="dialog" aria-modal="true" aria-hidden="true"
     aria-labelledby="roundingTitle" aria-describedby="roundingInfo">
     <div class="modal roundingModal" role="document">
@@ -3203,7 +3642,7 @@
 
   <div class="modalBackdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-hidden="true"
     aria-labelledby="modalTitle" aria-describedby="modalInfoText">
-    <div class="modal" role="document">
+    <div class="modal eventModal" role="document" data-pcolor="3">
       <div class="modalHeader">
         <div class="modalHeaderMeta">
           <h2 id="modalTitle">Novo evento</h2>
@@ -3241,7 +3680,7 @@
         <div class="hint" id="timeHint">Os horários são em intervalos de 10 minutos. “24:00” representa o final do dia.</div>
 
         <div class="row">
-          <label for="projectInput">Projeto (nº do projeto)</label>
+          <label for="projectInput">Projeto (nº do projeto)*</label>
           <input type="text" id="projectInput" placeholder="Ex.: 1360" autocomplete="off" />
         </div>
 
@@ -3270,7 +3709,10 @@
           <label class="artiaLaunchField" for="artiaLaunchedInput">
             <input type="checkbox" id="artiaLaunchedInput" />
             <span class="artiaLaunchCheck" aria-hidden="true"></span>
-            <span>Lançamento Artia</span>
+            <span>
+              <span>Lançamento Artia</span>
+              <span class="artiaLaunchHint"> (Marque aqui se o apontamento já foi lançado no Artia)</span>
+            </span>
           </label>
         </div>
 
@@ -6063,6 +6505,16 @@
     const helpBackdrop = document.getElementById("helpBackdrop");
     const helpClose = document.getElementById("helpClose");
     const helpCloseFooter = document.getElementById("helpCloseFooter");
+    const importConfigBackdrop = document.getElementById("importConfigBackdrop");
+    const importConfigClose = document.getElementById("importConfigClose");
+    const importConfigCancel = document.getElementById("importConfigCancel");
+    const importConfigApply = document.getElementById("importConfigApply");
+    const importConfigFileName = document.getElementById("importConfigFileName");
+    const importSheetSelect = document.getElementById("importSheetSelect");
+    const importModeSelect = document.getElementById("importModeSelect");
+    const importHeaderRowSelect = document.getElementById("importHeaderRowSelect");
+    const importHeaderMap = document.getElementById("importHeaderMap");
+    const importConfigHint = document.getElementById("importConfigHint");
     const roundingBackdrop = document.getElementById("roundingBackdrop");
     const roundingClose = document.getElementById("roundingClose");
     const roundingCancel = document.getElementById("roundingCancel");
@@ -6093,6 +6545,13 @@
     const idLookupPill = document.getElementById("idLookupPill");
     const idLookupText = document.getElementById("idLookupText");
     const btnDelete = document.getElementById("btnDelete");
+    const eventModalEl = modalBackdrop?.querySelector(".eventModal");
+
+    function setEventModalProjectColor(projectValue = "") {
+      if (!eventModalEl) return;
+      const project = String(projectValue || "").trim();
+      eventModalEl.dataset.pcolor = project ? projectColorDigit(project) : "3";
+    }
 
     function setModalInfo(msg) {
       if (!msg) { modalInfoEl.classList.add("hidden"); modalInfoTextEl.textContent = ""; return; }
@@ -6110,6 +6569,7 @@
         if (state.selection) {
           modalDateInput.value = state.selection.dayIso;
         }
+        setEventModalProjectColor(projectInputEl.value);
         modalBackdrop.classList.add("show");
         modalBackdrop.setAttribute("aria-hidden", "false");
         setModalInfo("");
@@ -6129,6 +6589,18 @@
       } else {
         helpBackdrop.classList.remove("show");
         helpBackdrop.setAttribute("aria-hidden", "true");
+      }
+    }
+
+    function showImportConfigModal(show) {
+      if (!importConfigBackdrop) return;
+      if (show) {
+        importConfigBackdrop.classList.add("show");
+        importConfigBackdrop.setAttribute("aria-hidden", "false");
+        requestAnimationFrame(() => importSheetSelect?.focus());
+      } else {
+        importConfigBackdrop.classList.remove("show");
+        importConfigBackdrop.setAttribute("aria-hidden", "true");
       }
     }
 
@@ -6207,6 +6679,7 @@
       activityIdInputEl.value = "";
       artiaLaunchedInputEl.checked = false;
       notesInputEl.value = "";
+      setEventModalProjectColor("");
       setIdLookupStatus("warn", state.idBaseIndex ? "ID: selecione projeto e atividade" : "ID: preencha manualmente (base não consultada)");
     }
     function setTimeSelectorsFromSelection(dayIso, start, end) {
@@ -6303,6 +6776,7 @@
     function maybeAutoFillId() {
       const project = (projectInputEl.value || "").trim();
       const activityName = (activityNameInputEl.value || "").trim();
+      setEventModalProjectColor(project);
       if (!state.idBaseIndex) { setIdLookupStatus("warn", "ID: preencha manualmente (base não consultada)"); return; }
       if (!project || !activityName) { setIdLookupStatus("warn", "ID: selecione projeto e atividade"); return; }
       const found = lookupIdFor(project, activityName);
@@ -6387,6 +6861,7 @@
       activityIdInputEl.value = ev.activityId || "";
       artiaLaunchedInputEl.checked = Boolean(ev.artiaLaunched);
       notesInputEl.value = ev.notes || "";
+      setEventModalProjectColor(projectInputEl.value);
       showModal(true);
       maybeAutoFillId();
     }
@@ -6450,7 +6925,7 @@
     endTimeInputEl.addEventListener("change", updateModalSelectionFromInputs);
     startTimeInputEl.addEventListener("blur", updateModalSelectionFromInputs);
     endTimeInputEl.addEventListener("blur", updateModalSelectionFromInputs);
-    projectInputEl.addEventListener("input", () => { clearTimeout(projectInputEl._t); projectInputEl._t = setTimeout(maybeAutoFillId, 120); });
+    projectInputEl.addEventListener("input", () => { setEventModalProjectColor(projectInputEl.value); clearTimeout(projectInputEl._t); projectInputEl._t = setTimeout(maybeAutoFillId, 120); });
     activityNameInputEl.addEventListener("input", () => { clearTimeout(activityNameInputEl._t); activityNameInputEl._t = setTimeout(maybeAutoFillId, 120); });
 
     // Copiar/Colar campos do evento (Projeto/Atividade/ID/Observação)
@@ -6473,6 +6948,7 @@
       if (clip.activityLabel) activityNameInputEl.value = clip.activityLabel;
       activityIdInputEl.value = clip.activityId || "";
       notesInputEl.value = clip.notes || "";
+      setEventModalProjectColor(projectInputEl.value);
       setIdLookupStatus("ok", "ID colado (não alterado)");
       setModalInfo("Campos colados.");
     });
@@ -6519,6 +6995,17 @@
     if (helpClose) helpClose.addEventListener("click", () => showHelpModal(false));
     if (helpCloseFooter) helpCloseFooter.addEventListener("click", () => showHelpModal(false));
     window.addEventListener("keydown", (e) => { if (e.key === "Escape" && helpBackdrop?.classList.contains("show")) showHelpModal(false); });
+    if (importConfigBackdrop) {
+      importConfigBackdrop.addEventListener("click", (e) => {
+        if (e.target === importConfigBackdrop) closeImportConfigAndReset();
+      });
+    }
+    if (importConfigClose) importConfigClose.addEventListener("click", closeImportConfigAndReset);
+    if (importConfigCancel) importConfigCancel.addEventListener("click", closeImportConfigAndReset);
+    if (importConfigApply) importConfigApply.addEventListener("click", onImportConfigApply);
+    if (importSheetSelect) importSheetSelect.addEventListener("change", () => refreshImportConfigForSelectedSheet({ preserveHeaderRow: false }));
+    if (importHeaderRowSelect) importHeaderRowSelect.addEventListener("change", () => refreshImportHeaderSuggestionsFromSelectedRow());
+    window.addEventListener("keydown", (e) => { if (e.key === "Escape" && importConfigBackdrop?.classList.contains("show")) closeImportConfigAndReset(); });
     if (roundingBackdrop) {
       roundingBackdrop.addEventListener("click", (e) => {
         if (e.target === roundingBackdrop) showRoundingModal(false);
@@ -6823,7 +7310,7 @@
 
     window.addEventListener("keydown", (e) => {
       if (e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (modalBackdrop.classList.contains("show") || helpBackdrop?.classList.contains("show") || roundingBackdrop?.classList.contains("show")) return;
+      if (modalBackdrop.classList.contains("show") || helpBackdrop?.classList.contains("show") || importConfigBackdrop?.classList.contains("show") || roundingBackdrop?.classList.contains("show")) return;
       if (isTypingContext(e.target)) return;
 
       const shortcut = VIEW_SHORTCUTS[String(e.key || "").toLowerCase()];
@@ -7017,12 +7504,368 @@
 
 
     /* =========================================================
-       Importar eventos da aba "atividades" (XLSX)
-       - Lê a aba "atividades" da planilha e cria eventos no calendário
-       - Colunas esperadas (cabeçalho): Data, Projeto, Hora Início, Hora de Término, Atividade, Observação, ID da Atividade
+       Importar eventos (XLSX) com escolha de aba e mapeamento
        ========================================================= */
     const btnImportActivities = document.getElementById("btnImportActivities");
     const fileActivitiesInput = document.getElementById("fileActivitiesInput");
+    const IMPORT_FIELD_DEFS = [
+      { key: "data", label: "Data", required: true },
+      { key: "projeto", label: "Projeto", required: true },
+      { key: "inicio", label: "Hora Início", required: true },
+      { key: "fim", label: "Hora de Término", required: true },
+      { key: "atividade", label: "Atividade", required: false },
+      { key: "observacao", label: "Observação", required: false },
+      { key: "artiaLancado", label: "Lançamento Artia", required: false },
+      { key: "id", label: "ID da Atividade", required: false },
+    ];
+    const IMPORT_HEADER_ALIASES = {
+      data: ["data"],
+      projeto: ["projeto"],
+      inicio: ["hora início", "hora inicio", "inicio", "início", "hora inicial", "início da atividade"],
+      fim: ["hora de término", "hora de termino", "término", "termino", "fim", "hora final"],
+      atividade: ["atividade", "nome da atividade", "descrição da atividade", "descricao da atividade"],
+      observacao: ["observação", "observacao", "comentário", "comentario", "nota", "notas"],
+      artiaLancado: ["lançamento artia", "lancamento artia", "artia", "lançado no artia", "lancado no artia"],
+      id: ["id da atividade", "id atividade", "id", "código da atividade", "codigo da atividade"]
+    };
+    const importConfigState = {
+      fileName: "",
+      zip: null,
+      sharedStrings: [],
+      sheets: [],
+      rowsCache: new Map()
+    };
+
+    function setImportConfigHintText(text) {
+      if (!importConfigHint) return;
+      importConfigHint.textContent = text || "Selecione a aba e revise o mapeamento antes de importar.";
+    }
+
+    function resetImportConfigState() {
+      importConfigState.fileName = "";
+      importConfigState.zip = null;
+      importConfigState.sharedStrings = [];
+      importConfigState.sheets = [];
+      importConfigState.rowsCache = new Map();
+      if (importConfigFileName) importConfigFileName.textContent = "Arquivo: -";
+      if (importSheetSelect) importSheetSelect.innerHTML = "";
+      if (importHeaderRowSelect) importHeaderRowSelect.innerHTML = "";
+      if (importHeaderMap) importHeaderMap.innerHTML = "";
+      const dl = document.getElementById("importHeaderCandidates");
+      if (dl) dl.innerHTML = "";
+      setImportConfigHintText("Selecione a aba e revise o mapeamento antes de importar.");
+    }
+
+    function closeImportConfigAndReset() {
+      showImportConfigModal(false);
+      resetImportConfigState();
+      if (fileActivitiesInput) fileActivitiesInput.value = "";
+    }
+
+    function colLettersToIndex(colLetters) {
+      const s = String(colLetters || "").toUpperCase();
+      let n = 0;
+      for (let i = 0; i < s.length; i++) {
+        const c = s.charCodeAt(i);
+        if (c < 65 || c > 90) continue;
+        n = (n * 26) + (c - 64);
+      }
+      return n;
+    }
+
+    function normalizeWorksheetTargetPath(target) {
+      let p = String(target || "").trim().replace(/\\/g, "/");
+      if (!p) return "";
+      while (p.startsWith("../")) p = p.slice(3);
+      p = p.replace(/^\/+/, "");
+      if (!p) return "";
+      if (p.startsWith("xl/")) return p;
+      return "xl/" + p;
+    }
+
+    function getImportSheetNameByPath(path) {
+      const hit = importConfigState.sheets.find(s => s.path === path);
+      return hit ? hit.name : "";
+    }
+
+    function previewImportRow(rowObj) {
+      const vals = Object.entries(rowObj || {})
+        .sort((a, b) => colLettersToIndex(a[0]) - colLettersToIndex(b[0]))
+        .map(([, val]) => String(val || "").trim())
+        .filter(Boolean)
+        .slice(0, 3);
+      if (!vals.length) return "(sem valores)";
+      const preview = vals.join(" | ");
+      return preview.length > 90 ? `${preview.slice(0, 87)}...` : preview;
+    }
+
+    async function listWorkbookSheets(zip) {
+      const wbXml = await zipReadText(zip, "xl/workbook.xml");
+      if (!wbXml) return [];
+      const relsXml = await zipReadText(zip, "xl/_rels/workbook.xml.rels");
+      if (!relsXml) return [];
+
+      const wbDoc = new DOMParser().parseFromString(wbXml, "application/xml");
+      const relDoc = new DOMParser().parseFromString(relsXml, "application/xml");
+
+      let sheetNodes = Array.from(wbDoc.getElementsByTagName("sheet"));
+      if (!sheetNodes.length) sheetNodes = Array.from(wbDoc.getElementsByTagNameNS("*", "sheet"));
+      let relNodes = Array.from(relDoc.getElementsByTagName("Relationship"));
+      if (!relNodes.length) relNodes = Array.from(relDoc.getElementsByTagNameNS("*", "Relationship"));
+
+      const relById = new Map();
+      for (const rel of relNodes) {
+        const id = rel.getAttribute("Id") || "";
+        const target = rel.getAttribute("Target") || "";
+        if (id && target) relById.set(id, normalizeWorksheetTargetPath(target));
+      }
+
+      const sheets = [];
+      for (const sh of sheetNodes) {
+        const name = (sh.getAttribute("name") || "").trim();
+        const rId = sh.getAttribute("r:id") || sh.getAttribute("id") || "";
+        const path = relById.get(rId) || "";
+        if (!name || !path) continue;
+        sheets.push({ name, path });
+      }
+      return sheets;
+    }
+
+    async function getRowsForImportSheet(sheetPath) {
+      if (!sheetPath) return [];
+      if (importConfigState.rowsCache.has(sheetPath)) return importConfigState.rowsCache.get(sheetPath);
+      const sheetXml = await zipReadText(importConfigState.zip, sheetPath);
+      if (!sheetXml) throw new Error(`Não consegui ler o conteúdo da aba "${getImportSheetNameByPath(sheetPath) || sheetPath}".`);
+      const rows = parseSheetRowsAny(sheetXml, importConfigState.sharedStrings);
+      importConfigState.rowsCache.set(sheetPath, rows);
+      return rows;
+    }
+
+    function ensureImportHeaderDatalist(headerEntries) {
+      let dl = document.getElementById("importHeaderCandidates");
+      if (!dl) {
+        dl = document.createElement("datalist");
+        dl.id = "importHeaderCandidates";
+        importConfigBackdrop?.appendChild(dl);
+      }
+      dl.innerHTML = "";
+      const seen = new Set();
+      for (const [, val] of headerEntries) {
+        const headerName = String(val || "").trim();
+        if (!headerName) continue;
+        const k = normKey(headerName);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        const opt = document.createElement("option");
+        opt.value = headerName;
+        dl.appendChild(opt);
+      }
+    }
+
+    function guessHeaderNameForField(fieldKey, headerEntries) {
+      const aliases = (IMPORT_HEADER_ALIASES[fieldKey] || []).map(normKey);
+      if (!aliases.length) return "";
+
+      for (const [, val] of headerEntries) {
+        const n = normKey(val);
+        if (aliases.includes(n)) return String(val || "").trim();
+      }
+      for (const [, val] of headerEntries) {
+        const n = normKey(val);
+        if (aliases.some(alias => n.includes(alias) || alias.includes(n))) return String(val || "").trim();
+      }
+      return "";
+    }
+
+    function renderImportHeaderMap(headerEntries) {
+      if (!importHeaderMap) return;
+      ensureImportHeaderDatalist(headerEntries);
+      importHeaderMap.innerHTML = "";
+
+      for (const field of IMPORT_FIELD_DEFS) {
+        const row = document.createElement("div");
+        row.className = "importMappingRow";
+
+        const left = document.createElement("div");
+        left.className = "importSiteField";
+        left.textContent = field.label;
+        if (field.required) {
+          const req = document.createElement("small");
+          req.textContent = "obrigatório";
+          left.appendChild(req);
+        }
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "importHeaderInput";
+        input.dataset.field = field.key;
+        input.placeholder = `Ex.: ${field.label}`;
+        input.setAttribute("list", "importHeaderCandidates");
+        input.value = guessHeaderNameForField(field.key, headerEntries);
+        input.addEventListener("input", () => input.classList.remove("invalid"));
+
+        row.appendChild(left);
+        row.appendChild(input);
+        importHeaderMap.appendChild(row);
+      }
+    }
+
+    async function refreshImportConfigForSelectedSheet({ preserveHeaderRow = true } = {}) {
+      if (!importSheetSelect || !importHeaderRowSelect) return;
+      const sheetPath = String(importSheetSelect.value || "");
+      if (!sheetPath) {
+        importHeaderRowSelect.innerHTML = "";
+        if (importHeaderMap) importHeaderMap.innerHTML = "";
+        setImportConfigHintText("Selecione uma aba válida para continuar.");
+        return;
+      }
+
+      const previousHeaderRow = parseInt(importHeaderRowSelect.value || "", 10);
+
+      try {
+        const rows = await getRowsForImportSheet(sheetPath);
+        importHeaderRowSelect.innerHTML = "";
+
+        if (!rows.length) {
+          if (importHeaderMap) importHeaderMap.innerHTML = "";
+          setImportConfigHintText(`A aba "${getImportSheetNameByPath(sheetPath)}" está vazia.`);
+          return;
+        }
+
+        const auto = findHeaderMapping(rows).headerRowIndex;
+        let selectedIndex = (auto >= 0) ? auto : 0;
+        if (preserveHeaderRow && Number.isInteger(previousHeaderRow) && previousHeaderRow >= 0 && previousHeaderRow < rows.length) {
+          selectedIndex = previousHeaderRow;
+        }
+
+        for (let i = 0; i < rows.length; i++) {
+          const opt = document.createElement("option");
+          opt.value = String(i);
+          opt.textContent = `Linha ${i + 1}: ${previewImportRow(rows[i])}`;
+          importHeaderRowSelect.appendChild(opt);
+        }
+        importHeaderRowSelect.value = String(selectedIndex);
+        refreshImportHeaderSuggestionsFromSelectedRow();
+
+        setImportConfigHintText(`Aba "${getImportSheetNameByPath(sheetPath)}": ${rows.length} linhas úteis encontradas. Ajuste o mapeamento antes de importar.`);
+      } catch (err) {
+        console.error(err);
+        importHeaderRowSelect.innerHTML = "";
+        if (importHeaderMap) importHeaderMap.innerHTML = "";
+        setImportConfigHintText("Falha ao ler a aba selecionada.");
+      }
+    }
+
+    function refreshImportHeaderSuggestionsFromSelectedRow() {
+      if (!importSheetSelect || !importHeaderRowSelect) return;
+      const sheetPath = String(importSheetSelect.value || "");
+      if (!sheetPath) return;
+      const rows = importConfigState.rowsCache.get(sheetPath) || [];
+      if (!rows.length) return;
+
+      let headerRowIndex = parseInt(importHeaderRowSelect.value || "", 10);
+      if (!Number.isInteger(headerRowIndex) || headerRowIndex < 0 || headerRowIndex >= rows.length) headerRowIndex = 0;
+      const headerRow = rows[headerRowIndex] || {};
+      const headerEntries = Object.entries(headerRow).sort((a, b) => colLettersToIndex(a[0]) - colLettersToIndex(b[0]));
+      renderImportHeaderMap(headerEntries);
+    }
+
+    function resolveImportColumnMap(headerRow) {
+      const headerEntries = Object.entries(headerRow || {}).sort((a, b) => colLettersToIndex(a[0]) - colLettersToIndex(b[0]));
+      const colMap = {};
+      const missingRequired = [];
+      const unresolved = [];
+
+      for (const field of IMPORT_FIELD_DEFS) {
+        const input = importHeaderMap?.querySelector(`.importHeaderInput[data-field="${field.key}"]`);
+        if (input) input.classList.remove("invalid");
+        const wantedLabel = String(input?.value || "").trim();
+
+        if (!wantedLabel) {
+          if (field.required) missingRequired.push(field.label);
+          continue;
+        }
+
+        let matchedCol = "";
+        if (/^[A-Za-z]{1,4}$/.test(wantedLabel)) {
+          const colTry = wantedLabel.toUpperCase();
+          if (Object.prototype.hasOwnProperty.call(headerRow, colTry)) matchedCol = colTry;
+        }
+
+        if (!matchedCol) {
+          const wantedNorm = normKey(wantedLabel);
+          const hit = headerEntries.find(([, val]) => normKey(val) === wantedNorm);
+          if (hit) matchedCol = hit[0];
+        }
+
+        if (!matchedCol) {
+          if (input) input.classList.add("invalid");
+          unresolved.push(`${field.label} -> "${wantedLabel}"`);
+          if (field.required) missingRequired.push(field.label);
+          continue;
+        }
+
+        colMap[field.key] = matchedCol;
+      }
+
+      return { colMap, missingRequired, unresolved };
+    }
+
+    async function onImportConfigApply() {
+      if (!importSheetSelect || !importHeaderRowSelect) return;
+      const sheetPath = String(importSheetSelect.value || "");
+      if (!sheetPath) {
+        alert("Selecione uma aba da planilha.");
+        return;
+      }
+
+      try {
+        const rows = await getRowsForImportSheet(sheetPath);
+        if (!rows.length) throw new Error("A aba selecionada está vazia.");
+
+        let headerRowIndex = parseInt(importHeaderRowSelect.value || "", 10);
+        if (!Number.isInteger(headerRowIndex) || headerRowIndex < 0 || headerRowIndex >= rows.length) headerRowIndex = 0;
+
+        const headerRow = rows[headerRowIndex] || {};
+        const { colMap, missingRequired, unresolved } = resolveImportColumnMap(headerRow);
+
+        if (unresolved.length) {
+          throw new Error(`Não encontrei estes cabeçalhos na linha selecionada:\n- ${unresolved.join("\n- ")}`);
+        }
+        if (missingRequired.length) {
+          throw new Error(`Compatibilize os campos obrigatórios:\n- ${missingRequired.join("\n- ")}`);
+        }
+
+        const imported = buildEventsFromRows(rows, headerRowIndex, colMap);
+        if (!imported.length) {
+          throw new Error("Não encontrei linhas válidas para importar com o mapeamento informado.");
+        }
+
+        const replaceAll = (importModeSelect?.value || "replace") === "replace";
+        if (replaceAll) {
+          state.events = imported;
+        } else {
+          const sig = (e) => `${e.day}|${e.start}|${e.end}|${e.project}|${e.activityId}|${e.artiaLaunched ? 1 : 0}|${e.notes}`;
+          const existing = new Set(state.events.map(sig));
+          for (const ev of imported) {
+            const s = sig(ev);
+            if (!existing.has(s)) {
+              existing.add(s);
+              state.events.push(ev);
+            }
+          }
+        }
+
+        saveEvents();
+        renderAll();
+        const sheetName = getImportSheetNameByPath(sheetPath) || sheetPath;
+        closeImportConfigAndReset();
+        alert(`Importação concluída.\n\nAba importada: ${sheetName}\nEventos importados: ${imported.length}`);
+      } catch (err) {
+        console.error(err);
+        alert("Falha ao importar apontamentos.\n\nErro: " + (err?.message || err));
+      }
+    }
 
     if (btnImportActivities && fileActivitiesInput) {
       btnImportActivities.addEventListener("click", () => fileActivitiesInput.click());
@@ -7031,57 +7874,41 @@
         const file = fileActivitiesInput.files && fileActivitiesInput.files[0];
         if (!file) return;
 
-        // OK = substituir tudo | Cancel = mesclar
-        const replaceAll = confirm(
-          'Importar eventos da aba "atividades"?\n\nOK = substituir TODOS os eventos atuais\nCancelar = mesclar (manter os eventos atuais e adicionar os importados)'
-        );
-
         try {
           const buf = await file.arrayBuffer();
           const zip = await readZipEntries(buf);
-
           const sharedXml = await zipReadText(zip, "xl/sharedStrings.xml");
           const shared = sharedXml ? parseSharedStrings(sharedXml) : [];
+          const sheets = await listWorkbookSheets(zip);
 
-          const sheetPath = await findWorksheetPathByName(zip, "atividades");
-          if (!sheetPath) throw new Error('Não encontrei a aba "atividades" dentro do XLSX.');
+          if (!sheets.length) throw new Error("Não encontrei abas válidas dentro do XLSX.");
 
-          const sheetXml = await zipReadText(zip, sheetPath);
-          if (!sheetXml) throw new Error('Não consegui ler o conteúdo da aba "atividades".');
+          resetImportConfigState();
+          importConfigState.fileName = file.name || "";
+          importConfigState.zip = zip;
+          importConfigState.sharedStrings = shared;
+          importConfigState.sheets = sheets;
 
-          const rows = parseSheetRowsAny(sheetXml, shared);
-          if (!rows.length) throw new Error("A aba parece vazia.");
-
-          const { headerRowIndex, colMap } = findHeaderMapping(rows);
-          if (headerRowIndex < 0) throw new Error('Não encontrei o cabeçalho (linha com "Data" e "Projeto").');
-
-          const imported = buildEventsFromRows(rows, headerRowIndex, colMap);
-
-          if (!imported.length) throw new Error("Não encontrei linhas válidas para importar.");
-
-          if (replaceAll) {
-            state.events = imported;
-          } else {
-            // mescla: evita duplicados óbvios (mesmo day + start + end + project + activityId + notes)
-            const sig = (e) => `${e.day}|${e.start}|${e.end}|${e.project}|${e.activityId}|${e.artiaLaunched ? 1 : 0}|${e.notes}`;
-            const existing = new Set(state.events.map(sig));
-            for (const ev of imported) {
-              const s = sig(ev);
-              if (!existing.has(s)) {
-                existing.add(s);
-                state.events.push(ev);
-              }
+          if (importConfigFileName) importConfigFileName.textContent = `Arquivo: ${file.name || "-"}`;
+          if (importModeSelect) importModeSelect.value = "replace";
+          if (importSheetSelect) {
+            importSheetSelect.innerHTML = "";
+            for (const sheet of sheets) {
+              const opt = document.createElement("option");
+              opt.value = sheet.path;
+              opt.textContent = sheet.name;
+              importSheetSelect.appendChild(opt);
             }
           }
 
-          saveEvents();
-          renderAll();
-          alert(`Importação concluída.\n\nEventos importados: ${imported.length}`);
+          const preferred = sheets.find(s => normKey(s.name) === "atividades") || sheets[0];
+          if (importSheetSelect) importSheetSelect.value = preferred.path;
+          await refreshImportConfigForSelectedSheet({ preserveHeaderRow: false });
+          showImportConfigModal(true);
         } catch (err) {
           console.error(err);
-          alert("Falha ao importar a aba atividades.\n\nErro: " + (err?.message || err));
-        } finally {
-          fileActivitiesInput.value = "";
+          alert("Falha ao preparar importação XLSX.\n\nErro: " + (err?.message || err));
+          closeImportConfigAndReset();
         }
       });
     }
