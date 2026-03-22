@@ -1,6 +1,6 @@
-const { URL } = require("node:url");
+const mysql = require("mysql2/promise");
 
-const REQUEST_TIMEOUT_MS = 15000;
+let poolPromise = null;
 
 function readEnv(name, fallback = "") {
   return String(process.env[name] ?? fallback).trim();
@@ -11,38 +11,6 @@ function splitCsv(value) {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
-}
-
-function getByPath(source, path) {
-  if (!path) return source;
-  return String(path)
-    .split(".")
-    .filter(Boolean)
-    .reduce((acc, key) => (acc == null ? undefined : acc[key]), source);
-}
-
-function pickArrayFromPayload(payload, dataPath) {
-  const candidate = dataPath ? getByPath(payload, dataPath) : payload;
-  if (Array.isArray(candidate)) return candidate;
-  if (Array.isArray(candidate?.items)) return candidate.items;
-  if (Array.isArray(candidate?.data)) return candidate.data;
-  return null;
-}
-
-function normalizeRow(item, fields) {
-  const project = String(getByPath(item, fields.projectField) ?? "").trim();
-  const projectLabel = String(getByPath(item, fields.projectLabelField) ?? "").trim();
-  const activity = String(getByPath(item, fields.activityField) ?? "").trim();
-  const id = String(getByPath(item, fields.idField) ?? "").trim();
-
-  if (!project || !activity || !id) return null;
-
-  return {
-    project,
-    projectLabel,
-    activity,
-    id
-  };
 }
 
 function getOriginDecision(req) {
@@ -75,73 +43,178 @@ function applyCors(req, res) {
   return decision;
 }
 
-function buildUpstreamUrl(req) {
-  const upstreamUrl = readEnv("ARTIA_UPSTREAM_URL");
-  if (!upstreamUrl) {
-    throw new Error("Defina ARTIA_UPSTREAM_URL na Vercel.");
+function requireDbConfig() {
+  const config = {
+    host: readEnv("ARTIA_DB_HOST"),
+    port: Number(readEnv("ARTIA_DB_PORT", "3306")),
+    user: readEnv("ARTIA_DB_USER"),
+    password: readEnv("ARTIA_DB_PASSWORD"),
+    database: readEnv("ARTIA_DB_NAME")
+  };
+
+  const missing = Object.entries({
+    ARTIA_DB_HOST: config.host,
+    ARTIA_DB_PORT: config.port,
+    ARTIA_DB_USER: config.user,
+    ARTIA_DB_PASSWORD: config.password,
+    ARTIA_DB_NAME: config.database
+  })
+    .filter(([, value]) => !value)
+    .map(([key]) => key);
+
+  if (missing.length) {
+    throw new Error(`Defina ${missing.join(", ")} na Vercel.`);
   }
 
-  const url = new URL(upstreamUrl);
-  const forwardQueryParams = splitCsv(readEnv("ARTIA_FORWARD_QUERY_PARAMS"));
-
-  for (const key of forwardQueryParams) {
-    const value = req.query?.[key];
-    if (value != null && value !== "") {
-      url.searchParams.set(key, String(value));
-    }
-  }
-
-  return url;
+  return config;
 }
 
-function buildRequestHeaders() {
-  const headers = { Accept: "application/json" };
-  const apiKey = readEnv("ARTIA_API_KEY");
-  const apiKeyHeader = readEnv("ARTIA_API_KEY_HEADER", "Authorization");
-  const apiKeyPrefix = readEnv("ARTIA_API_KEY_PREFIX", "Bearer");
+function extractOrganizationId() {
+  const explicit = readEnv("ARTIA_ORGANIZATION_ID");
+  if (explicit) return explicit;
 
-  if (apiKey) {
-    headers[apiKeyHeader] = apiKeyPrefix ? `${apiKeyPrefix} ${apiKey}` : apiKey;
-  }
+  const user = readEnv("ARTIA_DB_USER");
+  const match = user.match(/(\d+)/);
+  if (match) return match[1];
 
-  const extraHeadersJson = readEnv("ARTIA_EXTRA_HEADERS_JSON");
-  if (extraHeadersJson) {
-    const extraHeaders = JSON.parse(extraHeadersJson);
-    if (extraHeaders && typeof extraHeaders === "object" && !Array.isArray(extraHeaders)) {
-      Object.assign(headers, extraHeaders);
-    } else {
-      throw new Error("ARTIA_EXTRA_HEADERS_JSON precisa ser um objeto JSON.");
-    }
-  }
-
-  return headers;
+  throw new Error("Não consegui inferir o organization_id a partir de ARTIA_DB_USER.");
 }
 
-async function fetchUpstreamJson(url, headers) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+function validateTableName(name) {
+  if (!/^[A-Za-z0-9_]+$/.test(name)) {
+    throw new Error(`Nome de tabela inválido: ${name}`);
+  }
+  return name;
+}
 
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers,
-      signal: controller.signal
+function getTableNames() {
+  const orgId = extractOrganizationId();
+
+  return {
+    projects: validateTableName(
+      readEnv("ARTIA_DB_PROJECTS_TABLE", `organization_${orgId}_projects`)
+    ),
+    activities: validateTableName(
+      readEnv("ARTIA_DB_ACTIVITIES_TABLE", `organization_${orgId}_activities`)
+    )
+  };
+}
+
+async function getPool() {
+  if (!poolPromise) {
+    const config = requireDbConfig();
+    poolPromise = mysql.createPool({
+      host: config.host,
+      port: config.port,
+      user: config.user,
+      password: config.password,
+      database: config.database,
+      waitForConnections: true,
+      connectionLimit: Number(readEnv("ARTIA_DB_CONNECTION_LIMIT", "5")),
+      queueLimit: 0,
+      connectTimeout: Number(readEnv("ARTIA_DB_CONNECT_TIMEOUT_MS", "10000")),
+      ssl: readEnv("ARTIA_DB_SSL", "true") === "false" ? undefined : { rejectUnauthorized: false }
     });
-    const rawText = await response.text();
-    let payload = null;
-
-    if (rawText) {
-      try {
-        payload = JSON.parse(rawText);
-      } catch {
-        payload = null;
-      }
-    }
-
-    return { response, payload, rawText };
-  } finally {
-    clearTimeout(timeoutId);
   }
+
+  return poolPromise;
+}
+
+function parseLimit(value) {
+  const limit = Number.parseInt(String(value ?? ""), 10);
+  if (!Number.isFinite(limit) || limit <= 0) return null;
+  return Math.min(limit, 5000);
+}
+
+function normalizeDbRow(row) {
+  const project = String(
+    row.project ?? row.project_number ?? row.projectNumber ?? row.project_code ?? ""
+  ).trim();
+  const projectLabel = String(
+    row.projectLabel ?? row.project_label ?? row.project_name ?? row.projectName ?? row.name ?? ""
+  ).trim();
+  const activity = String(
+    row.activity ?? row.activity_title ?? row.activityLabel ?? row.title ?? ""
+  ).trim();
+  const id = String(
+    row.id ?? row.activity_id ?? row.activityId ?? ""
+  ).trim();
+
+  if (!project || !activity || !id) {
+    return null;
+  }
+
+  return {
+    project,
+    projectLabel,
+    activity,
+    id
+  };
+}
+
+async function loadRowsFromDatabase({ limit = null } = {}) {
+  const pool = await getPool();
+  const customQuery = readEnv("ARTIA_DB_QUERY");
+
+  if (customQuery) {
+    const [rows] = await pool.query(customQuery);
+    if (!Array.isArray(rows)) {
+      throw new Error("A consulta customizada não retornou uma lista.");
+    }
+    return rows.map(normalizeDbRow).filter(Boolean);
+  }
+
+  const tables = getTableNames();
+  const [projectRows] = await pool.query(`
+    SELECT
+      id,
+      project_number,
+      name,
+      status
+    FROM ${tables.projects}
+  `);
+  const projectById = new Map(
+    projectRows
+      .map((row) => ({
+        id: String(row.id ?? "").trim(),
+        project: String(row.project_number ?? "").trim() || String(row.id ?? "").trim(),
+        projectLabel: String(row.name ?? "").trim(),
+        status: Number(row.status ?? 0)
+      }))
+      .filter((row) => row.id && row.project && row.projectLabel && row.status === 1)
+      .map((row) => [row.id, { project: row.project, projectLabel: row.projectLabel }])
+  );
+
+  const activitySql = `
+    SELECT
+      id,
+      title,
+      folder_last_project_id,
+      status
+    FROM ${tables.activities}
+    WHERE folder_last_project_id IS NOT NULL
+    ${limit ? `LIMIT ${limit}` : ""}
+  `;
+  const [activityRows] = await pool.query(activitySql);
+
+  const rows = [];
+  for (const row of activityRows) {
+    if (Number(row.status ?? 0) !== 1) continue;
+    const projectInfo = projectById.get(String(row.folder_last_project_id));
+    if (!projectInfo?.project || !projectInfo?.projectLabel) continue;
+    const activity = String(row.title ?? "").trim();
+    const id = String(row.id ?? "").trim();
+    if (!activity || !id) continue;
+
+    rows.push({
+      project: projectInfo.project,
+      projectLabel: projectInfo.projectLabel,
+      activity,
+      id
+    });
+  }
+
+  return rows.filter((row) => row.project && row.projectLabel && row.activity && row.id);
 }
 
 module.exports = async function handler(req, res) {
@@ -160,52 +233,22 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const upstreamUrl = buildUpstreamUrl(req);
-    const headers = buildRequestHeaders();
-    const { response, payload, rawText } = await fetchUpstreamJson(upstreamUrl, headers);
-
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error: payload?.error || payload?.message || rawText || `Falha HTTP ${response.status} ao consultar o Artia.`
-      });
-    }
-
-    if (!payload) {
-      throw new Error("A API de origem não respondeu com JSON.");
-    }
-
-    const dataPath = readEnv("ARTIA_DATA_PATH");
-    const items = pickArrayFromPayload(payload, dataPath);
-    if (!items) {
-      throw new Error("Não encontrei uma lista na resposta. Ajuste ARTIA_DATA_PATH.");
-    }
-
-    const fields = {
-      projectField: readEnv("ARTIA_PROJECT_FIELD", "project"),
-      projectLabelField: readEnv("ARTIA_PROJECT_LABEL_FIELD", "projectLabel"),
-      activityField: readEnv("ARTIA_ACTIVITY_FIELD", "activity"),
-      idField: readEnv("ARTIA_ID_FIELD", "id")
-    };
-
-    const rows = items
-      .map((item) => normalizeRow(item, fields))
-      .filter(Boolean);
+    const rows = await loadRowsFromDatabase({
+      limit: parseLimit(req.query?.limit)
+    });
 
     return res.status(200).json({
       rows,
       meta: {
         count: rows.length,
         fetchedAt: new Date().toISOString(),
-        sourceName: "Artia API via Vercel",
-        sourceEndpoint: `${upstreamUrl.origin}${upstreamUrl.pathname}`
+        sourceName: "Artia DB via Vercel",
+        sourceType: "mysql"
       }
     });
   } catch (error) {
-    const isAbortError = error?.name === "AbortError";
-    return res.status(isAbortError ? 504 : 500).json({
-      error: isAbortError
-        ? "Tempo limite excedido ao consultar o Artia."
-        : error?.message || "Falha inesperada ao consultar o Artia."
+    return res.status(500).json({
+      error: error?.message || "Falha inesperada ao consultar o banco do Artia."
     });
   }
 };

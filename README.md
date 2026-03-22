@@ -2,121 +2,90 @@
 
 ## Visao geral
 
-Este projeto continua sendo um site estatico em `index.html`, publicado no GitHub Pages.
+Este projeto continua com o front estatico no GitHub Pages, mas agora a carga da base de IDs pode vir de uma funcao serverless da Vercel que consulta diretamente o banco do Artia.
 
-A integracao segura com o Artia agora fica separada:
+- GitHub Pages: entrega o `index.html`
+- Vercel: executa `api/artia-ids.js`
+- Banco Artia MySQL: fornece projetos e atividades
 
-- GitHub Pages: entrega a interface do site.
-- Vercel: executa a funcao serverless em `api/artia-ids.js`.
-- Artia API: recebe a chamada da Vercel com a chave guardada em variaveis de ambiente.
+A senha do banco fica apenas nas variaveis de ambiente da Vercel.
 
-Assim, a chave nao vai para o navegador nem para o HTML publicado.
+## URL usada pelo site
 
-## Fluxo da arquitetura
-
-1. O usuario abre o site no GitHub Pages.
-2. O front chama a URL da Vercel configurada no meta `artia-proxy-url`.
-3. A funcao `api/artia-ids.js` usa a chave guardada na Vercel para consultar o Artia.
-4. A Vercel devolve apenas um JSON normalizado com `project`, `projectLabel`, `activity` e `id`.
-5. O site salva essa base no IndexedDB e reaproveita o mesmo fluxo ja usado pela planilha XLSX.
-
-Se a API nao estiver configurada ou falhar, o site ainda pode cair no XLSX local como fallback.
-
-## Arquivos importantes
-
-- `index.html`: interface, logica principal e sincronizacao da base de IDs.
-- `api/artia-ids.js`: proxy serverless da Vercel para o Artia.
-- `base_dados_id_artia_no_client.xlsx`: fallback local opcional.
-
-## O que mudou no front
-
-- Foi adicionado o meta `<meta name="artia-proxy-url" content="" />`.
-- Foi adicionado o botao `Atualizar IDs via API`, mostrado apenas quando a URL da Vercel esta configurada.
-- No carregamento inicial, o site tenta sincronizar pela API protegida.
-- A resposta da Vercel entra no mesmo indice de IDs ja usado pelo modo XLSX.
-
-## Como configurar no GitHub Pages
-
-Edite o `index.html` e preencha o meta com a URL da sua funcao:
+O front chama a URL configurada em [index.html](/Users/andre/Documents/apontamentos-artia-codex_v5/index.html#L10):
 
 ```html
 <meta name="artia-proxy-url" content="https://seu-projeto.vercel.app/api/artia-ids" />
 ```
 
-Depois publique normalmente no GitHub Pages.
+## O que a funcao faz
 
-## Como testar em localhost
+A funcao [api/artia-ids.js](/Users/andre/Documents/apontamentos-artia-codex_v5/api/artia-ids.js#L1):
 
-Foi adicionado um servidor local simples em `local-dev-server.js`, sem dependencias externas.
-
-1. Copie `.env.local.example` para `.env.local`.
-2. Preencha a URL real do Artia, a chave e os campos de mapeamento.
-3. Rode `npm run dev:local`.
-4. Abra `http://localhost:3000`.
-
-Em localhost, o front usa `/api/artia-ids` automaticamente, mesmo se o meta `artia-proxy-url` estiver vazio.
-
-## Como configurar na Vercel
-
-Crie um projeto na Vercel apontando para este repositorio. Como o projeto e estatico + `api/`, normalmente nao precisa build custom.
-
-Configure estas variaveis de ambiente:
-
-- `ARTIA_UPSTREAM_URL`: endpoint real da API do Artia que retorna os IDs.
-- `ARTIA_API_KEY`: chave da API do Artia.
-- `ARTIA_ALLOWED_ORIGINS`: origem do seu GitHub Pages, por exemplo `https://andre.github.io`.
-
-Campos de mapeamento da resposta:
-
-- `ARTIA_DATA_PATH`: caminho ate o array na resposta, por exemplo `data.items`.
-- `ARTIA_PROJECT_FIELD`: campo do projeto, por exemplo `project.id`.
-- `ARTIA_PROJECT_LABEL_FIELD`: campo do nome do projeto, por exemplo `project.name`.
-- `ARTIA_ACTIVITY_FIELD`: campo do nome da atividade, por exemplo `name`.
-- `ARTIA_ID_FIELD`: campo do ID da atividade, por exemplo `id`.
-
-Opcionais:
-
-- `ARTIA_API_KEY_HEADER`: nome do header da chave. Padrao: `Authorization`.
-- `ARTIA_API_KEY_PREFIX`: prefixo do header. Padrao: `Bearer`.
-- `ARTIA_EXTRA_HEADERS_JSON`: headers extras em JSON.
-- `ARTIA_FORWARD_QUERY_PARAMS`: query params que a Vercel deve repassar ao upstream.
-
-## Formato esperado pelo front
-
-A funcao da Vercel devolve este formato:
+- conecta no MySQL do Artia com `ARTIA_DB_*`
+- detecta a organizacao a partir do usuario `cliente-9115`
+- consulta `organization_9115_projects` e `organization_9115_activities`
+- devolve JSON no formato:
 
 ```json
 {
   "rows": [
     {
       "project": "1360",
-      "projectLabel": "Cliente X",
+      "projectLabel": "1360 - Cliente X",
       "activity": "Reuniao",
-      "id": "R01"
+      "id": "123456"
     }
-  ],
-  "meta": {
-    "count": 1,
-    "fetchedAt": "2026-03-22T12:00:00.000Z",
-    "sourceName": "Artia API via Vercel",
-    "sourceEndpoint": "https://api.exemplo.com/atividades"
-  }
+  ]
 }
 ```
 
-## Observacoes de seguranca
+## Variaveis da Vercel
 
-- A chave do Artia fica apenas na Vercel.
-- O navegador nunca recebe a chave.
-- `ARTIA_ALLOWED_ORIGINS` ajuda a limitar chamadas do seu dominio.
-- Isso protege a chave, mas nao substitui autenticacao forte se voce quiser restringir totalmente o uso publico do endpoint.
+Obrigatorias:
 
-## Publicacao sugerida
+- `ARTIA_DB_HOST`
+- `ARTIA_DB_PORT`
+- `ARTIA_DB_USER`
+- `ARTIA_DB_PASSWORD`
+- `ARTIA_DB_NAME`
+- `ARTIA_ALLOWED_ORIGINS`
 
-1. Suba este repositorio no GitHub.
-2. Ative o GitHub Pages para servir o `index.html`.
-3. Conecte o mesmo repositorio na Vercel.
-4. Configure as variaveis de ambiente.
-5. Publique.
-6. Cole a URL da Vercel no meta `artia-proxy-url`.
-7. Abra o site e teste o botao `Atualizar IDs via API`.
+Exemplo de `ARTIA_ALLOWED_ORIGINS`:
+
+```txt
+http://localhost:3000,https://SEU-USUARIO.github.io
+```
+
+Opcionais:
+
+- `ARTIA_ORGANIZATION_ID`
+- `ARTIA_DB_PROJECTS_TABLE`
+- `ARTIA_DB_ACTIVITIES_TABLE`
+- `ARTIA_DB_QUERY`
+
+Se usar `ARTIA_DB_QUERY`, o SQL precisa retornar estas colunas com alias:
+
+- `project`
+- `projectLabel`
+- `activity`
+- `id`
+
+## Teste local
+
+1. Copie `.env.local.example` para `.env.local`
+2. Preencha a senha real em `ARTIA_DB_PASSWORD`
+3. Rode `npm run dev:local`
+4. Abra `http://localhost:3000`
+
+Em localhost, o front usa `/api/artia-ids` automaticamente.
+
+## Deploy
+
+1. Suba o codigo no GitHub
+2. Garanta que a Vercel esteja apontando para esse branch
+3. Configure as variaveis `ARTIA_DB_*`
+4. Faça um novo deploy
+5. Teste `https://seu-projeto.vercel.app/api/artia-ids`
+
+Se a rota responder JSON, o site do GitHub Pages ja consegue consumir a base com a senha protegida.
