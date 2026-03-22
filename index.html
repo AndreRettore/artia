@@ -7,6 +7,7 @@
   <title>Apontamento de Horas - Artia</title>
   <meta name="description"
     content="Sistema de apontamento de horas com calendário semanal, edição de eventos, IDs Artia, tabela, Gantt e gráficos." />
+  <meta name="artia-proxy-url" content="https://backend-artia-dxlbvz4r3-andres-projects-c1737ebe.vercel.app/api/artia-ids" />
   <meta property="og:locale" content="pt_BR" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Apontamento de Horas - Artia" />
@@ -3313,6 +3314,13 @@
               <path d="M10 3L8 21" />
               <path d="M16 3l-2 18" />
             </svg></span><span>Carregar IDs Artia (XLSX)</span></button>
+        <button class="btn btnSm hidden" id="btnSyncArtiaApi" type="button"
+          title="Atualizar a base de IDs usando a API protegida da Vercel"><span class="btnIcon"><svg viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+              <path d="M21 3v6h-6" />
+            </svg></span><span>Atualizar IDs via API</span></button>
         <input id="fileBaseInput" type="file" accept=".xlsx" class="hidden" aria-hidden="true" tabindex="-1" />
         <button class="btn btnSm" id="btnImportActivities" type="button"
           title="Importar apontamentos de um arquivo XLSX"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none"
@@ -3588,6 +3596,7 @@
             <li><strong>Importar Apontamentos (XLSX)</strong>: lê uma planilha e adiciona os registros ao sistema.</li>
             <li><strong>Definir Local de Salvamento</strong>: escolhe a pasta usada para backups XLSX.</li>
             <li><strong>Salvar XLSX</strong>: gera o backup manual dos apontamentos.</li>
+            <li><strong>Atualizar IDs via API</strong>: sincroniza a base direto da API do Artia, sem expor a chave no navegador.</li>
             <li><strong>Carregar IDs Artia (XLSX)</strong>: importa a base usada para preencher e consultar IDs por
               projeto e atividade.</li>
           </ul>
@@ -3802,6 +3811,14 @@
     const LS_TABLE_RANGE_KEY = "offline_week_calendar_table_range_v1";
     const LS_CHARTS_RANGE_KEY = "offline_week_calendar_charts_range_v1";
     const LS_UI_PREFS_KEY = "offline_week_calendar_ui_prefs_v1";
+    const IS_LOCAL_HOST = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+    const ARTIA_PROXY_URL = (
+      (typeof window.ARTIA_PROXY_URL === "string" ? window.ARTIA_PROXY_URL : "") ||
+      document.querySelector('meta[name="artia-proxy-url"]')?.content ||
+      (IS_LOCAL_HOST ? "/api/artia-ids" : "") ||
+      ""
+    ).trim();
+    const ARTIA_PROXY_SOURCE_LABEL = "API Vercel";
     const DEFAULT_ID_BASE_CANDIDATE_URLS = [
       "./base_dados_id_artia_no_client.xlsx",
       "./base_ids_artia.xlsx",
@@ -4409,6 +4426,31 @@
       if (projLabel && na === normKey(projLabel)) return true; // igual ao nome textual do projeto
       return false;
     }
+    function firstNonEmptyValue(...values) {
+      for (const value of values) {
+        const trimmed = String(value ?? "").trim();
+        if (trimmed) return trimmed;
+      }
+      return "";
+    }
+    function buildIdBaseIndexFromApiRows(rows) {
+      const index = {};
+      for (const row of Array.isArray(rows) ? rows : []) {
+        const projectRaw = firstNonEmptyValue(row?.project, row?.projectId, row?.projectCode, row?.projectLabel);
+        const project = extractProjectFromC(projectRaw) || projectRaw.match(/\b(\d{3,})\b/)?.[1] || "";
+        const projectLabel = firstNonEmptyValue(row?.projectLabel, row?.projectName, projectRaw);
+        const activity = firstNonEmptyValue(row?.activity, row?.activityLabel, row?.name);
+        const id = firstNonEmptyValue(row?.id, row?.activityId, row?.artiaId);
+        if (!project || !activity || !id) continue;
+        if (isLikelyProjectNameActivity(activity, project, projectLabel)) continue;
+        const key = `${normKey(project)}||${normKey(activity)}`;
+        if (!index[key]) {
+          index[key] = id;
+          index[`${key}||name`] = activity;
+        }
+      }
+      return index;
+    }
     function projectColorDigit(project) {
       const m = String(project || "").match(/(\d)\s*$/);
       return m ? m[1] : "0";
@@ -4604,13 +4646,13 @@
       if (!loaded) {
         baseStatusTextEl.textContent = "IDs: não carregada";
         if (baseMiniEl) { baseMiniEl.classList.remove("ok"); baseMiniEl.classList.add("warn"); }
-        if (baseMiniTextEl) { baseMiniTextEl.textContent = "Base local"; }
+        if (baseMiniTextEl) { baseMiniTextEl.textContent = ARTIA_PROXY_URL ? ARTIA_PROXY_SOURCE_LABEL : "Base local"; }
         return;
       }
       const rows = meta?.rows ?? "?"; const fileName = meta?.fileName ?? "arquivo";
       baseStatusTextEl.textContent = `IDs: carregada (${rows} linhas)`;
       if (baseMiniEl) { baseMiniEl.classList.remove("warn"); baseMiniEl.classList.add("ok"); }
-      if (baseMiniTextEl) { baseMiniTextEl.textContent = "Base local"; } baseStatusEl.title = `Fonte: ${fileName}`;
+      if (baseMiniTextEl) { baseMiniTextEl.textContent = meta?.sourceLabel || "Base local"; } baseStatusEl.title = `Fonte: ${fileName}`;
     }
 
     const daysHeaderEl = document.getElementById("daysHeader");
@@ -7512,7 +7554,9 @@
        XLSX Import (sem libs)
        ========================================================= */
     const btnLoadBase = document.getElementById("btnLoadBase");
+    const btnSyncArtiaApi = document.getElementById("btnSyncArtiaApi");
     const fileBaseInput = document.getElementById("fileBaseInput");
+    if (btnSyncArtiaApi && ARTIA_PROXY_URL) btnSyncArtiaApi.classList.remove("hidden");
     btnLoadBase.addEventListener("click", () => fileBaseInput.click());
 
     function buildIdBaseIndex(rows) {
@@ -7560,7 +7604,106 @@
       fillActivityNames(projectInputEl?.value || "", activityNameInputEl?.value || "");
       setIdLookupStatus("warn", "ID: selecione projeto e atividade");
       maybeAutoFillId();
+      renderAll();
       return meta;
+    }
+
+    async function importIdBaseFromApiRows(rows, {
+      fileName = "API Artia via Vercel",
+      loadingLabel = "Base IDs: sincronizando via API...",
+      sourceLabel = ARTIA_PROXY_SOURCE_LABEL
+    } = {}) {
+      const previousIndex = state.idBaseIndex;
+      const previousMeta = state.idBaseMeta;
+      setBaseStatus(false, null);
+      if (baseStatusTextEl) baseStatusTextEl.textContent = loadingLabel;
+
+      try {
+        const index = buildIdBaseIndexFromApiRows(rows);
+        if (!Object.keys(index).length) {
+          throw new Error("A API respondeu, mas não retornou linhas válidas de projeto, atividade e ID.");
+        }
+
+        const meta = {
+          rows: Array.isArray(rows) ? rows.length : 0,
+          indexed: Object.keys(index).length,
+          loadedAt: new Date().toISOString(),
+          fileName,
+          source: "api",
+          sourceLabel
+        };
+        await saveIdBaseToStorage(index, meta);
+        fillActivityNames(projectInputEl?.value || "", activityNameInputEl?.value || "");
+        setIdLookupStatus("warn", "ID: selecione projeto e atividade");
+        maybeAutoFillId();
+        renderAll();
+        return meta;
+      } catch (error) {
+        state.idBaseIndex = previousIndex;
+        state.idBaseMeta = previousMeta;
+        setBaseStatus(!!previousIndex, previousMeta);
+        throw error;
+      }
+    }
+
+    async function tryLoadArtiaIdBaseFromApi({ silentIfUnavailable = false } = {}) {
+      if (!ARTIA_PROXY_URL) {
+        if (!silentIfUnavailable) {
+          alert("Defina a URL da Vercel no meta 'artia-proxy-url' para habilitar a sincronização via API.");
+        }
+        return false;
+      }
+
+      const previousIndex = state.idBaseIndex;
+      const previousMeta = state.idBaseMeta;
+      if (baseStatusTextEl) baseStatusTextEl.textContent = "Base IDs: sincronizando via API protegida...";
+
+      try {
+        const separator = ARTIA_PROXY_URL.includes("?") ? "&" : "?";
+        const response = await fetch(`${ARTIA_PROXY_URL}${separator}ts=${Date.now()}`, { cache: "no-store" });
+        const rawText = await response.text();
+        let payload = null;
+
+        if (rawText) {
+          try {
+            payload = JSON.parse(rawText);
+          } catch {
+            if (!response.ok) throw new Error(rawText);
+            throw new Error("A API da Vercel não respondeu em JSON.");
+          }
+        }
+
+        if (!response.ok) {
+          throw new Error(payload?.error || payload?.message || `Falha HTTP ${response.status}`);
+        }
+
+        const rows = Array.isArray(payload?.rows) ? payload.rows : Array.isArray(payload) ? payload : [];
+        if (!rows.length) {
+          throw new Error("A API retornou 0 registros de IDs.");
+        }
+
+        const sourceName = firstNonEmptyValue(
+          payload?.meta?.sourceName,
+          payload?.meta?.sourceEndpoint,
+          "API Artia via Vercel"
+        );
+
+        await importIdBaseFromApiRows(rows, {
+          fileName: sourceName,
+          loadingLabel: "Base IDs: sincronizada com a API protegida.",
+          sourceLabel: ARTIA_PROXY_SOURCE_LABEL
+        });
+        return true;
+      } catch (error) {
+        console.error("Falha ao sincronizar IDs via API:", error);
+        state.idBaseIndex = previousIndex;
+        state.idBaseMeta = previousMeta;
+        setBaseStatus(!!previousIndex, previousMeta);
+        if (!silentIfUnavailable) {
+          alert("Falha ao sincronizar IDs via API.\n\nErro: " + (error?.message || error));
+        }
+        return false;
+      }
     }
 
     async function tryLoadBundledIdBaseOnFirstRun() {
@@ -7584,6 +7727,12 @@
       }
       setBaseStatus(false, null);
       return false;
+    }
+
+    if (btnSyncArtiaApi) {
+      btnSyncArtiaApi.addEventListener("click", async () => {
+        await tryLoadArtiaIdBaseFromApi();
+      });
     }
 
     fileBaseInput.addEventListener("change", async () => {
@@ -8618,7 +8767,8 @@
       fillActivityNames();
       updatePasteButtonState();
       const hasStoredIdBase = await loadIdBaseFromStorage();
-      if (!hasStoredIdBase) {
+      const loadedFromApi = await tryLoadArtiaIdBaseFromApi({ silentIfUnavailable: true });
+      if (!hasStoredIdBase && !loadedFromApi) {
         await tryLoadBundledIdBaseOnFirstRun();
       }
 

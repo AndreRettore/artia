@@ -1,0 +1,7 @@
+{
+  "name": "apontamentos-artia-codex-v5",
+  "private": true,
+  "scripts": {
+    "dev:local": "node local-dev-server.js"
+  }
+}

@@ -1,228 +1,122 @@
-# Apontamentos Artia - Arquitetura e Funcionamento
+# Apontamentos Artia com GitHub Pages + Vercel
 
-## 1. Visão geral
+## Visao geral
 
-Este projeto é uma aplicação web **single-page** (SPA) feita em um único arquivo principal: `index.html`.
+Este projeto continua sendo um site estatico em `index.html`, publicado no GitHub Pages.
 
-Objetivo do sistema:
+A integracao segura com o Artia agora fica separada:
 
-- registrar apontamentos de horas por dia/horário;
-- editar, mover e redimensionar eventos no calendário semanal;
-- visualizar os mesmos dados em Tabela, Gantt, Gráficos e Diretório de IDs;
-- importar/exportar dados (XLSX/CSV);
-- manter dados locais no navegador (offline-first com persistência).
+- GitHub Pages: entrega a interface do site.
+- Vercel: executa a funcao serverless em `api/artia-ids.js`.
+- Artia API: recebe a chamada da Vercel com a chave guardada em variaveis de ambiente.
 
-## 2. Stack técnica
+Assim, a chave nao vai para o navegador nem para o HTML publicado.
 
-- **UI + lógica**: HTML, CSS e JavaScript vanilla (sem framework).
-- **Gráficos**: [Chart.js](https://cdn.jsdelivr.net/npm/chart.js) via CDN.
-- **Presença online**: Firebase Realtime Database (SDK modular via `script type="module"`).
-- **Persistência local principal**: IndexedDB.
-- **Persistência auxiliar**: localStorage (preferências e filtros).
-- **Leitura/escrita XLSX**: implementação própria no JS (parser XML + ZIP store writer), sem libs externas de XLSX.
-- **Backup local em arquivo**: File System Access API (`showDirectoryPicker` / `showSaveFilePicker`) com fallback para download.
+## Fluxo da arquitetura
 
-## 3. Estrutura de alto nível
+1. O usuario abre o site no GitHub Pages.
+2. O front chama a URL da Vercel configurada no meta `artia-proxy-url`.
+3. A funcao `api/artia-ids.js` usa a chave guardada na Vercel para consultar o Artia.
+4. A Vercel devolve apenas um JSON normalizado com `project`, `projectLabel`, `activity` e `id`.
+5. O site salva essa base no IndexedDB e reaproveita o mesmo fluxo ja usado pela planilha XLSX.
 
-### 3.1 Arquivos do repositório
+Se a API nao estiver configurada ou falhar, o site ainda pode cair no XLSX local como fallback.
 
-- `index.html`: interface, estilos e toda a lógica da aplicação.
-- `base_dados_id_artia_no_client.xlsx`: base padrão de IDs usada no carregamento automático inicial.
-- `favicon-exxata-clock-red.svg`: favicon.
+## Arquivos importantes
 
-### 3.2 Blocos principais de interface
+- `index.html`: interface, logica principal e sincronizacao da base de IDs.
+- `api/artia-ids.js`: proxy serverless da Vercel para o Artia.
+- `base_dados_id_artia_no_client.xlsx`: fallback local opcional.
 
-- **Header/topbar**: navegação de visões, filtros globais, botões de import/export e configurações.
-- **Views**:
-  - Calendário (`#calendarView`)
-  - Tabela (`#tableView`)
-  - Gantt (`#ganttView`)
-  - Gráficos (`#chartsView`)
-  - Diretório (`#directoryView`)
-- **Modais**:
-  - ajuda (`#helpBackdrop`)
-  - arredondamento de horários (`#roundingBackdrop`)
-  - evento (criar/editar) (`#modalBackdrop`)
+## O que mudou no front
 
-## 4. Modelo de dados
+- Foi adicionado o meta `<meta name="artia-proxy-url" content="" />`.
+- Foi adicionado o botao `Atualizar IDs via API`, mostrado apenas quando a URL da Vercel esta configurada.
+- No carregamento inicial, o site tenta sincronizar pela API protegida.
+- A resposta da Vercel entra no mesmo indice de IDs ja usado pelo modo XLSX.
 
-### 4.1 Estado principal em memória
+## Como configurar no GitHub Pages
 
-O objeto `state` controla o runtime:
+Edite o `index.html` e preencha o meta com a URL da sua funcao:
 
-- `weekStart`: início da semana ativa;
-- `events`: lista de eventos;
-- `selection`: seleção atual no calendário;
-- `editingEventId`: evento em edição;
-- `selectedEventId`: evento selecionado (1 clique seleciona, 2 abre);
-- `idBaseIndex` / `idBaseMeta`: base de IDs carregada;
-- `view`: visão ativa (`calendar`, `table`, `gantt`, `charts`, `directory`).
+```html
+<meta name="artia-proxy-url" content="https://seu-projeto.vercel.app/api/artia-ids" />
+```
 
-### 4.2 Evento
+Depois publique normalmente no GitHub Pages.
 
-Cada evento possui, em geral:
+## Como testar em localhost
 
-- `id`
-- `start` e `end` (ISO datetime)
-- `day` (ISO date)
-- `project`
-- `activityLabel`
-- `activityId`
-- `notes`
-- `artiaLaunched` (boolean)
+Foi adicionado um servidor local simples em `local-dev-server.js`, sem dependencias externas.
 
-## 5. Persistência
+1. Copie `.env.local.example` para `.env.local`.
+2. Preencha a URL real do Artia, a chave e os campos de mapeamento.
+3. Rode `npm run dev:local`.
+4. Abra `http://localhost:3000`.
 
-### 5.1 IndexedDB
+Em localhost, o front usa `/api/artia-ids` automaticamente, mesmo se o meta `artia-proxy-url` estiver vazio.
 
-Banco: `artia_offline_db_v1`
+## Como configurar na Vercel
 
-Object stores:
+Crie um projeto na Vercel apontando para este repositorio. Como o projeto e estatico + `api/`, normalmente nao precisa build custom.
 
-- `events` (eventos salvos)
-- `kv` (chave-valor para configurações e metadados)
+Configure estas variaveis de ambiente:
 
-Dados importantes em `kv`:
+- `ARTIA_UPSTREAM_URL`: endpoint real da API do Artia que retorna os IDs.
+- `ARTIA_API_KEY`: chave da API do Artia.
+- `ARTIA_ALLOWED_ORIGINS`: origem do seu GitHub Pages, por exemplo `https://andre.github.io`.
 
-- base de IDs: `LS_IDBASE_KEY`, `LS_IDBASE_META_KEY`
-- handles de backup: `backupDirectoryHandle`, `backupFileHandle`, `backupFolderName`
-- e-mail de exportação e outros metadados
+Campos de mapeamento da resposta:
 
-### 5.2 localStorage
+- `ARTIA_DATA_PATH`: caminho ate o array na resposta, por exemplo `data.items`.
+- `ARTIA_PROJECT_FIELD`: campo do projeto, por exemplo `project.id`.
+- `ARTIA_PROJECT_LABEL_FIELD`: campo do nome do projeto, por exemplo `project.name`.
+- `ARTIA_ACTIVITY_FIELD`: campo do nome da atividade, por exemplo `name`.
+- `ARTIA_ID_FIELD`: campo do ID da atividade, por exemplo `id`.
 
-Usado para preferências rápidas:
+Opcionais:
 
-- tema (`theme`)
-- filtros de período (Tabela/Gráficos)
-- clipboard de campos do modal
-- preferência de horário quebrado (`LS_UI_PREFS_KEY`)
+- `ARTIA_API_KEY_HEADER`: nome do header da chave. Padrao: `Authorization`.
+- `ARTIA_API_KEY_PREFIX`: prefixo do header. Padrao: `Bearer`.
+- `ARTIA_EXTRA_HEADERS_JSON`: headers extras em JSON.
+- `ARTIA_FORWARD_QUERY_PARAMS`: query params que a Vercel deve repassar ao upstream.
 
-## 6. Fluxo de inicialização
+## Formato esperado pelo front
 
-No `init()`:
+A funcao da Vercel devolve este formato:
 
-1. monta combos de horário e datalist de atividades;
-2. aplica preferência de horários quebrados;
-3. carrega base de IDs do IndexedDB;
-4. se não houver base local, tenta carregar automaticamente um XLSX padrão do repositório;
-5. carrega eventos do IndexedDB;
-6. registra handlers globais;
-7. renderiza a view inicial.
-
-### 6.1 Carregamento automático da base de IDs
-
-Na primeira execução (sem base salva), o sistema tenta `fetch` em ordem:
-
-1. `./base_dados_id_artia_no_client.xlsx`
-2. `./base_ids_artia.xlsx`
-3. `./ids_artia.xlsx`
-4. `./ids-artia.xlsx`
-5. `./assets/base_ids_artia.xlsx`
-
-Se encontrar e parsear com sucesso, a base fica salva localmente.
-
-Importante:
-
-- isso **não remove** a opção manual de carregar IDs;
-- o botão **Carregar IDs Artia (XLSX)** continua substituindo a base quando o usuário quiser.
-
-## 7. Importação/Exportação
-
-### 7.1 Importar base de IDs (manual)
-
-Botão: `Carregar IDs Artia (XLSX)`
-
-Regras esperadas da planilha:
-
-- Coluna A: atividade
-- Coluna B: ID
-- Coluna C: projeto + descrição
-
-O parser:
-
-- remove pseudo-atividades;
-- normaliza chaves (`projeto||atividade`);
-- salva índice e metadados.
-
-### 7.2 Importar apontamentos (XLSX)
-
-Botão: `Importar Apontamentos (XLSX)`
-
-Fluxo:
-
-- lê aba `atividades`;
-- mapeia cabeçalho dinamicamente;
-- cria eventos no formato interno;
-- permite substituir tudo ou mesclar.
-
-### 7.3 Exportar CSV
-
-Botão: `Exportar CSV` (menu com "Tudo" e "Tabela com Filtros")
-
-- delimitador `;` (compatibilidade Excel pt-BR);
-- inclui colunas de esforço e e-mail configurado.
-
-### 7.4 Backup XLSX
-
-- `Salvar XLSX`: gera backup imediatamente;
-- `Definir Local de Salvamento`: vincula pasta/arquivo para sobrescrever backup automaticamente;
-- fallback para download quando API de arquivo não estiver disponível.
-
-## 8. Funcionalidades de calendário e regras de negócio
-
-- seleção por arraste em slots vazios para criar evento;
-- hint visual com início/fim + duração;
-- sem sobreposição no mesmo dia (validação antes de salvar/mover);
-- drag-and-drop de evento para mover;
-- resize pelas bordas superior/inferior;
-- confirmação quando arrastar para outra data;
-- clique único seleciona evento, segundo clique abre modal;
-- opção de arredondar horários (10 min) ou permitir horários quebrados;
-- preenchimento automático de ID quando projeto+atividade batem com base carregada.
-
-## 9. Views e responsabilidade de cada uma
-
-- **Calendário**: operação principal (CRUD por horário).
-- **Tabela**: auditoria, ordenação, filtros e edição por linha.
-- **Gantt**: consolidado semanal por projeto/dia.
-- **Gráficos**: leitura analítica por período/projeto.
-- **Diretório**: consulta da base de IDs por projeto/atividade.
-
-## 10. Presença online (Firebase)
-
-Existe um bloco separado de script para presença:
-
-- gera `sessionId` por aba;
-- envia heartbeat periódico;
-- mantém a sessão no RTDB e marca `state: offline` no disconnect/fechamento da aba;
-- exibe contador de usuários online no badge.
-- salva no RTDB os campos `state`, `lastSeen` no horário de Brasília, `lastSeenMs` para a lógica de presença e `email` capturado do campo de exportação.
-
-Observação:
-
-- as credenciais do Firebase estão no cliente por design (modelo padrão de app web com RTDB);
-- para produção, manter regras de segurança do Firebase bem restritas.
-
-## 11. Como publicar no GitHub Pages
-
-1. manter `index.html` na raiz (ou ajustar caminho conforme sua estrutura de pages);
-2. versionar junto o XLSX padrão (`base_dados_id_artia_no_client.xlsx`) na mesma pasta de `index.html`;
-3. publicar no GitHub Pages;
-4. abrir a URL publicada e validar:
-   - base de IDs carrega sozinha no primeiro acesso;
-   - botão manual de carregar IDs continua funcionando.
-
-## 12. Pontos de manutenção recomendados
-
-- separar `index.html` em arquivos (`styles.css`, `app.js`, módulos por domínio) quando o escopo crescer;
-- mover credenciais sensíveis e regras de segurança para ambiente controlado;
-- aumentar cobertura de testes além do `selftest` interno;
-- documentar schema exato das planilhas em um guia de operação para usuários finais.
-
-## 13. Modo de autoteste
-
-A aplicação possui um fluxo interno de autoteste acionado por query string:
-
-- `?selftest=1`
-
-Ele executa verificações de renderização e regras principais e marca PASS/FAIL no título da página.
+```json
+{
+  "rows": [
+    {
+      "project": "1360",
+      "projectLabel": "Cliente X",
+      "activity": "Reuniao",
+      "id": "R01"
+    }
+  ],
+  "meta": {
+    "count": 1,
+    "fetchedAt": "2026-03-22T12:00:00.000Z",
+    "sourceName": "Artia API via Vercel",
+    "sourceEndpoint": "https://api.exemplo.com/atividades"
+  }
+}
+```
+
+## Observacoes de seguranca
+
+- A chave do Artia fica apenas na Vercel.
+- O navegador nunca recebe a chave.
+- `ARTIA_ALLOWED_ORIGINS` ajuda a limitar chamadas do seu dominio.
+- Isso protege a chave, mas nao substitui autenticacao forte se voce quiser restringir totalmente o uso publico do endpoint.
+
+## Publicacao sugerida
+
+1. Suba este repositorio no GitHub.
+2. Ative o GitHub Pages para servir o `index.html`.
+3. Conecte o mesmo repositorio na Vercel.
+4. Configure as variaveis de ambiente.
+5. Publique.
+6. Cole a URL da Vercel no meta `artia-proxy-url`.
+7. Abra o site e teste o botao `Atualizar IDs via API`.
