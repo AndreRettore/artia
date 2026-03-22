@@ -3812,10 +3812,14 @@
     const LS_CHARTS_RANGE_KEY = "offline_week_calendar_charts_range_v1";
     const LS_UI_PREFS_KEY = "offline_week_calendar_ui_prefs_v1";
     const IS_LOCAL_HOST = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+    const IS_VERCEL_HOST = window.location.hostname.endsWith(".vercel.app");
+    const DEFAULT_VERCEL_PROXY_URL = IS_VERCEL_HOST ? `${window.location.origin}/api/artia-ids` : "";
+    const ARTIA_API_FETCH_TIMEOUT_MS = 20000;
     const ARTIA_PROXY_URL = (
       (typeof window.ARTIA_PROXY_URL === "string" ? window.ARTIA_PROXY_URL : "") ||
-      document.querySelector('meta[name="artia-proxy-url"]')?.content ||
       (IS_LOCAL_HOST ? "/api/artia-ids" : "") ||
+      DEFAULT_VERCEL_PROXY_URL ||
+      document.querySelector('meta[name="artia-proxy-url"]')?.content ||
       ""
     ).trim();
     const ARTIA_PROXY_SOURCE_LABEL = "API Vercel";
@@ -7660,41 +7664,55 @@
 
       try {
         const separator = ARTIA_PROXY_URL.includes("?") ? "&" : "?";
-        const response = await fetch(`${ARTIA_PROXY_URL}${separator}ts=${Date.now()}`, { cache: "no-store" });
-        const rawText = await response.text();
-        let payload = null;
+        const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+        const timeoutId = controller
+          ? setTimeout(() => controller.abort(new Error("Tempo limite ao sincronizar IDs pela API.")), ARTIA_API_FETCH_TIMEOUT_MS)
+          : null;
+        try {
+          const response = await fetch(`${ARTIA_PROXY_URL}${separator}ts=${Date.now()}`, {
+            cache: "no-store",
+            signal: controller?.signal
+          });
+          const rawText = await response.text();
+          let payload = null;
 
-        if (rawText) {
-          try {
-            payload = JSON.parse(rawText);
-          } catch {
-            if (!response.ok) throw new Error(rawText);
-            throw new Error("A API da Vercel não respondeu em JSON.");
+          if (rawText) {
+            try {
+              payload = JSON.parse(rawText);
+            } catch {
+              if (!response.ok) throw new Error(rawText);
+              throw new Error("A API da Vercel não respondeu em JSON.");
+            }
           }
+
+          if (!response.ok) {
+            throw new Error(payload?.error || payload?.message || `Falha HTTP ${response.status}`);
+          }
+
+          const rows = Array.isArray(payload?.rows) ? payload.rows : Array.isArray(payload) ? payload : [];
+          if (!rows.length) {
+            throw new Error("A API retornou 0 registros de IDs.");
+          }
+
+          const sourceName = firstNonEmptyValue(
+            payload?.meta?.sourceName,
+            payload?.meta?.sourceEndpoint,
+            "API Artia via Vercel"
+          );
+
+          await importIdBaseFromApiRows(rows, {
+            fileName: sourceName,
+            loadingLabel: "Base IDs: sincronizada com a API protegida.",
+            sourceLabel: ARTIA_PROXY_SOURCE_LABEL
+          });
+          return true;
+        } finally {
+          if (timeoutId) clearTimeout(timeoutId);
         }
-
-        if (!response.ok) {
-          throw new Error(payload?.error || payload?.message || `Falha HTTP ${response.status}`);
-        }
-
-        const rows = Array.isArray(payload?.rows) ? payload.rows : Array.isArray(payload) ? payload : [];
-        if (!rows.length) {
-          throw new Error("A API retornou 0 registros de IDs.");
-        }
-
-        const sourceName = firstNonEmptyValue(
-          payload?.meta?.sourceName,
-          payload?.meta?.sourceEndpoint,
-          "API Artia via Vercel"
-        );
-
-        await importIdBaseFromApiRows(rows, {
-          fileName: sourceName,
-          loadingLabel: "Base IDs: sincronizada com a API protegida.",
-          sourceLabel: ARTIA_PROXY_SOURCE_LABEL
-        });
-        return true;
       } catch (error) {
+        if (error?.name === "AbortError") {
+          error = new Error("Tempo limite ao sincronizar IDs pela API.");
+        }
         console.error("Falha ao sincronizar IDs via API:", error);
         state.idBaseIndex = previousIndex;
         state.idBaseMeta = previousMeta;

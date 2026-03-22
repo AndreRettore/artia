@@ -126,6 +126,17 @@ function parseLimit(value) {
   return Math.min(limit, 5000);
 }
 
+function getQueryTimeoutMs() {
+  return Number(readEnv("ARTIA_DB_QUERY_TIMEOUT_MS", "15000")) || 15000;
+}
+
+async function runQuery(pool, sql) {
+  return pool.query({
+    sql,
+    timeout: getQueryTimeoutMs()
+  });
+}
+
 function normalizeDbRow(row) {
   const project = String(
     row.project ?? row.project_number ?? row.projectNumber ?? row.project_code ?? ""
@@ -157,7 +168,7 @@ async function loadRowsFromDatabase({ limit = null } = {}) {
   const customQuery = readEnv("ARTIA_DB_QUERY");
 
   if (customQuery) {
-    const [rows] = await pool.query(customQuery);
+    const [rows] = await runQuery(pool, customQuery);
     if (!Array.isArray(rows)) {
       throw new Error("A consulta customizada não retornou uma lista.");
     }
@@ -165,7 +176,7 @@ async function loadRowsFromDatabase({ limit = null } = {}) {
   }
 
   const tables = getTableNames();
-  const [projectRows] = await pool.query(`
+  const [projectRows] = await runQuery(pool, `
     SELECT
       id,
       project_number,
@@ -195,7 +206,7 @@ async function loadRowsFromDatabase({ limit = null } = {}) {
     WHERE folder_last_project_id IS NOT NULL
     ${limit ? `LIMIT ${limit}` : ""}
   `;
-  const [activityRows] = await pool.query(activitySql);
+  const [activityRows] = await runQuery(pool, activitySql);
 
   const rows = [];
   for (const row of activityRows) {
