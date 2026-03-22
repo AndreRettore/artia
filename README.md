@@ -1,91 +1,55 @@
 # Apontamentos Artia com GitHub Pages + Vercel
 
-## Visao geral
+## Como ficou
 
-Este projeto continua com o front estatico no GitHub Pages, mas agora a carga da base de IDs pode vir de uma funcao serverless da Vercel que consulta diretamente o banco do Artia.
+- GitHub Pages: entrega o front em `index.html`
+- Vercel: entrega a rota `api/artia-ids`
+- Fonte atual da API: snapshot JSON gerado do arquivo `base_dados_id_artia_no_client.xlsx`
 
-- GitHub Pages: entrega o `index.html`
-- Vercel: executa `api/artia-ids.js`
-- Banco Artia MySQL: fornece projetos e atividades
+## Por que mudou
 
-A senha do banco fica apenas nas variaveis de ambiente da Vercel.
+O acesso direto ao banco do Artia foi testado localmente e a view de atividades levou mais de 60 segundos mesmo com `LIMIT 5`, o que torna a carga online inviavel.
 
-## URL usada pelo site
+Para deixar o site funcionando de forma confiavel, a API da Vercel agora serve um snapshot rapido em `data/artia-ids.json`.
 
-O front chama a URL configurada em [index.html](/Users/andre/Documents/apontamentos-artia-codex_v5/index.html#L10):
+## Como atualizar a base
 
-```html
-<meta name="artia-proxy-url" content="https://seu-projeto.vercel.app/api/artia-ids" />
+Quando o arquivo `base_dados_id_artia_no_client.xlsx` mudar, rode:
+
+```bash
+npm run build:ids-snapshot
 ```
 
-## O que a funcao faz
+Isso gera ou atualiza:
 
-A funcao [api/artia-ids.js](/Users/andre/Documents/apontamentos-artia-codex_v5/api/artia-ids.js#L1):
-
-- conecta no MySQL do Artia com `ARTIA_DB_*`
-- detecta a organizacao a partir do usuario `cliente-9115`
-- consulta `organization_9115_projects` e `organization_9115_activities`
-- devolve JSON no formato:
-
-```json
-{
-  "rows": [
-    {
-      "project": "1360",
-      "projectLabel": "1360 - Cliente X",
-      "activity": "Reuniao",
-      "id": "123456"
-    }
-  ]
-}
+```text
+data/artia-ids.json
 ```
 
-## Variaveis da Vercel
-
-Obrigatorias:
-
-- `ARTIA_DB_HOST`
-- `ARTIA_DB_PORT`
-- `ARTIA_DB_USER`
-- `ARTIA_DB_PASSWORD`
-- `ARTIA_DB_NAME`
-- `ARTIA_ALLOWED_ORIGINS`
-
-Exemplo de `ARTIA_ALLOWED_ORIGINS`:
-
-```txt
-http://localhost:3000,https://SEU-USUARIO.github.io
-```
-
-Opcionais:
-
-- `ARTIA_ORGANIZATION_ID`
-- `ARTIA_DB_PROJECTS_TABLE`
-- `ARTIA_DB_ACTIVITIES_TABLE`
-- `ARTIA_DB_QUERY`
-
-Se usar `ARTIA_DB_QUERY`, o SQL precisa retornar estas colunas com alias:
-
-- `project`
-- `projectLabel`
-- `activity`
-- `id`
+Depois suba o commit no GitHub e redeploye a Vercel.
 
 ## Teste local
 
-1. Copie `.env.local.example` para `.env.local`
-2. Preencha a senha real em `ARTIA_DB_PASSWORD`
-3. Rode `npm run dev:local`
-4. Abra `http://localhost:3000`
+```bash
+npm install
+npm run build:ids-snapshot
+npm run dev:local
+```
 
-Em localhost, o front usa `/api/artia-ids` automaticamente.
+Abra:
 
-## Deploy
+- `http://localhost:3000`
+- `http://localhost:3000/api/artia-ids?limit=5`
 
-1. Suba o codigo no GitHub
-2. Garanta que a Vercel esteja apontando para esse branch
-3. Configure as variaveis `ARTIA_DB_*`
-4. Faça um novo deploy
-5. Teste `https://seu-projeto.vercel.app/api/artia-ids`
+## Resultado validado localmente
 
-Se a rota responder JSON, o site do GitHub Pages ja consegue consumir a base com a senha protegida.
+- `GET /api/artia-ids?limit=5`: respondeu em ~125 ms
+- `GET /api/artia-ids`: respondeu em ~232 ms
+- total carregado: 62.899 IDs
+
+## Arquivos principais
+
+- [index.html](/Users/andre/Documents/apontamentos-artia-codex_v5/index.html#L10)
+- [api/artia-ids.js](/Users/andre/Documents/apontamentos-artia-codex_v5/api/artia-ids.js#L1)
+- [scripts/build-artia-ids-snapshot.js](/Users/andre/Documents/apontamentos-artia-codex_v5/scripts/build-artia-ids-snapshot.js#L1)
+- [data/artia-ids.json](/Users/andre/Documents/apontamentos-artia-codex_v5/data/artia-ids.json)
