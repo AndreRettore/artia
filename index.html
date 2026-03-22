@@ -3101,7 +3101,7 @@
   <script type="module">
   // Firebase v10+ (ESM)
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-  import { getDatabase, ref, onValue, set, onDisconnect, serverTimestamp, update } from
+  import { getDatabase, ref, onValue, set, onDisconnect, update } from
     "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
 
   // 1) Cole aqui as credenciais do seu projeto
@@ -3119,18 +3119,46 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
+  function pad2(value) {
+    return String(value).padStart(2, "0");
+  }
+
+  function formatUtcLastSeen(date = new Date()) {
+    return `${pad2(date.getUTCDate())}/${pad2(date.getUTCMonth() + 1)}/${date.getUTCFullYear()} ${pad2(date.getUTCHours())}:${pad2(date.getUTCMinutes())}:${pad2(date.getUTCSeconds())} (UTC)`;
+  }
+
+  function getPresenceEmail() {
+    return String(localStorage.getItem("exportEmail") || "").trim();
+  }
+
+  function buildPresencePayload() {
+    const now = new Date();
+    return {
+      state: "online",
+      lastSeen: formatUtcLastSeen(now),
+      lastSeenMs: now.getTime(),
+      email: getPresenceEmail()
+    };
+  }
+
   // 2) Identificador por ABA (cada aba conta como 1 online)
   const sessionId = crypto.randomUUID();
   const meRef = ref(db, `presence/${sessionId}`);
 
   // 3) Marca online e mantém heartbeat
   async function goOnline() {
-    await set(meRef, { state: "online", lastSeen: Date.now() });
+    await set(meRef, buildPresencePayload());
     onDisconnect(meRef).remove(); // quando a aba cair, remove
   }
 
+  async function syncPresenceMetadata() {
+    await update(meRef, buildPresencePayload());
+  }
+
+  window.syncPresenceMetadata = syncPresenceMetadata;
+
   // heartbeat (a cada 15s)
-  setInterval(() => update(meRef, { lastSeen: Date.now() }), 15000);
+  setInterval(() => syncPresenceMetadata().catch(() => { }), 15000);
 
   // 4) Contagem (considera online quem atualizou em até 60s)
   const presenceRef = ref(db, "presence");
@@ -3139,7 +3167,10 @@
     const now = Date.now();
     let count = 0;
     for (const k in data) {
-      if (data[k] && (now - (data[k].lastSeen || 0) <= 60000)) count++;
+      const lastSeenMs = typeof data[k]?.lastSeenMs === "number"
+        ? data[k].lastSeenMs
+        : (typeof data[k]?.lastSeen === "number" ? data[k].lastSeen : 0);
+      if (data[k] && (now - lastSeenMs <= 60000)) count++;
     }
     document.getElementById("onlineCount").textContent = count;
   });
@@ -6664,14 +6695,51 @@
         endTimeSelectEl.appendChild(opt);
       }
     }
-    function fillActivityNames() {
+    function getProjectLookupKeys(project) {
+      const keys = [];
+      const raw = normKey(project);
+      if (raw) keys.push(raw);
+      const projectNumber = String(project || "").match(/\b(\d{3,})\b/)?.[1] || "";
+      const normalizedProjectNumber = normKey(projectNumber);
+      if (normalizedProjectNumber && !keys.includes(normalizedProjectNumber)) keys.push(normalizedProjectNumber);
+      return keys;
+    }
+
+    function getActivitySuggestionsForProject(project) {
+      const projectKeys = getProjectLookupKeys(project);
+      if (!state.idBaseIndex || !projectKeys.length) return [...ACTIVITY_NAMES];
+
+      const names = [];
+      const seen = new Set();
+
+      for (const [key] of Object.entries(state.idBaseIndex)) {
+        if (key.endsWith("||name")) continue;
+        const parts = key.split("||");
+        if (parts.length < 2) continue;
+        if (!projectKeys.includes(parts[0].trim())) continue;
+
+        const activityName = String(state.idBaseIndex[`${key}||name`] || parts.slice(1).join("||")).trim();
+        if (!activityName) continue;
+        if (isLikelyProjectNameActivity(activityName, projectKeys[0], "")) continue;
+
+        const normalizedActivity = normKey(activityName);
+        if (seen.has(normalizedActivity)) continue;
+        seen.add(normalizedActivity);
+        names.push(activityName);
+      }
+
+      names.sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true, sensitivity: "base" }));
+      return names.length ? names : [...ACTIVITY_NAMES];
+    }
+
+    function fillActivityNames(project = "", keepValue = "") {
       activityDatalistEl.innerHTML = "";
-      for (const name of ACTIVITY_NAMES) {
+      for (const name of getActivitySuggestionsForProject(project)) {
         const opt = document.createElement("option");
         opt.value = name;
         activityDatalistEl.appendChild(opt);
       }
-
+      ensureSelectHasValue(activityDatalistEl, keepValue);
     }
     function resetModalFields() {
       projectInputEl.value = "";
@@ -6679,6 +6747,7 @@
       activityIdInputEl.value = "";
       artiaLaunchedInputEl.checked = false;
       notesInputEl.value = "";
+      fillActivityNames();
       setEventModalProjectColor("");
       setIdLookupStatus("warn", state.idBaseIndex ? "ID: selecione projeto e atividade" : "ID: preencha manualmente (base não consultada)");
     }
@@ -6762,14 +6831,12 @@
 
     function lookupIdFor(project, activityName) {
       if (!state.idBaseIndex) return "";
-      const p = normKey(project), a = normKey(activityName);
-      if (!p || !a) return "";
-      const hit1 = state.idBaseIndex[`${p}||${a}`];
-      if (hit1) return String(hit1);
-      const pn = String(project).match(/\b(\d{3,})\b/)?.[1] || "";
-      if (pn) {
-        const hit2 = state.idBaseIndex[`${normKey(pn)}||${a}`];
-        if (hit2) return String(hit2);
+      const projectKeys = getProjectLookupKeys(project);
+      const a = normKey(activityName);
+      if (!projectKeys.length || !a) return "";
+      for (const p of projectKeys) {
+        const hit = state.idBaseIndex[`${p}||${a}`];
+        if (hit) return String(hit);
       }
       return "";
     }
@@ -6853,10 +6920,7 @@
 
       projectInputEl.value = ev.project || "";
       const act = ev.activityLabel || "";
-      if (act && !ACTIVITY_NAMES.includes(act)) {
-        const opt = document.createElement("option"); opt.value = act; opt.textContent = act;
-        activityDatalistEl.appendChild(opt);
-      }
+      fillActivityNames(projectInputEl.value, act);
       activityNameInputEl.value = act;
       activityIdInputEl.value = ev.activityId || "";
       artiaLaunchedInputEl.checked = Boolean(ev.artiaLaunched);
@@ -6925,7 +6989,12 @@
     endTimeInputEl.addEventListener("change", updateModalSelectionFromInputs);
     startTimeInputEl.addEventListener("blur", updateModalSelectionFromInputs);
     endTimeInputEl.addEventListener("blur", updateModalSelectionFromInputs);
-    projectInputEl.addEventListener("input", () => { setEventModalProjectColor(projectInputEl.value); clearTimeout(projectInputEl._t); projectInputEl._t = setTimeout(maybeAutoFillId, 120); });
+    projectInputEl.addEventListener("input", () => {
+      setEventModalProjectColor(projectInputEl.value);
+      fillActivityNames(projectInputEl.value, activityNameInputEl.value);
+      clearTimeout(projectInputEl._t);
+      projectInputEl._t = setTimeout(maybeAutoFillId, 120);
+    });
     activityNameInputEl.addEventListener("input", () => { clearTimeout(activityNameInputEl._t); activityNameInputEl._t = setTimeout(maybeAutoFillId, 120); });
 
     // Copiar/Colar campos do evento (Projeto/Atividade/ID/Observação)
@@ -6944,7 +7013,7 @@
       const clip = getClipboardFields();
       if (!clip) { updatePasteButtonState(); return; }
       projectInputEl.value = clip.project || "";
-      ensureSelectHasValue(activityDatalistEl, clip.activityLabel || "");
+      fillActivityNames(projectInputEl.value, clip.activityLabel || "");
       if (clip.activityLabel) activityNameInputEl.value = clip.activityLabel;
       activityIdInputEl.value = clip.activityId || "";
       notesInputEl.value = clip.notes || "";
@@ -7039,12 +7108,18 @@
         EXPORT_EMAIL = (csvEmailInput.value || "").trim();
         localStorage.setItem("exportEmail", EXPORT_EMAIL);
         try { kvSet && kvSet("exportEmail", EXPORT_EMAIL).catch(() => { }); } catch { }
+        try { window.syncPresenceMetadata && window.syncPresenceMetadata().catch(() => { }); } catch { }
       });
       // tenta carregar do IndexedDB (se existir) sem travar a UI
       try {
         kvGet && kvGet("exportEmail").then(v => {
           const s = String(v || "").trim();
-          if (s && s !== EXPORT_EMAIL) { EXPORT_EMAIL = s; localStorage.setItem("exportEmail", EXPORT_EMAIL); csvEmailInput.value = EXPORT_EMAIL; }
+          if (s && s !== EXPORT_EMAIL) {
+            EXPORT_EMAIL = s;
+            localStorage.setItem("exportEmail", EXPORT_EMAIL);
+            csvEmailInput.value = EXPORT_EMAIL;
+            try { window.syncPresenceMetadata && window.syncPresenceMetadata().catch(() => { }); } catch { }
+          }
         }).catch(() => { });
       } catch { }
     }
@@ -7065,6 +7140,16 @@
       const end = new Date(ev.end);
       const m = clampMinutesRaw(minutesFromDayStart(end, ev.day));
       return formatTimeFromMinutes(m);
+    }
+
+    function buildCsvExportFileName(date = new Date()) {
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const dd = String(date.getDate()).padStart(2, "0");
+      const hh = String(date.getHours()).padStart(2, "0");
+      const min = String(date.getMinutes()).padStart(2, "0");
+      const ss = String(date.getSeconds()).padStart(2, "0");
+      return `export_artia_${yyyy}-${mm}-${dd}_${hh}-${min}-${ss}.csv`;
     }
 
     function downloadCsvRows(events) {
@@ -7121,7 +7206,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "apontamento_horas.csv";
+      a.download = buildCsvExportFileName();
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -7457,6 +7542,7 @@
 
       const meta = { rows: rows.length, indexed: Object.keys(index).length, loadedAt: new Date().toISOString(), fileName };
       await saveIdBaseToStorage(index, meta);
+      fillActivityNames(projectInputEl?.value || "", activityNameInputEl?.value || "");
       setIdLookupStatus("warn", "ID: selecione projeto e atividade");
       maybeAutoFillId();
       return meta;

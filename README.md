@@ -196,6 +196,7 @@ Existe um bloco separado de script para presença:
 - envia heartbeat periódico;
 - remove sessão em disconnect;
 - exibe contador de usuários online no badge.
+- salva no RTDB os campos `state`, `lastSeen` formatado em UTC, `lastSeenMs` para a lógica de presença e `email` capturado do campo de exportação.
 
 Observação:
 
@@ -225,4 +226,3 @@ A aplicação possui um fluxo interno de autoteste acionado por query string:
 - `?selftest=1`
 
 Ele executa verificações de renderização e regras principais e marca PASS/FAIL no título da página.
-
