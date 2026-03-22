@@ -3119,23 +3119,31 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  function pad2(value) {
-    return String(value).padStart(2, "0");
-  }
+  function formatBrasiliaLastSeen(date = new Date()) {
+    const parts = new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false
+    }).formatToParts(date);
 
-  function formatUtcLastSeen(date = new Date()) {
-    return `${pad2(date.getUTCDate())}/${pad2(date.getUTCMonth() + 1)}/${date.getUTCFullYear()} ${pad2(date.getUTCHours())}:${pad2(date.getUTCMinutes())}:${pad2(date.getUTCSeconds())} (UTC)`;
+    const getPart = (type) => parts.find((part) => part.type === type)?.value || "";
+    return `${getPart("day")}/${getPart("month")}/${getPart("year")} ${getPart("hour")}:${getPart("minute")}:${getPart("second")} (Horario de Brasilia)`;
   }
 
   function getPresenceEmail() {
     return String(localStorage.getItem("exportEmail") || "").trim();
   }
 
-  function buildPresencePayload() {
+  function buildPresencePayload(nextState = "online") {
     const now = new Date();
     return {
-      state: "online",
-      lastSeen: formatUtcLastSeen(now),
+      state: nextState,
+      lastSeen: formatBrasiliaLastSeen(now),
       lastSeenMs: now.getTime(),
       email: getPresenceEmail()
     };
@@ -3147,15 +3155,22 @@
 
   // 3) Marca online e mantém heartbeat
   async function goOnline() {
-    await set(meRef, buildPresencePayload());
-    onDisconnect(meRef).remove(); // quando a aba cair, remove
+    await set(meRef, buildPresencePayload("online"));
+    onDisconnect(meRef).update({ state: "offline" }); // quando a aba cair, preserva o registro
   }
 
-  async function syncPresenceMetadata() {
-    await update(meRef, buildPresencePayload());
+  async function syncPresenceMetadata(nextState = "online") {
+    await update(meRef, buildPresencePayload(nextState));
   }
 
   window.syncPresenceMetadata = syncPresenceMetadata;
+
+  function scheduleOfflinePresenceUpdate() {
+    syncPresenceMetadata("offline").catch(() => { });
+  }
+
+  window.addEventListener("pagehide", scheduleOfflinePresenceUpdate);
+  window.addEventListener("beforeunload", scheduleOfflinePresenceUpdate);
 
   // heartbeat (a cada 15s)
   setInterval(() => syncPresenceMetadata().catch(() => { }), 15000);
@@ -3170,7 +3185,7 @@
       const lastSeenMs = typeof data[k]?.lastSeenMs === "number"
         ? data[k].lastSeenMs
         : (typeof data[k]?.lastSeen === "number" ? data[k].lastSeen : 0);
-      if (data[k] && (now - lastSeenMs <= 60000)) count++;
+      if (data[k]?.state === "online" && (now - lastSeenMs <= 60000)) count++;
     }
     document.getElementById("onlineCount").textContent = count;
   });

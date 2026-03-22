@@ -194,9 +194,9 @@ Existe um bloco separado de script para presença:
 
 - gera `sessionId` por aba;
 - envia heartbeat periódico;
-- remove sessão em disconnect;
+- mantém a sessão no RTDB e marca `state: offline` no disconnect/fechamento da aba;
 - exibe contador de usuários online no badge.
-- salva no RTDB os campos `state`, `lastSeen` formatado em UTC, `lastSeenMs` para a lógica de presença e `email` capturado do campo de exportação.
+- salva no RTDB os campos `state`, `lastSeen` no horário de Brasília, `lastSeenMs` para a lógica de presença e `email` capturado do campo de exportação.
 
 Observação:
 
