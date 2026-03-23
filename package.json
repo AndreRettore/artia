@@ -2,6 +2,7 @@
   "name": "apontamentos-artia-codex-v5",
   "private": true,
   "scripts": {
+    "build:ids-snapshot:db": "node scripts/build-artia-ids-from-db.js",
     "build:ids-snapshot": "node scripts/build-artia-ids-snapshot.js",
     "dev:local": "node local-dev-server.js"
   },

@@ -1,55 +1,105 @@
 # Apontamentos Artia com GitHub Pages + Vercel
 
-## Como ficou
+## Arquitetura atual
 
-- GitHub Pages: entrega o front em `index.html`
-- Vercel: entrega a rota `api/artia-ids`
-- Fonte atual da API: snapshot JSON gerado do arquivo `base_dados_id_artia_no_client.xlsx`
+- GitHub Pages: hospeda o front
+- Vercel: expõe `api/artia-ids`
+- GitHub Actions: atualiza `data/artia-ids.json` automaticamente a cada hora
 
-## Por que mudou
+O site nao consulta mais o banco do Artia em tempo real na abertura da pagina. Ele le um snapshot rapido em JSON.
 
-O acesso direto ao banco do Artia foi testado localmente e a view de atividades levou mais de 60 segundos mesmo com `LIMIT 5`, o que torna a carga online inviavel.
+## Por que essa estrategia
 
-Para deixar o site funcionando de forma confiavel, a API da Vercel agora serve um snapshot rapido em `data/artia-ids.json`.
+Foi testado localmente que a consulta direta nas views de atividades do banco do Artia demora mais de 60 segundos ate com `LIMIT 5`, entao a API online nao ficava viavel para uso em tempo real.
 
-## Como atualizar a base
+A solucao gratuita e estavel foi:
 
-Quando o arquivo `base_dados_id_artia_no_client.xlsx` mudar, rode:
+1. um workflow agendado do GitHub Actions gera o snapshot
+2. o workflow salva `data/artia-ids.json` no repositorio
+3. o GitHub Pages e a Vercel passam a servir esse snapshot ja pronto
 
-```bash
-npm run build:ids-snapshot
-```
+## Workflow automatico
 
-Isso gera ou atualiza:
+Arquivo:
 
-```text
-data/artia-ids.json
-```
+- [.github/workflows/update-artia-snapshot.yml](/Users/andre/Documents/apontamentos-artia-codex_v5/.github/workflows/update-artia-snapshot.yml)
 
-Depois suba o commit no GitHub e redeploye a Vercel.
+Ele roda:
 
-## Teste local
+- de hora em hora
+- manualmente via `workflow_dispatch`
 
-```bash
-npm install
-npm run build:ids-snapshot
-npm run dev:local
-```
+## Secrets que voce precisa criar no GitHub
 
-Abra:
+No repositorio, em `Settings > Secrets and variables > Actions`, crie:
 
-- `http://localhost:3000`
-- `http://localhost:3000/api/artia-ids?limit=5`
+- `ARTIA_DB_HOST`
+- `ARTIA_DB_PORT`
+- `ARTIA_DB_USER`
+- `ARTIA_DB_PASSWORD`
+- `ARTIA_DB_NAME`
 
-## Resultado validado localmente
+Opcionais:
 
-- `GET /api/artia-ids?limit=5`: respondeu em ~125 ms
-- `GET /api/artia-ids`: respondeu em ~232 ms
-- total carregado: 62.899 IDs
+- `ARTIA_DB_SSL`
+- `ARTIA_ORGANIZATION_ID`
+- `ARTIA_DB_ACTIVITIES_TABLE`
+- `ARTIA_DB_PROJECTS_TABLE`
+- `ARTIA_DB_QUERY`
+- `ARTIA_DB_QUERY_TIMEOUT_MS`
 
-## Arquivos principais
+## Como o snapshot e gerado
 
-- [index.html](/Users/andre/Documents/apontamentos-artia-codex_v5/index.html#L10)
-- [api/artia-ids.js](/Users/andre/Documents/apontamentos-artia-codex_v5/api/artia-ids.js#L1)
-- [scripts/build-artia-ids-snapshot.js](/Users/andre/Documents/apontamentos-artia-codex_v5/scripts/build-artia-ids-snapshot.js#L1)
+Script:
+
+- [scripts/build-artia-ids-from-db.js](/Users/andre/Documents/apontamentos-artia-codex_v5/scripts/build-artia-ids-from-db.js)
+
+Ele:
+
+- conecta no banco do Artia
+- executa a query configurada
+- normaliza para `project`, `projectLabel`, `activity`, `id`
+- salva em:
+
 - [data/artia-ids.json](/Users/andre/Documents/apontamentos-artia-codex_v5/data/artia-ids.json)
+
+## API usada pelo site
+
+Arquivo:
+
+- [api/artia-ids.js](/Users/andre/Documents/apontamentos-artia-codex_v5/api/artia-ids.js)
+
+Ela so le o snapshot e responde rapido.
+
+## Scripts disponiveis
+
+- `npm run build:ids-snapshot`
+  Gera snapshot a partir do XLSX local
+- `npm run build:ids-snapshot:db`
+  Gera snapshot a partir do banco do Artia
+- `npm run dev:local`
+  Sobe o servidor local
+
+## Validacao local que foi feita
+
+Com o snapshot em JSON:
+
+- `GET /api/artia-ids?limit=5`: ~125 ms
+- `GET /api/artia-ids`: ~232 ms
+- total: 62.899 IDs
+
+## Observacoes importantes
+
+- O horario do `schedule` do GitHub Actions usa UTC
+- O GitHub permite workflows agendados com intervalo minimo de 5 minutos
+- Em repositorio publico, workflows agendados podem ser desativados apos 60 dias sem atividade
+
+## Proximo passo
+
+Depois de subir esses arquivos, basta:
+
+1. configurar os secrets do GitHub
+2. abrir a aba `Actions`
+3. rodar `Update Artia Snapshot` manualmente uma vez
+4. confirmar que `data/artia-ids.json` foi atualizado
+5. testar a pagina
