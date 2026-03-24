@@ -20,7 +20,7 @@ function getOriginDecision(req) {
   }
 
   if (!origin) {
-    return { allowed: false, corsOrigin: "" };
+    return { allowed: true, corsOrigin: "" };
   }
 
   if (!allowedOrigins.includes(origin)) {
