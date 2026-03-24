@@ -1,4 +1,7 @@
-const { readStoredSnapshot, getStoreSummary } = require("../lib/artia-snapshot-store");
+const { readStoredSnapshot, writeStoredSnapshot, getStoreSummary } = require("../lib/artia-snapshot-store");
+const { buildSnapshot } = require("../lib/artia-snapshot-sources");
+
+let refreshPromise = null;
 
 function readEnv(name, fallback = "") {
   return String(process.env[name] ?? fallback).trim();
@@ -47,6 +50,11 @@ function parseLimit(value) {
   return Math.min(limit, 5000);
 }
 
+function parsePositiveInt(value, fallback) {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 function limitRows(rows, limit) {
   return limit ? rows.slice(0, limit) : rows;
 }
@@ -59,8 +67,57 @@ async function readSnapshot() {
   return payload;
 }
 
+function getSourceMode() {
+  return readEnv("ARTIA_IDS_SOURCE_MODE", "bundled").toLowerCase() || "bundled";
+}
+
+function getExpectedSourceTypes(mode) {
+  if (mode === "db") return ["mysql"];
+  if (mode === "upstream") return ["upstream-api"];
+  return ["bundled", "xlsx-snapshot"];
+}
+
+function shouldRefreshSnapshot(snapshot, mode) {
+  if (!snapshot?.rows?.length) return true;
+  if (mode === "bundled") return false;
+
+  const ttlMs = parsePositiveInt(readEnv("ARTIA_SNAPSHOT_TTL_MS"), 10 * 60 * 1000);
+  const builtAtMs = Date.parse(String(snapshot?.meta?.builtAt || ""));
+  const isStale = !Number.isFinite(builtAtMs) || Date.now() - builtAtMs >= ttlMs;
+  const sourceType = String(snapshot?.meta?.sourceType || "").trim();
+  const sourceMatches = getExpectedSourceTypes(mode).includes(sourceType);
+
+  return isStale || !sourceMatches;
+}
+
+async function refreshSnapshot(mode) {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const payload = await buildSnapshot(mode);
+      await writeStoredSnapshot(payload);
+      return payload;
+    })().finally(() => {
+      refreshPromise = null;
+    });
+  }
+
+  return refreshPromise;
+}
+
 async function loadRows({ limit }) {
-  const snapshot = await readSnapshot();
+  const mode = getSourceMode();
+  let snapshot = await readSnapshot();
+
+  if (shouldRefreshSnapshot(snapshot, mode)) {
+    try {
+      snapshot = await refreshSnapshot(mode);
+    } catch (error) {
+      if (!snapshot?.rows?.length) {
+        throw error;
+      }
+    }
+  }
+
   return {
     rows: limitRows(snapshot.rows, limit),
     meta: {
@@ -68,7 +125,8 @@ async function loadRows({ limit }) {
       fetchedAt: new Date().toISOString(),
       sourceName: snapshot.meta?.sourceName || "artia snapshot",
       sourceType: snapshot.meta?.sourceType || "snapshot",
-      storeMode: getStoreSummary().mode
+      storeMode: getStoreSummary().mode,
+      sourceMode: mode
     }
   };
 }
