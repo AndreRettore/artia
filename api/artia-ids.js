@@ -107,11 +107,13 @@ async function refreshSnapshot(mode) {
 async function loadRows({ limit }) {
   const mode = getSourceMode();
   let snapshot = await readSnapshot();
+  let refreshErrorMessage = "";
 
   if (shouldRefreshSnapshot(snapshot, mode)) {
     try {
       snapshot = await refreshSnapshot(mode);
     } catch (error) {
+      refreshErrorMessage = String(error?.message || error || "").trim();
       if (!snapshot?.rows?.length) {
         throw error;
       }
@@ -126,7 +128,8 @@ async function loadRows({ limit }) {
       sourceName: snapshot.meta?.sourceName || "artia snapshot",
       sourceType: snapshot.meta?.sourceType || "snapshot",
       storeMode: getStoreSummary().mode,
-      sourceMode: mode
+      sourceMode: mode,
+      refreshError: refreshErrorMessage || undefined
     }
   };
 }
