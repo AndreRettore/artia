@@ -94,7 +94,14 @@ async function refreshSnapshot(mode) {
   if (!refreshPromise) {
     refreshPromise = (async () => {
       const payload = await buildSnapshot(mode);
-      await writeStoredSnapshot(payload);
+      try {
+        await writeStoredSnapshot(payload);
+      } catch (error) {
+        payload.meta = {
+          ...payload.meta,
+          cacheWriteError: String(error?.message || error || "").trim() || undefined
+        };
+      }
       return payload;
     })().finally(() => {
       refreshPromise = null;
