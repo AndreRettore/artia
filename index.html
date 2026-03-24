@@ -3814,7 +3814,7 @@
     const IS_LOCAL_HOST = ["localhost", "127.0.0.1"].includes(window.location.hostname);
     const IS_VERCEL_HOST = window.location.hostname.endsWith(".vercel.app");
     const DEFAULT_VERCEL_PROXY_URL = IS_VERCEL_HOST ? `${window.location.origin}/api/artia-ids` : "";
-    const ARTIA_API_FETCH_TIMEOUT_MS = 20000;
+    const ARTIA_API_FETCH_TIMEOUT_MS = 45000;
     const ARTIA_PROXY_URL = (
       (typeof window.ARTIA_PROXY_URL === "string" ? window.ARTIA_PROXY_URL : "") ||
       (IS_LOCAL_HOST ? "/api/artia-ids" : "") ||
