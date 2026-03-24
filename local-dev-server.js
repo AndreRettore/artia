@@ -5,6 +5,7 @@ const { URL } = require("node:url");
 
 const rootDir = __dirname;
 const apiHandler = require("./api/artia-ids.js");
+const refreshHandler = require("./api/artia-ids-refresh.js");
 const port = Number(process.env.PORT || 3000);
 
 const MIME_TYPES = {
@@ -127,6 +128,18 @@ const server = http.createServer(async (req, res) => {
   try {
     if (parsedUrl.pathname === "/api/artia-ids") {
       await handleApi(req, res, parsedUrl);
+      return;
+    }
+
+    if (parsedUrl.pathname === "/api/artia-ids-refresh") {
+      const apiReq = {
+        method: req.method,
+        headers: req.headers,
+        query: Object.fromEntries(parsedUrl.searchParams.entries()),
+        url: parsedUrl.pathname + parsedUrl.search
+      };
+      const apiRes = createApiResponseAdapter(res);
+      await refreshHandler(apiReq, apiRes);
       return;
     }
 

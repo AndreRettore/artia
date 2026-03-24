@@ -7,7 +7,7 @@
   <title>Apontamento de Horas - Artia</title>
   <meta name="description"
     content="Sistema de apontamento de horas com calendário semanal, edição de eventos, IDs Artia, tabela, Gantt e gráficos." />
-  <meta name="artia-proxy-url" content="https://backend-artia-aqsn00bxv-andres-projects-c1737ebe.vercel.app/api/artia-ids" />
+  <meta name="artia-proxy-url" content="" />
   <meta property="og:locale" content="pt_BR" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Apontamento de Horas - Artia" />
@@ -7653,7 +7653,7 @@
     async function tryLoadArtiaIdBaseFromApi({ silentIfUnavailable = false } = {}) {
       if (!ARTIA_PROXY_URL) {
         if (!silentIfUnavailable) {
-          alert("Defina a URL da Vercel no meta 'artia-proxy-url' para habilitar a sincronização via API.");
+          alert("Defina a URL da API da Vercel no meta 'artia-proxy-url' para habilitar a sincronização dos IDs.");
         }
         return false;
       }

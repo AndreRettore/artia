@@ -3,73 +3,85 @@
 ## Arquitetura atual
 
 - GitHub Pages: hospeda o front
-- Vercel: expõe `api/artia-ids`
-- GitHub Actions: atualiza `data/artia-ids.json` automaticamente a cada hora
+- Vercel: expõe a API `api/artia-ids`
+- Vercel: tambem pode atualizar o snapshot via `api/artia-ids-refresh`
 
-O site nao consulta mais o banco do Artia em tempo real na abertura da pagina. Ele le um snapshot rapido em JSON.
+O site continua lendo os IDs pela API da Vercel. A diferenca e que o snapshot agora fica dentro da propria stack da Vercel, sem GitHub Actions.
 
-## Por que essa estrategia
+## Como funciona
 
-Foi testado localmente que a consulta direta nas views de atividades do banco do Artia demora mais de 60 segundos ate com `LIMIT 5`, entao a API online nao ficava viavel para uso em tempo real.
+1. o front chama `GET /api/artia-ids`
+2. a API responde um snapshot rapido
+3. o snapshot pode ser atualizado por `GET/POST /api/artia-ids-refresh`
+4. quando a Vercel tem `BLOB_READ_WRITE_TOKEN`, esse snapshot fica persistido no Vercel Blob
+5. sem Blob, o ambiente local usa `.cache/artia-ids.json`
 
-A solucao gratuita e estavel foi:
+## Endpoints
 
-1. um workflow agendado do GitHub Actions gera o snapshot
-2. o workflow salva `data/artia-ids.json` no repositorio
-3. o GitHub Pages e a Vercel passam a servir esse snapshot ja pronto
+- [api/artia-ids.js](/Users/andre/Documents/apontamentos-artia-codex_v5/api/artia-ids.js)
+  Le o snapshot persistido e responde rapido
+- [api/artia-ids-refresh.js](/Users/andre/Documents/apontamentos-artia-codex_v5/api/artia-ids-refresh.js)
+  Gera e grava um snapshot novo na Vercel
 
-## Workflow automatico
+## Sources suportados no refresh
 
-Arquivo:
+Voce escolhe com `ARTIA_IDS_SOURCE_MODE`:
 
-- [.github/workflows/update-artia-snapshot.yml](/Users/andre/Documents/apontamentos-artia-codex_v5/.github/workflows/update-artia-snapshot.yml)
+- `bundled`
+  Usa [data/artia-ids.json](/Users/andre/Documents/apontamentos-artia-codex_v5/data/artia-ids.json) como fonte inicial
+- `db`
+  Consulta o banco do Artia usando `ARTIA_DB_QUERY`
+- `upstream`
+  Consulta uma API upstream do Artia usando `ARTIA_UPSTREAM_URL`
 
-Ele roda:
+## Variaveis importantes na Vercel
 
-- de hora em hora
-- manualmente via `workflow_dispatch`
+Obrigatorias para o site:
 
-## Secrets que voce precisa criar no GitHub
+- `ARTIA_ALLOWED_ORIGINS`
 
-No repositorio, em `Settings > Secrets and variables > Actions`, crie:
+Para proteger o refresh:
 
+- `ARTIA_REFRESH_SECRET`
+
+Para persistencia no Blob:
+
+- `BLOB_READ_WRITE_TOKEN`
+- `ARTIA_SNAPSHOT_BLOB_PATH` opcional
+
+Para refresh via banco:
+
+- `ARTIA_IDS_SOURCE_MODE=db`
 - `ARTIA_DB_HOST`
 - `ARTIA_DB_PORT`
 - `ARTIA_DB_USER`
 - `ARTIA_DB_PASSWORD`
 - `ARTIA_DB_NAME`
-
-Opcionais:
-
-- `ARTIA_DB_SSL`
-- `ARTIA_ORGANIZATION_ID`
-- `ARTIA_DB_ACTIVITIES_TABLE`
-- `ARTIA_DB_PROJECTS_TABLE`
 - `ARTIA_DB_QUERY`
-- `ARTIA_DB_QUERY_TIMEOUT_MS`
 
-## Como o snapshot e gerado
+Para refresh via API upstream:
 
-Script:
+- `ARTIA_IDS_SOURCE_MODE=upstream`
+- `ARTIA_UPSTREAM_URL`
+- `ARTIA_API_KEY` opcional
 
-- [scripts/build-artia-ids-from-db.js](/Users/andre/Documents/apontamentos-artia-codex_v5/scripts/build-artia-ids-from-db.js)
+## Observacao importante sobre o banco do Artia
 
-Ele:
+Foi testado localmente que as views `organization_9115_activities` e `organization_9115_activities_v2` continuam lentas demais para uso online. Por isso o backend agora separa:
 
-- conecta no banco do Artia
-- executa a query configurada
-- normaliza para `project`, `projectLabel`, `activity`, `id`
-- salva em:
+- leitura rapida do snapshot em `GET /api/artia-ids`
+- refresh controlado em `GET/POST /api/artia-ids-refresh`
 
-- [data/artia-ids.json](/Users/andre/Documents/apontamentos-artia-codex_v5/data/artia-ids.json)
+Se voce quiser refresh real direto do banco, o ideal e definir uma `ARTIA_DB_QUERY` mais eficiente do que a view padrao.
 
-## API usada pelo site
+## Teste local
 
-Arquivo:
-
-- [api/artia-ids.js](/Users/andre/Documents/apontamentos-artia-codex_v5/api/artia-ids.js)
-
-Ela so le o snapshot e responde rapido.
+1. copie [.env.local.example](/Users/andre/Documents/apontamentos-artia-codex_v5/.env.local.example) para `.env.local`
+2. rode `npm run dev:local`
+3. abra `http://localhost:3000`
+4. teste:
+   - `GET http://localhost:3000/api/artia-ids?limit=5`
+   - `POST http://localhost:3000/api/artia-ids-refresh?secret=SEU_SEGREDO`
 
 ## Scripts disponiveis
 
@@ -79,27 +91,3 @@ Ela so le o snapshot e responde rapido.
   Gera snapshot a partir do banco do Artia
 - `npm run dev:local`
   Sobe o servidor local
-
-## Validacao local que foi feita
-
-Com o snapshot em JSON:
-
-- `GET /api/artia-ids?limit=5`: ~125 ms
-- `GET /api/artia-ids`: ~232 ms
-- total: 62.899 IDs
-
-## Observacoes importantes
-
-- O horario do `schedule` do GitHub Actions usa UTC
-- O GitHub permite workflows agendados com intervalo minimo de 5 minutos
-- Em repositorio publico, workflows agendados podem ser desativados apos 60 dias sem atividade
-
-## Proximo passo
-
-Depois de subir esses arquivos, basta:
-
-1. configurar os secrets do GitHub
-2. abrir a aba `Actions`
-3. rodar `Update Artia Snapshot` manualmente uma vez
-4. confirmar que `data/artia-ids.json` foi atualizado
-5. testar a pagina
