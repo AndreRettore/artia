@@ -3734,10 +3734,10 @@
             <label for="endTimeSelect">Fim (HH:MM)</label>
             <select id="endTimeSelect"></select>
             <input type="text" id="endTimeInput" class="timeManualInput hidden" inputmode="numeric" autocomplete="off"
-              placeholder="HH:MM ou 24:00" />
+              placeholder="HH:MM ou 23:59" />
           </div>
         </div>
-        <div class="hint" id="timeHint">Os horários são em intervalos de 10 minutos. “24:00” representa o final do dia.</div>
+        <div class="hint" id="timeHint">Os horários são em intervalos de 10 minutos. “23:59” representa o final do dia.</div>
 
         <div class="row">
           <label for="projectInput">Projeto (nº do projeto)*</label>
@@ -4356,7 +4356,7 @@
     function clampMinutesToDay(m) { return normalizeToStepMinutes(clampMinutesRaw(m)); }
     function formatTimeFromMinutes(m) {
       m = clampMinutesRaw(m);
-      if (m === 1440) return "24:00";
+      if (m === 1440) return "23:59";
       const hh = Math.floor(m / 60), mm = m % 60;
       return pad2(hh) + ":" + pad2(mm);
     }
@@ -4372,7 +4372,7 @@
 
     function formatTimeForInput(m, allow2400 = false) {
       let mins = clampMinutesRaw(m);
-      if (allow2400 && mins === 1440) return "24:00";
+      if (allow2400 && mins === 1440) return "23:59";
       if (mins >= 1440) mins = 1439;
       const hh = Math.floor(mins / 60);
       const mm = mins % 60;
@@ -4386,6 +4386,7 @@
       const hh = Number(match[1]);
       const mm = Number(match[2]);
       if (allow2400 && hh === 24 && mm === 0) return 1440;
+      if (allow2400 && hh === 23 && mm === 59) return 1440;
       if (hh < 0 || hh > 23) return null;
       return (hh * 60) + mm;
     }
@@ -6757,8 +6758,8 @@
 
       if (timeHintEl) {
         timeHintEl.textContent = freeMode
-          ? "Horários quebrados ativos: digite HH:MM livremente (fim aceita 24:00)."
-          : "Os horários são em intervalos de 10 minutos. “24:00” representa o final do dia.";
+          ? "Horários quebrados ativos: digite HH:MM livremente (fim aceita 23:59 como final do dia)."
+          : "Os horários são em intervalos de 10 minutos. “23:59” representa o final do dia.";
       }
       if (btnToggleBrokenTimes) {
         btnToggleBrokenTimes.textContent = "Arredondar Horários";
@@ -6853,7 +6854,7 @@
         const parsedStart = parseTypedTimeToMinutes(startTimeInputEl.value);
         const parsedEnd = parseTypedTimeToMinutes(endTimeInputEl.value, { allow2400: true });
         if (parsedStart == null || parsedEnd == null) {
-          setModalInfo("Horário inválido. Use HH:MM (fim pode ser 24:00).");
+          setModalInfo("Horário inválido. Use HH:MM (fim pode ser 23:59 ou 24:00).");
           return null;
         }
         sM = clampMinutesRaw(parsedStart);
