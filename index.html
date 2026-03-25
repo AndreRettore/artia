@@ -3389,6 +3389,12 @@
             <select id="tableProjectFilter" class="ctrlSelect"></select>
             <label class="ctrlLabel" for="tableActivityFilter">Atividade:</label>
             <select id="tableActivityFilter" class="ctrlSelect"></select>
+            <label class="ctrlLabel" for="tableArtiaLaunchFilter">Lançamento:</label>
+            <select id="tableArtiaLaunchFilter" class="ctrlSelect">
+              <option value="ALL">Todos</option>
+              <option value="LAUNCHED">Lançados</option>
+              <option value="PENDING">Não lançados</option>
+            </select>
           </div>
           <button class="btn primary btnSm" id="btnNewFromTable" type="button">+ Novo apontamento</button>
         </div>
@@ -4700,6 +4706,7 @@
     const ganttHeadRowEl = document.getElementById("ganttHeadRow");
     const tableProjectFilterEl = document.getElementById("tableProjectFilter");
     const tableActivityFilterEl = document.getElementById("tableActivityFilter");
+    const tableArtiaLaunchFilterEl = document.getElementById("tableArtiaLaunchFilter");
     const tableFilterStartEl = document.getElementById("tableFilterStart");
     const tableFilterEndEl = document.getElementById("tableFilterEnd");
 
@@ -5367,6 +5374,19 @@
         .slice()
         .sort((a, b) => new Date(a.start) - new Date(b.start));
     }
+    function getTableRangeEvents() {
+      const wsIso = tableFilterStartEl?.value || "0000-00-00";
+      const weIso = tableFilterEndEl?.value || "9999-99-99";
+      return state.events
+        .filter(ev => ev.day >= wsIso && ev.day <= weIso)
+        .slice()
+        .sort((a, b) => new Date(a.start) - new Date(b.start));
+    }
+    function matchesTableLaunchFilter(ev, launchFilter = "ALL") {
+      if (launchFilter === "LAUNCHED") return Boolean(ev.artiaLaunched);
+      if (launchFilter === "PENDING") return !ev.artiaLaunched;
+      return true;
+    }
     function renderTable() {
       if (state.view !== "table") return;
 
@@ -5463,19 +5483,17 @@
       ensureTableFilterOptions();
       const pFilter = (tableProjectFilterEl && tableProjectFilterEl.value) ? tableProjectFilterEl.value : "ALL";
       const aFilter = (tableActivityFilterEl && tableActivityFilterEl.value) ? tableActivityFilterEl.value : "ALL";
-      const wsIso = tableFilterStartEl?.value || "0000-00-00";
-      const weIso = tableFilterEndEl?.value || "9999-99-99";
+      const launchFilter = (tableArtiaLaunchFilterEl && tableArtiaLaunchFilterEl.value) ? tableArtiaLaunchFilterEl.value : "ALL";
 
-      return state.events
+      return getTableRangeEvents()
         .filter(ev => {
-          if (ev.day < wsIso || ev.day > weIso) return false;
           const p = (ev.project || "").trim();
           const a = (ev.activityLabel || "").trim();
           if (pFilter !== "ALL" && p !== pFilter) return false;
           if (aFilter !== "ALL" && a !== aFilter) return false;
+          if (!matchesTableLaunchFilter(ev, launchFilter)) return false;
           return true;
         })
-        .slice()
         .sort((a, b) => {
           let valA, valB;
           if (tableSort.key === "data") { valA = a.start; valB = b.start; }
@@ -5524,22 +5542,33 @@
       });
     }
 
-    function getActivitiesInWeek(projectFilter = "ALL") {
-      const inWeek = getWeekEventsSorted();
+    function getProjectsInTableRange(launchFilter = "ALL") {
       const set = new Set();
-      for (const ev of inWeek) {
+      for (const ev of getTableRangeEvents()) {
+        if (!matchesTableLaunchFilter(ev, launchFilter)) continue;
+        const p = (ev.project || "").trim();
+        if (p) set.add(p);
+      }
+      return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true, sensitivity: "base" }));
+    }
+
+    function getActivitiesInTableRange(projectFilter = "ALL", launchFilter = "ALL") {
+      const set = new Set();
+      for (const ev of getTableRangeEvents()) {
+        if (!matchesTableLaunchFilter(ev, launchFilter)) continue;
         const p = (ev.project || "").trim();
         if (projectFilter !== "ALL" && p !== projectFilter) continue;
         const a = (ev.activityLabel || "").trim();
         if (a) set.add(a);
       }
-      return Array.from(set).sort((a, b) => a.localeCompare(b));
+      return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true, sensitivity: "base" }));
     }
 
     function ensureTableFilterOptions() {
       if (!tableProjectFilterEl || !tableActivityFilterEl) return;
 
-      const projects = getProjectsInWeek();
+      const launchFilter = tableArtiaLaunchFilterEl?.value || "ALL";
+      const projects = getProjectsInTableRange(launchFilter);
       const prevP = tableProjectFilterEl.value || "ALL";
 
       tableProjectFilterEl.innerHTML = "";
@@ -5563,7 +5592,7 @@
 
       // Atividades dependem do projeto escolhido
       const pSel = tableProjectFilterEl.value || "ALL";
-      const activities = getActivitiesInWeek(pSel);
+      const activities = getActivitiesInTableRange(pSel, launchFilter);
       const prevA = tableActivityFilterEl.value || "ALL";
 
       tableActivityFilterEl.innerHTML = "";
@@ -7553,6 +7582,11 @@
     });
     if (tableActivityFilterEl) tableActivityFilterEl.addEventListener("change", () => {
       if (state.view === "table") renderTable();
+    });
+    if (tableArtiaLaunchFilterEl) tableArtiaLaunchFilterEl.addEventListener("change", () => {
+      if (state.view !== "table") return;
+      ensureTableFilterOptions();
+      renderTable();
     });
     if (tableFilterStartEl) tableFilterStartEl.addEventListener("change", () => {
       syncTableDateRangeStorage();
