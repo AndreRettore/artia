@@ -3251,6 +3251,19 @@
                 </span>
                 <span>Como usar</span>
               </button>
+              <button class="btn btnSm settingsMenu__action" id="btnLoadBase" type="button"
+                title="Carregar a base de IDs Artia a partir de um XLSX">
+                <span class="btnIcon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 9h16" />
+                    <path d="M4 15h16" />
+                    <path d="M10 3L8 21" />
+                    <path d="M16 3l-2 18" />
+                  </svg>
+                </span>
+                <span>Carregar IDs Artia (XLSX)</span>
+              </button>
               <button class="btn btnSm settingsMenu__action" id="btnToggleBrokenTimes" type="button" aria-haspopup="dialog">Arredondar
                 Horários</button>
               <button class="btn btnSm danger settingsMenu__action" id="btnClearWeek" type="button">Limpar semana</button>
@@ -3305,22 +3318,14 @@
               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="iconStroke">
               <path d="M3 7h6l2 2h10v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
             </svg></span><span>Definir Local de Salvamento</span></button>
-        <button class="btn btnSm" id="btnLoadBase" type="button"
-          title="Carregar a base de IDs Artia a partir de um XLSX"><span class="btnIcon"><svg viewBox="0 0 24 24"
+        <button class="btn btnSm utilityBtn hidden" id="btnSyncArtiaApi" type="button"
+          title="Atualizar IDs via API" aria-label="Atualizar IDs via API"><span class="btnIcon"><svg viewBox="0 0 24 24"
               fill="none" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M4 9h16" />
-              <path d="M4 15h16" />
-              <path d="M10 3L8 21" />
-              <path d="M16 3l-2 18" />
-            </svg></span><span>Carregar IDs Artia (XLSX)</span></button>
-        <button class="btn btnSm hidden" id="btnSyncArtiaApi" type="button"
-          title="Atualizar a base de IDs usando a API protegida da Vercel"><span class="btnIcon"><svg viewBox="0 0 24 24"
-              fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-              <path d="M21 3v6h-6" />
-            </svg></span><span>Atualizar IDs via API</span></button>
+              <path d="M7 18a4 4 0 1 1 .8-7.92A5 5 0 0 1 17.5 11a3.5 3.5 0 1 1 .5 7H7z" />
+              <path d="M12 10v7" />
+              <path d="m9.5 12.5 2.5-2.5 2.5 2.5" />
+            </svg></span><span class="srOnly">Atualizar IDs via API</span></button>
         <input id="fileBaseInput" type="file" accept=".xlsx" class="hidden" aria-hidden="true" tabindex="-1" />
         <button class="btn btnSm" id="btnImportActivities" type="button"
           title="Importar apontamentos de um arquivo XLSX"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none"
@@ -4658,6 +4663,7 @@
     const baseMiniEl = document.getElementById("baseMini");
     const baseMiniTextEl = document.getElementById("baseMiniText");
     const baseStatusTextEl = document.getElementById("baseStatusText");
+    const baseRowCountFormatter = new Intl.NumberFormat("pt-BR");
     function setBaseStatus(loaded, meta) {
       baseStatusEl.classList.remove("ok", "warn");
       baseStatusEl.classList.add(loaded ? "ok" : "warn");
@@ -4667,7 +4673,9 @@
         if (baseMiniTextEl) { baseMiniTextEl.textContent = ARTIA_PROXY_URL ? ARTIA_PROXY_SOURCE_LABEL : "Base local"; }
         return;
       }
-      const rows = meta?.rows ?? "?"; const fileName = meta?.fileName ?? "arquivo";
+      const rawRows = Number(meta?.rows);
+      const rows = Number.isFinite(rawRows) ? baseRowCountFormatter.format(rawRows) : (meta?.rows ?? "?");
+      const fileName = meta?.fileName ?? "arquivo";
       baseStatusTextEl.textContent = `IDs: carregada (${rows} linhas)`;
       if (baseMiniEl) { baseMiniEl.classList.remove("warn"); baseMiniEl.classList.add("ok"); }
       if (baseMiniTextEl) { baseMiniTextEl.textContent = meta?.sourceLabel || "Base local"; } baseStatusEl.title = `Fonte: ${fileName}`;
@@ -7574,7 +7582,11 @@
     const btnSyncArtiaApi = document.getElementById("btnSyncArtiaApi");
     const fileBaseInput = document.getElementById("fileBaseInput");
     if (btnSyncArtiaApi && ARTIA_PROXY_URL) btnSyncArtiaApi.classList.remove("hidden");
-    btnLoadBase.addEventListener("click", () => fileBaseInput.click());
+    btnLoadBase.addEventListener("click", () => {
+      settingsMenu?.classList.add("hidden");
+      btnSettings?.setAttribute("aria-expanded", "false");
+      fileBaseInput.click();
+    });
 
     function buildIdBaseIndex(rows) {
       const index = {};
