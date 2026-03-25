@@ -59,6 +59,14 @@ function limitRows(rows, limit) {
   return limit ? rows.slice(0, limit) : rows;
 }
 
+function toPublicRows(rows) {
+  return (Array.isArray(rows) ? rows : []).map((row) => ({
+    project: String(row?.project ?? "").trim(),
+    activity: String(row?.activity ?? "").trim(),
+    id: String(row?.id ?? "").trim()
+  }));
+}
+
 async function readSnapshot() {
   const payload = await readStoredSnapshot();
   if (!Array.isArray(payload?.rows)) {
@@ -159,12 +167,13 @@ module.exports = async function handler(req, res) {
   try {
     const limit = parseLimit(req.query?.limit);
     const payload = await loadRows({ limit });
+    const publicRows = toPublicRows(payload.rows);
 
     return res.status(200).json({
-      rows: payload.rows,
+      rows: publicRows,
       meta: {
         ...payload.meta,
-        count: payload.rows.length
+        count: publicRows.length
       }
     });
   } catch (error) {
