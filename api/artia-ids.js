@@ -14,9 +14,20 @@ function splitCsv(value) {
     .filter(Boolean);
 }
 
+function normalizeOriginValue(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (raw === "*") return "*";
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return raw.replace(/\/+$/, "");
+  }
+}
+
 function getOriginDecision(req) {
-  const allowedOrigins = splitCsv(readEnv("ARTIA_ALLOWED_ORIGINS"));
-  const origin = String(req.headers.origin || "").trim();
+  const allowedOrigins = splitCsv(readEnv("ARTIA_ALLOWED_ORIGINS")).map(normalizeOriginValue);
+  const origin = normalizeOriginValue(req.headers.origin || "");
 
   if (!allowedOrigins.length) {
     return { allowed: true, corsOrigin: origin || "*" };
@@ -24,6 +35,10 @@ function getOriginDecision(req) {
 
   if (!origin) {
     return { allowed: true, corsOrigin: "" };
+  }
+
+  if (allowedOrigins.includes("*")) {
+    return { allowed: true, corsOrigin: origin };
   }
 
   if (!allowedOrigins.includes(origin)) {
