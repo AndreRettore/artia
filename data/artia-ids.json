@@ -1,0 +1,28 @@
+{
+  "rows": [
+    {
+      "project": "0000",
+      "projectLabel": "0000",
+      "activity": "1.1 - Exemplo de atividade",
+      "id": "EXEMPLO-0001"
+    },
+    {
+      "project": "SP0001",
+      "projectLabel": "SP0001",
+      "activity": "2 - Exemplo de atividade alfanumerica",
+      "id": "EXEMPLO-0002"
+    },
+    {
+      "project": "21.10",
+      "projectLabel": "21.10",
+      "activity": "7.5.1 - Exemplo com ponto no projeto",
+      "id": "EXEMPLO-0003"
+    }
+  ],
+  "meta": {
+    "count": 3,
+    "builtAt": "2026-03-25T02:20:00.000Z",
+    "sourceName": "sanitized-bundled-snapshot",
+    "sourceType": "bundled"
+  }
+}

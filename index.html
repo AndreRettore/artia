@@ -7,6 +7,7 @@
   <title>Apontamento de Horas - Artia</title>
   <meta name="description"
     content="Sistema de apontamento de horas com calendário semanal, edição de eventos, IDs Artia, tabela, Gantt e gráficos." />
+  <meta name="artia-proxy-url" content="" />
   <meta property="og:locale" content="pt_BR" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Apontamento de Horas - Artia" />
@@ -3250,6 +3251,19 @@
                 </span>
                 <span>Como usar</span>
               </button>
+              <button class="btn btnSm settingsMenu__action" id="btnLoadBase" type="button"
+                title="Carregar a base de IDs Artia a partir de um XLSX">
+                <span class="btnIcon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 9h16" />
+                    <path d="M4 15h16" />
+                    <path d="M10 3L8 21" />
+                    <path d="M16 3l-2 18" />
+                  </svg>
+                </span>
+                <span>Carregar IDs Artia (XLSX)</span>
+              </button>
               <button class="btn btnSm settingsMenu__action" id="btnToggleBrokenTimes" type="button" aria-haspopup="dialog">Arredondar
                 Horários</button>
               <button class="btn btnSm danger settingsMenu__action" id="btnClearWeek" type="button">Limpar semana</button>
@@ -3304,15 +3318,14 @@
               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="iconStroke">
               <path d="M3 7h6l2 2h10v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
             </svg></span><span>Definir Local de Salvamento</span></button>
-        <button class="btn btnSm" id="btnLoadBase" type="button"
-          title="Carregar a base de IDs Artia a partir de um XLSX"><span class="btnIcon"><svg viewBox="0 0 24 24"
+        <button class="btn btnSm utilityBtn hidden" id="btnSyncArtiaApi" type="button"
+          title="Atualizar IDs via API" aria-label="Atualizar IDs via API"><span class="btnIcon"><svg viewBox="0 0 24 24"
               fill="none" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M4 9h16" />
-              <path d="M4 15h16" />
-              <path d="M10 3L8 21" />
-              <path d="M16 3l-2 18" />
-            </svg></span><span>Carregar IDs Artia (XLSX)</span></button>
+              <path d="M7 18a4 4 0 1 1 .8-7.92A5 5 0 0 1 17.5 11a3.5 3.5 0 1 1 .5 7H7z" />
+              <path d="M12 10v7" />
+              <path d="m9.5 12.5 2.5-2.5 2.5 2.5" />
+            </svg></span><span class="srOnly">Atualizar IDs via API</span></button>
         <input id="fileBaseInput" type="file" accept=".xlsx" class="hidden" aria-hidden="true" tabindex="-1" />
         <button class="btn btnSm" id="btnImportActivities" type="button"
           title="Importar apontamentos de um arquivo XLSX"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none"
@@ -3376,6 +3389,12 @@
             <select id="tableProjectFilter" class="ctrlSelect"></select>
             <label class="ctrlLabel" for="tableActivityFilter">Atividade:</label>
             <select id="tableActivityFilter" class="ctrlSelect"></select>
+            <label class="ctrlLabel" for="tableArtiaLaunchFilter">Lançamento:</label>
+            <select id="tableArtiaLaunchFilter" class="ctrlSelect">
+              <option value="ALL">Todos</option>
+              <option value="LAUNCHED">Lançados</option>
+              <option value="PENDING">Não lançados</option>
+            </select>
           </div>
           <button class="btn primary btnSm" id="btnNewFromTable" type="button">+ Novo apontamento</button>
         </div>
@@ -3588,6 +3607,7 @@
             <li><strong>Importar Apontamentos (XLSX)</strong>: lê uma planilha e adiciona os registros ao sistema.</li>
             <li><strong>Definir Local de Salvamento</strong>: escolhe a pasta usada para backups XLSX.</li>
             <li><strong>Salvar XLSX</strong>: gera o backup manual dos apontamentos.</li>
+            <li><strong>Atualizar IDs via API</strong>: sincroniza a base direto da API do Artia, sem expor a chave no navegador.</li>
             <li><strong>Carregar IDs Artia (XLSX)</strong>: importa a base usada para preencher e consultar IDs por
               projeto e atividade.</li>
           </ul>
@@ -3720,10 +3740,10 @@
             <label for="endTimeSelect">Fim (HH:MM)</label>
             <select id="endTimeSelect"></select>
             <input type="text" id="endTimeInput" class="timeManualInput hidden" inputmode="numeric" autocomplete="off"
-              placeholder="HH:MM ou 24:00" />
+              placeholder="HH:MM ou 23:59" />
           </div>
         </div>
-        <div class="hint" id="timeHint">Os horários são em intervalos de 10 minutos. “24:00” representa o final do dia.</div>
+        <div class="hint" id="timeHint">Os horários são em intervalos de 10 minutos. “23:59” representa o final do dia.</div>
 
         <div class="row">
           <label for="projectInput">Projeto (nº do projeto)*</label>
@@ -3802,6 +3822,18 @@
     const LS_TABLE_RANGE_KEY = "offline_week_calendar_table_range_v1";
     const LS_CHARTS_RANGE_KEY = "offline_week_calendar_charts_range_v1";
     const LS_UI_PREFS_KEY = "offline_week_calendar_ui_prefs_v1";
+    const IS_LOCAL_HOST = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+    const IS_VERCEL_HOST = window.location.hostname.endsWith(".vercel.app");
+    const DEFAULT_VERCEL_PROXY_URL = IS_VERCEL_HOST ? `${window.location.origin}/api/artia-ids` : "";
+    const ARTIA_API_FETCH_TIMEOUT_MS = 45000;
+    const ARTIA_PROXY_URL = (
+      (typeof window.ARTIA_PROXY_URL === "string" ? window.ARTIA_PROXY_URL : "") ||
+      (IS_LOCAL_HOST ? "/api/artia-ids" : "") ||
+      DEFAULT_VERCEL_PROXY_URL ||
+      document.querySelector('meta[name="artia-proxy-url"]')?.content ||
+      ""
+    ).trim();
+    const ARTIA_PROXY_SOURCE_LABEL = "API Vercel";
     const DEFAULT_ID_BASE_CANDIDATE_URLS = [
       "./base_dados_id_artia_no_client.xlsx",
       "./base_ids_artia.xlsx",
@@ -4330,7 +4362,7 @@
     function clampMinutesToDay(m) { return normalizeToStepMinutes(clampMinutesRaw(m)); }
     function formatTimeFromMinutes(m) {
       m = clampMinutesRaw(m);
-      if (m === 1440) return "24:00";
+      if (m === 1440) return "23:59";
       const hh = Math.floor(m / 60), mm = m % 60;
       return pad2(hh) + ":" + pad2(mm);
     }
@@ -4346,7 +4378,7 @@
 
     function formatTimeForInput(m, allow2400 = false) {
       let mins = clampMinutesRaw(m);
-      if (allow2400 && mins === 1440) return "24:00";
+      if (allow2400 && mins === 1440) return "23:59";
       if (mins >= 1440) mins = 1439;
       const hh = Math.floor(mins / 60);
       const mm = mins % 60;
@@ -4360,6 +4392,7 @@
       const hh = Number(match[1]);
       const mm = Number(match[2]);
       if (allow2400 && hh === 24 && mm === 0) return 1440;
+      if (allow2400 && hh === 23 && mm === 59) return 1440;
       if (hh < 0 || hh > 23) return null;
       return (hh * 60) + mm;
     }
@@ -4386,17 +4419,31 @@
     function normKey(s) {
       return String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ").replace(/[–—]/g, "-").replace(/\s*-\s*/g, " - ").replace(/\u00A0/g, " ");
     }
+    function normalizeProjectCode(value) {
+      const raw = String(value ?? "").trim().replace(/\u00A0/g, " ");
+      if (!raw) return "";
+
+      const directCandidate = raw
+        .replace(/^projeto\s+/i, "")
+        .split(/\s[-–—]\s/, 1)[0]
+        .trim()
+        .replace(/\s+/g, "");
+
+      const directMatch = directCandidate.match(/^(?:[a-z]+\d+(?:\.\d+)*|c\d+|\d+(?:\.\d+)+|\d{3,})$/i);
+      if (directMatch) return directMatch[0].toUpperCase();
+
+      const embeddedMatch = raw.match(/\b(?:[a-z]+\d+(?:\.\d+)*|c\d+|\d+(?:\.\d+)+|\d{3,})\b/i);
+      return embeddedMatch ? embeddedMatch[0].toUpperCase() : "";
+    }
     function extractProjectFromC(valC) {
-      const s = String(valC ?? "").trim();
-      const m = s.match(/\b(\d{3,})\b/);
-      return m ? m[1] : "";
+      return normalizeProjectCode(valC);
     }
     /** Extrai apenas o nome textual do projeto de ColC, ex: "1358 - CONCREJATO x RIO+" => "concrejato x rio+" */
     function extractProjectLabelFromC(valC) {
       const s = String(valC ?? "").trim();
       // Remove o número inicial e separadores logo após
       return s
-        .replace(/^\d+\s*[-–—:.]?\s*/, "")
+        .replace(/^(?:projeto\s+)?(?:[a-z]+\d+(?:\.\d+)*|c\d+|\d+(?:\.\d+)+|\d{3,})\s*[-–—:.]?\s*/i, "")
         .replace(/^[-–—:.\s]+/, "")
         .trim();
     }
@@ -4408,6 +4455,31 @@
       if (na === normKey(proj)) return true;      // igual ao número do projeto
       if (projLabel && na === normKey(projLabel)) return true; // igual ao nome textual do projeto
       return false;
+    }
+    function firstNonEmptyValue(...values) {
+      for (const value of values) {
+        const trimmed = String(value ?? "").trim();
+        if (trimmed) return trimmed;
+      }
+      return "";
+    }
+    function buildIdBaseIndexFromApiRows(rows) {
+      const index = {};
+      for (const row of Array.isArray(rows) ? rows : []) {
+        const projectRaw = firstNonEmptyValue(row?.project, row?.projectId, row?.projectCode, row?.projectLabel);
+        const project = normalizeProjectCode(projectRaw);
+        const projectLabel = firstNonEmptyValue(row?.projectLabel, row?.projectName, projectRaw);
+        const activity = firstNonEmptyValue(row?.activity, row?.activityLabel, row?.name);
+        const id = firstNonEmptyValue(row?.id, row?.activityId, row?.artiaId);
+        if (!project || !activity || !id) continue;
+        if (isLikelyProjectNameActivity(activity, project, projectLabel)) continue;
+        const key = `${normKey(project)}||${normKey(activity)}`;
+        if (!index[key]) {
+          index[key] = id;
+          index[`${key}||name`] = activity;
+        }
+      }
+      return index;
     }
     function projectColorDigit(project) {
       const m = String(project || "").match(/(\d)\s*$/);
@@ -4598,19 +4670,22 @@
     const baseMiniEl = document.getElementById("baseMini");
     const baseMiniTextEl = document.getElementById("baseMiniText");
     const baseStatusTextEl = document.getElementById("baseStatusText");
+    const baseRowCountFormatter = new Intl.NumberFormat("pt-BR");
     function setBaseStatus(loaded, meta) {
       baseStatusEl.classList.remove("ok", "warn");
       baseStatusEl.classList.add(loaded ? "ok" : "warn");
       if (!loaded) {
         baseStatusTextEl.textContent = "IDs: não carregada";
         if (baseMiniEl) { baseMiniEl.classList.remove("ok"); baseMiniEl.classList.add("warn"); }
-        if (baseMiniTextEl) { baseMiniTextEl.textContent = "Base local"; }
+        if (baseMiniTextEl) { baseMiniTextEl.textContent = ARTIA_PROXY_URL ? ARTIA_PROXY_SOURCE_LABEL : "Base local"; }
         return;
       }
-      const rows = meta?.rows ?? "?"; const fileName = meta?.fileName ?? "arquivo";
+      const rawRows = Number(meta?.rows);
+      const rows = Number.isFinite(rawRows) ? baseRowCountFormatter.format(rawRows) : (meta?.rows ?? "?");
+      const fileName = meta?.fileName ?? "arquivo";
       baseStatusTextEl.textContent = `IDs: carregada (${rows} linhas)`;
       if (baseMiniEl) { baseMiniEl.classList.remove("warn"); baseMiniEl.classList.add("ok"); }
-      if (baseMiniTextEl) { baseMiniTextEl.textContent = "Base local"; } baseStatusEl.title = `Fonte: ${fileName}`;
+      if (baseMiniTextEl) { baseMiniTextEl.textContent = meta?.sourceLabel || "Base local"; } baseStatusEl.title = `Fonte: ${fileName}`;
     }
 
     const daysHeaderEl = document.getElementById("daysHeader");
@@ -4631,6 +4706,7 @@
     const ganttHeadRowEl = document.getElementById("ganttHeadRow");
     const tableProjectFilterEl = document.getElementById("tableProjectFilter");
     const tableActivityFilterEl = document.getElementById("tableActivityFilter");
+    const tableArtiaLaunchFilterEl = document.getElementById("tableArtiaLaunchFilter");
     const tableFilterStartEl = document.getElementById("tableFilterStart");
     const tableFilterEndEl = document.getElementById("tableFilterEnd");
 
@@ -5298,6 +5374,19 @@
         .slice()
         .sort((a, b) => new Date(a.start) - new Date(b.start));
     }
+    function getTableRangeEvents() {
+      const wsIso = tableFilterStartEl?.value || "0000-00-00";
+      const weIso = tableFilterEndEl?.value || "9999-99-99";
+      return state.events
+        .filter(ev => ev.day >= wsIso && ev.day <= weIso)
+        .slice()
+        .sort((a, b) => new Date(a.start) - new Date(b.start));
+    }
+    function matchesTableLaunchFilter(ev, launchFilter = "ALL") {
+      if (launchFilter === "LAUNCHED") return Boolean(ev.artiaLaunched);
+      if (launchFilter === "PENDING") return !ev.artiaLaunched;
+      return true;
+    }
     function renderTable() {
       if (state.view !== "table") return;
 
@@ -5394,19 +5483,17 @@
       ensureTableFilterOptions();
       const pFilter = (tableProjectFilterEl && tableProjectFilterEl.value) ? tableProjectFilterEl.value : "ALL";
       const aFilter = (tableActivityFilterEl && tableActivityFilterEl.value) ? tableActivityFilterEl.value : "ALL";
-      const wsIso = tableFilterStartEl?.value || "0000-00-00";
-      const weIso = tableFilterEndEl?.value || "9999-99-99";
+      const launchFilter = (tableArtiaLaunchFilterEl && tableArtiaLaunchFilterEl.value) ? tableArtiaLaunchFilterEl.value : "ALL";
 
-      return state.events
+      return getTableRangeEvents()
         .filter(ev => {
-          if (ev.day < wsIso || ev.day > weIso) return false;
           const p = (ev.project || "").trim();
           const a = (ev.activityLabel || "").trim();
           if (pFilter !== "ALL" && p !== pFilter) return false;
           if (aFilter !== "ALL" && a !== aFilter) return false;
+          if (!matchesTableLaunchFilter(ev, launchFilter)) return false;
           return true;
         })
-        .slice()
         .sort((a, b) => {
           let valA, valB;
           if (tableSort.key === "data") { valA = a.start; valB = b.start; }
@@ -5455,22 +5542,33 @@
       });
     }
 
-    function getActivitiesInWeek(projectFilter = "ALL") {
-      const inWeek = getWeekEventsSorted();
+    function getProjectsInTableRange(launchFilter = "ALL") {
       const set = new Set();
-      for (const ev of inWeek) {
+      for (const ev of getTableRangeEvents()) {
+        if (!matchesTableLaunchFilter(ev, launchFilter)) continue;
+        const p = (ev.project || "").trim();
+        if (p) set.add(p);
+      }
+      return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true, sensitivity: "base" }));
+    }
+
+    function getActivitiesInTableRange(projectFilter = "ALL", launchFilter = "ALL") {
+      const set = new Set();
+      for (const ev of getTableRangeEvents()) {
+        if (!matchesTableLaunchFilter(ev, launchFilter)) continue;
         const p = (ev.project || "").trim();
         if (projectFilter !== "ALL" && p !== projectFilter) continue;
         const a = (ev.activityLabel || "").trim();
         if (a) set.add(a);
       }
-      return Array.from(set).sort((a, b) => a.localeCompare(b));
+      return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true, sensitivity: "base" }));
     }
 
     function ensureTableFilterOptions() {
       if (!tableProjectFilterEl || !tableActivityFilterEl) return;
 
-      const projects = getProjectsInWeek();
+      const launchFilter = tableArtiaLaunchFilterEl?.value || "ALL";
+      const projects = getProjectsInTableRange(launchFilter);
       const prevP = tableProjectFilterEl.value || "ALL";
 
       tableProjectFilterEl.innerHTML = "";
@@ -5494,7 +5592,7 @@
 
       // Atividades dependem do projeto escolhido
       const pSel = tableProjectFilterEl.value || "ALL";
-      const activities = getActivitiesInWeek(pSel);
+      const activities = getActivitiesInTableRange(pSel, launchFilter);
       const prevA = tableActivityFilterEl.value || "ALL";
 
       tableActivityFilterEl.innerHTML = "";
@@ -6689,8 +6787,8 @@
 
       if (timeHintEl) {
         timeHintEl.textContent = freeMode
-          ? "Horários quebrados ativos: digite HH:MM livremente (fim aceita 24:00)."
-          : "Os horários são em intervalos de 10 minutos. “24:00” representa o final do dia.";
+          ? "Horários quebrados ativos: digite HH:MM livremente (fim aceita 23:59 como final do dia)."
+          : "Os horários são em intervalos de 10 minutos. “23:59” representa o final do dia.";
       }
       if (btnToggleBrokenTimes) {
         btnToggleBrokenTimes.textContent = "Arredondar Horários";
@@ -6714,9 +6812,8 @@
       const keys = [];
       const raw = normKey(project);
       if (raw) keys.push(raw);
-      const projectNumber = String(project || "").match(/\b(\d{3,})\b/)?.[1] || "";
-      const normalizedProjectNumber = normKey(projectNumber);
-      if (normalizedProjectNumber && !keys.includes(normalizedProjectNumber)) keys.push(normalizedProjectNumber);
+      const normalizedProjectCode = normKey(normalizeProjectCode(project));
+      if (normalizedProjectCode && !keys.includes(normalizedProjectCode)) keys.push(normalizedProjectCode);
       return keys;
     }
 
@@ -6786,7 +6883,7 @@
         const parsedStart = parseTypedTimeToMinutes(startTimeInputEl.value);
         const parsedEnd = parseTypedTimeToMinutes(endTimeInputEl.value, { allow2400: true });
         if (parsedStart == null || parsedEnd == null) {
-          setModalInfo("Horário inválido. Use HH:MM (fim pode ser 24:00).");
+          setModalInfo("Horário inválido. Use HH:MM (fim pode ser 23:59 ou 24:00).");
           return null;
         }
         sM = clampMinutesRaw(parsedStart);
@@ -7486,6 +7583,11 @@
     if (tableActivityFilterEl) tableActivityFilterEl.addEventListener("change", () => {
       if (state.view === "table") renderTable();
     });
+    if (tableArtiaLaunchFilterEl) tableArtiaLaunchFilterEl.addEventListener("change", () => {
+      if (state.view !== "table") return;
+      ensureTableFilterOptions();
+      renderTable();
+    });
     if (tableFilterStartEl) tableFilterStartEl.addEventListener("change", () => {
       syncTableDateRangeStorage();
       if (state.view === "table") renderAll();
@@ -7512,8 +7614,14 @@
        XLSX Import (sem libs)
        ========================================================= */
     const btnLoadBase = document.getElementById("btnLoadBase");
+    const btnSyncArtiaApi = document.getElementById("btnSyncArtiaApi");
     const fileBaseInput = document.getElementById("fileBaseInput");
-    btnLoadBase.addEventListener("click", () => fileBaseInput.click());
+    if (btnSyncArtiaApi && ARTIA_PROXY_URL) btnSyncArtiaApi.classList.remove("hidden");
+    btnLoadBase.addEventListener("click", () => {
+      settingsMenu?.classList.add("hidden");
+      btnSettings?.setAttribute("aria-expanded", "false");
+      fileBaseInput.click();
+    });
 
     function buildIdBaseIndex(rows) {
       const index = {};
@@ -7560,7 +7668,120 @@
       fillActivityNames(projectInputEl?.value || "", activityNameInputEl?.value || "");
       setIdLookupStatus("warn", "ID: selecione projeto e atividade");
       maybeAutoFillId();
+      renderAll();
       return meta;
+    }
+
+    async function importIdBaseFromApiRows(rows, {
+      fileName = "API Artia via Vercel",
+      loadingLabel = "Base IDs: sincronizando via API...",
+      sourceLabel = ARTIA_PROXY_SOURCE_LABEL
+    } = {}) {
+      const previousIndex = state.idBaseIndex;
+      const previousMeta = state.idBaseMeta;
+      setBaseStatus(false, null);
+      if (baseStatusTextEl) baseStatusTextEl.textContent = loadingLabel;
+
+      try {
+        const index = buildIdBaseIndexFromApiRows(rows);
+        if (!Object.keys(index).length) {
+          throw new Error("A API respondeu, mas não retornou linhas válidas de projeto, atividade e ID.");
+        }
+
+        const meta = {
+          rows: Array.isArray(rows) ? rows.length : 0,
+          indexed: Object.keys(index).length,
+          loadedAt: new Date().toISOString(),
+          fileName,
+          source: "api",
+          sourceLabel
+        };
+        await saveIdBaseToStorage(index, meta);
+        fillActivityNames(projectInputEl?.value || "", activityNameInputEl?.value || "");
+        setIdLookupStatus("warn", "ID: selecione projeto e atividade");
+        maybeAutoFillId();
+        renderAll();
+        return meta;
+      } catch (error) {
+        state.idBaseIndex = previousIndex;
+        state.idBaseMeta = previousMeta;
+        setBaseStatus(!!previousIndex, previousMeta);
+        throw error;
+      }
+    }
+
+    async function tryLoadArtiaIdBaseFromApi({ silentIfUnavailable = false } = {}) {
+      if (!ARTIA_PROXY_URL) {
+        if (!silentIfUnavailable) {
+          alert("Defina a URL da API da Vercel no meta 'artia-proxy-url' para habilitar a sincronização dos IDs.");
+        }
+        return false;
+      }
+
+      const previousIndex = state.idBaseIndex;
+      const previousMeta = state.idBaseMeta;
+      if (baseStatusTextEl) baseStatusTextEl.textContent = "Base IDs: sincronizando via API protegida...";
+
+      try {
+        const separator = ARTIA_PROXY_URL.includes("?") ? "&" : "?";
+        const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+        const timeoutId = controller
+          ? setTimeout(() => controller.abort(new Error("Tempo limite ao sincronizar IDs pela API.")), ARTIA_API_FETCH_TIMEOUT_MS)
+          : null;
+        try {
+          const response = await fetch(`${ARTIA_PROXY_URL}${separator}ts=${Date.now()}`, {
+            cache: "no-store",
+            signal: controller?.signal
+          });
+          const rawText = await response.text();
+          let payload = null;
+
+          if (rawText) {
+            try {
+              payload = JSON.parse(rawText);
+            } catch {
+              if (!response.ok) throw new Error(rawText);
+              throw new Error("A API da Vercel não respondeu em JSON.");
+            }
+          }
+
+          if (!response.ok) {
+            throw new Error(payload?.error || payload?.message || `Falha HTTP ${response.status}`);
+          }
+
+          const rows = Array.isArray(payload?.rows) ? payload.rows : Array.isArray(payload) ? payload : [];
+          if (!rows.length) {
+            throw new Error("A API retornou 0 registros de IDs.");
+          }
+
+          const sourceName = firstNonEmptyValue(
+            payload?.meta?.sourceName,
+            payload?.meta?.sourceEndpoint,
+            "API Artia via Vercel"
+          );
+
+          await importIdBaseFromApiRows(rows, {
+            fileName: sourceName,
+            loadingLabel: "Base IDs: sincronizada com a API protegida.",
+            sourceLabel: ARTIA_PROXY_SOURCE_LABEL
+          });
+          return true;
+        } finally {
+          if (timeoutId) clearTimeout(timeoutId);
+        }
+      } catch (error) {
+        if (error?.name === "AbortError") {
+          error = new Error("Tempo limite ao sincronizar IDs pela API.");
+        }
+        console.error("Falha ao sincronizar IDs via API:", error);
+        state.idBaseIndex = previousIndex;
+        state.idBaseMeta = previousMeta;
+        setBaseStatus(!!previousIndex, previousMeta);
+        if (!silentIfUnavailable) {
+          alert("Falha ao sincronizar IDs via API.\n\nErro: " + (error?.message || error));
+        }
+        return false;
+      }
     }
 
     async function tryLoadBundledIdBaseOnFirstRun() {
@@ -7584,6 +7805,12 @@
       }
       setBaseStatus(false, null);
       return false;
+    }
+
+    if (btnSyncArtiaApi) {
+      btnSyncArtiaApi.addEventListener("click", async () => {
+        await tryLoadArtiaIdBaseFromApi();
+      });
     }
 
     fileBaseInput.addEventListener("change", async () => {
@@ -8226,16 +8453,15 @@
         const activityLabel = String(rawAtv || "").trim();
 
         if (!activityId && state.idBaseIndex && project) {
-          const k1 = `${normKey(project)}||${normKey(activityLabel)}`;
-          if (state.idBaseIndex[k1] && typeof state.idBaseIndex[k1] === "string") {
-            activityId = state.idBaseIndex[k1];
-          } else {
-            const actNameClean = activityLabel.replace(new RegExp(`\\b${project}\\b`, "i"), "").replace(/^[-–—\s]+/, "").trim();
-            if (actNameClean) {
-              const k2 = `${normKey(project)}||${normKey(actNameClean)}`;
-              if (state.idBaseIndex[k2] && typeof state.idBaseIndex[k2] === "string") {
-                activityId = state.idBaseIndex[k2];
-              }
+          activityId = lookupIdFor(project, activityLabel);
+          if (!activityId) {
+            const projectCode = normalizeProjectCode(project);
+            const actNameClean = projectCode
+              ? activityLabel.replace(new RegExp(`\\b${projectCode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i"), "")
+              : activityLabel;
+            const cleaned = actNameClean.replace(/^[-–—\s]+/, "").trim();
+            if (cleaned) {
+              activityId = lookupIdFor(project, cleaned);
             }
           }
         }
@@ -8617,10 +8843,6 @@
       setAllowBrokenTimes(uiPrefs.allowBrokenTimes, { persist: false });
       fillActivityNames();
       updatePasteButtonState();
-      const hasStoredIdBase = await loadIdBaseFromStorage();
-      if (!hasStoredIdBase) {
-        await tryLoadBundledIdBaseOnFirstRun();
-      }
 
       const storageWasEmpty = await loadEvents();
       // Se não houver eventos salvos, ou se houver eventos de exemplo, começamos na semana atual
@@ -8637,6 +8859,16 @@
       bindGlobalHandlersOnce();
       syncTableDateRangeStorage();
       renderAll();
+
+      void (async () => {
+        const hasStoredIdBase = await loadIdBaseFromStorage();
+        const loadedFromApi = await tryLoadArtiaIdBaseFromApi({ silentIfUnavailable: true });
+        if (!hasStoredIdBase && !loadedFromApi) {
+          await tryLoadBundledIdBaseOnFirstRun();
+        }
+      })().catch((error) => {
+        console.error("Falha ao inicializar a base de IDs em segundo plano:", error);
+      });
     }
 
     init().then(runSelfTestIfRequested).catch(err => {
