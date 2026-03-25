@@ -4407,17 +4407,31 @@
     function normKey(s) {
       return String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ").replace(/[–—]/g, "-").replace(/\s*-\s*/g, " - ").replace(/\u00A0/g, " ");
     }
+    function normalizeProjectCode(value) {
+      const raw = String(value ?? "").trim().replace(/\u00A0/g, " ");
+      if (!raw) return "";
+
+      const directCandidate = raw
+        .replace(/^projeto\s+/i, "")
+        .split(/\s[-–—]\s/, 1)[0]
+        .trim()
+        .replace(/\s+/g, "");
+
+      const directMatch = directCandidate.match(/^(?:[a-z]+\d+(?:\.\d+)*|c\d+|\d+(?:\.\d+)+|\d{3,})$/i);
+      if (directMatch) return directMatch[0].toUpperCase();
+
+      const embeddedMatch = raw.match(/\b(?:[a-z]+\d+(?:\.\d+)*|c\d+|\d+(?:\.\d+)+|\d{3,})\b/i);
+      return embeddedMatch ? embeddedMatch[0].toUpperCase() : "";
+    }
     function extractProjectFromC(valC) {
-      const s = String(valC ?? "").trim();
-      const m = s.match(/\b(\d{3,})\b/);
-      return m ? m[1] : "";
+      return normalizeProjectCode(valC);
     }
     /** Extrai apenas o nome textual do projeto de ColC, ex: "1358 - CONCREJATO x RIO+" => "concrejato x rio+" */
     function extractProjectLabelFromC(valC) {
       const s = String(valC ?? "").trim();
       // Remove o número inicial e separadores logo após
       return s
-        .replace(/^\d+\s*[-–—:.]?\s*/, "")
+        .replace(/^(?:projeto\s+)?(?:[a-z]+\d+(?:\.\d+)*|c\d+|\d+(?:\.\d+)+|\d{3,})\s*[-–—:.]?\s*/i, "")
         .replace(/^[-–—:.\s]+/, "")
         .trim();
     }
@@ -4441,7 +4455,7 @@
       const index = {};
       for (const row of Array.isArray(rows) ? rows : []) {
         const projectRaw = firstNonEmptyValue(row?.project, row?.projectId, row?.projectCode, row?.projectLabel);
-        const project = extractProjectFromC(projectRaw) || projectRaw.match(/\b(\d{3,})\b/)?.[1] || "";
+        const project = normalizeProjectCode(projectRaw);
         const projectLabel = firstNonEmptyValue(row?.projectLabel, row?.projectName, projectRaw);
         const activity = firstNonEmptyValue(row?.activity, row?.activityLabel, row?.name);
         const id = firstNonEmptyValue(row?.id, row?.activityId, row?.artiaId);
@@ -6760,9 +6774,8 @@
       const keys = [];
       const raw = normKey(project);
       if (raw) keys.push(raw);
-      const projectNumber = String(project || "").match(/\b(\d{3,})\b/)?.[1] || "";
-      const normalizedProjectNumber = normKey(projectNumber);
-      if (normalizedProjectNumber && !keys.includes(normalizedProjectNumber)) keys.push(normalizedProjectNumber);
+      const normalizedProjectCode = normKey(normalizeProjectCode(project));
+      if (normalizedProjectCode && !keys.includes(normalizedProjectCode)) keys.push(normalizedProjectCode);
       return keys;
     }
 
@@ -8393,16 +8406,15 @@
         const activityLabel = String(rawAtv || "").trim();
 
         if (!activityId && state.idBaseIndex && project) {
-          const k1 = `${normKey(project)}||${normKey(activityLabel)}`;
-          if (state.idBaseIndex[k1] && typeof state.idBaseIndex[k1] === "string") {
-            activityId = state.idBaseIndex[k1];
-          } else {
-            const actNameClean = activityLabel.replace(new RegExp(`\\b${project}\\b`, "i"), "").replace(/^[-–—\s]+/, "").trim();
-            if (actNameClean) {
-              const k2 = `${normKey(project)}||${normKey(actNameClean)}`;
-              if (state.idBaseIndex[k2] && typeof state.idBaseIndex[k2] === "string") {
-                activityId = state.idBaseIndex[k2];
-              }
+          activityId = lookupIdFor(project, activityLabel);
+          if (!activityId) {
+            const projectCode = normalizeProjectCode(project);
+            const actNameClean = projectCode
+              ? activityLabel.replace(new RegExp(`\\b${projectCode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i"), "")
+              : activityLabel;
+            const cleaned = actNameClean.replace(/^[-–—\s]+/, "").trim();
+            if (cleaned) {
+              activityId = lookupIdFor(project, cleaned);
             }
           }
         }
