@@ -8796,11 +8796,6 @@
       setAllowBrokenTimes(uiPrefs.allowBrokenTimes, { persist: false });
       fillActivityNames();
       updatePasteButtonState();
-      const hasStoredIdBase = await loadIdBaseFromStorage();
-      const loadedFromApi = await tryLoadArtiaIdBaseFromApi({ silentIfUnavailable: true });
-      if (!hasStoredIdBase && !loadedFromApi) {
-        await tryLoadBundledIdBaseOnFirstRun();
-      }
 
       const storageWasEmpty = await loadEvents();
       // Se não houver eventos salvos, ou se houver eventos de exemplo, começamos na semana atual
@@ -8817,6 +8812,16 @@
       bindGlobalHandlersOnce();
       syncTableDateRangeStorage();
       renderAll();
+
+      void (async () => {
+        const hasStoredIdBase = await loadIdBaseFromStorage();
+        const loadedFromApi = await tryLoadArtiaIdBaseFromApi({ silentIfUnavailable: true });
+        if (!hasStoredIdBase && !loadedFromApi) {
+          await tryLoadBundledIdBaseOnFirstRun();
+        }
+      })().catch((error) => {
+        console.error("Falha ao inicializar a base de IDs em segundo plano:", error);
+      });
     }
 
     init().then(runSelfTestIfRequested).catch(err => {
