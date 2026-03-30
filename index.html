@@ -651,6 +651,48 @@
       text-align: right;
     }
 
+    #lastSavedInfo[data-mode="target-ready"],
+    #lastSavedInfo[data-mode="saved-handle"] {
+      color: rgba(175, 239, 197, .96);
+      opacity: 1;
+    }
+
+    #lastSavedInfo[data-mode="saved-download"] {
+      color: rgba(255, 232, 176, .96);
+      opacity: 1;
+    }
+
+    #lastSavedInfo[data-mode="needs-target"] {
+      color: rgba(255, 214, 122, .98);
+      opacity: 1;
+      font-weight: 600;
+    }
+
+    #lastSavedInfo[data-mode="permission-required"],
+    #lastSavedInfo[data-mode="target-unavailable"] {
+      color: rgba(255, 178, 165, .98);
+      opacity: 1;
+      font-weight: 600;
+    }
+
+    html.light #lastSavedInfo[data-mode="target-ready"],
+    html.light #lastSavedInfo[data-mode="saved-handle"] {
+      color: #1d6b45;
+    }
+
+    html.light #lastSavedInfo[data-mode="saved-download"] {
+      color: #8a5a00;
+    }
+
+    html.light #lastSavedInfo[data-mode="needs-target"] {
+      color: #9a5f00;
+    }
+
+    html.light #lastSavedInfo[data-mode="permission-required"],
+    html.light #lastSavedInfo[data-mode="target-unavailable"] {
+      color: #b43220;
+    }
+
     header.topbar .centerGroup {
       min-width: 0;
       display: inline-flex;
@@ -3933,6 +3975,14 @@
     }
 
     // ===== Backup XLSX (sobrescrever) =====
+    const AUTO_BACKUP_PROMPT_THRESHOLD = 4;
+    const AUTO_BACKUP_TARGET_MESSAGE = "⚠️ Defina um local de salvamento para ativar o backup automático.";
+    const AUTO_BACKUP_TARGET_ALERT = "⚠️ Defina um local de salvamento para ativar o backup automático.\n\nOs apontamentos continuam salvos no navegador, mas o backup XLSX automático só funciona depois que um local é definido.";
+    const BACKUP_TARGET_META_KEY = "backupTargetMeta";
+    const BACKUP_STATUS_NONE = "not-configured";
+    const BACKUP_STATUS_READY = "ready";
+    const BACKUP_STATUS_PERMISSION_REQUIRED = "permission-required";
+    const BACKUP_STATUS_UNAVAILABLE = "unavailable";
     let backupDirty = false;
     let backupTimer = null;
 
@@ -4207,10 +4257,67 @@
       return _zipStore(entries);
     }
 
-    async function writeBackupViaHandle(fileHandle) {
-      if (fileHandle?.requestPermission) {
-        const perm = await fileHandle.requestPermission({ mode: "readwrite" });
-        if (perm !== "granted") throw new Error("Permissão negada para gravar o backup.");
+    function normalizeBackupMeta(meta, fallback = {}) {
+      const folderName = String(meta?.folderName ?? fallback.folderName ?? "").trim();
+      const fileName = String(meta?.fileName ?? fallback.fileName ?? "backup_artia.xlsx").trim() || "backup_artia.xlsx";
+      const label = String(meta?.label ?? fallback.label ?? (folderName ? `${folderName}/${fileName}` : fileName)).trim();
+      const known = [BACKUP_STATUS_NONE, BACKUP_STATUS_READY, BACKUP_STATUS_PERMISSION_REQUIRED, BACKUP_STATUS_UNAVAILABLE];
+      const status = known.includes(meta?.status) ? meta.status : (fallback.status || BACKUP_STATUS_NONE);
+      return {
+        status,
+        folderName,
+        fileName,
+        label,
+        lastError: String(meta?.lastError ?? fallback.lastError ?? "").trim(),
+        updatedAt: String(meta?.updatedAt ?? fallback.updatedAt ?? "")
+      };
+    }
+
+    function formatBackupTargetLabel(folderName = "", fileName = "backup_artia.xlsx") {
+      const safeFolder = String(folderName || "").trim();
+      const safeFile = String(fileName || "backup_artia.xlsx").trim() || "backup_artia.xlsx";
+      return safeFolder ? `${safeFolder}/${safeFile}` : safeFile;
+    }
+
+    async function persistBackupTargetMeta(status, details = {}) {
+      const current = normalizeBackupMeta(await kvGet(BACKUP_TARGET_META_KEY));
+      const next = normalizeBackupMeta({
+        ...current,
+        ...details,
+        status,
+        updatedAt: new Date().toISOString()
+      }, current);
+      await kvSet(BACKUP_TARGET_META_KEY, next);
+      return next;
+    }
+
+    async function getBackupHandlePermission(fileHandle, { requestIfNeeded = false } = {}) {
+      if (!fileHandle) return "denied";
+
+      let permission = "granted";
+      if (fileHandle.queryPermission) {
+        try {
+          permission = await fileHandle.queryPermission({ mode: "readwrite" });
+        } catch {
+          permission = "prompt";
+        }
+      }
+
+      if (permission !== "granted" && requestIfNeeded && fileHandle.requestPermission) {
+        try {
+          permission = await fileHandle.requestPermission({ mode: "readwrite" });
+        } catch {
+          permission = "denied";
+        }
+      }
+
+      return permission;
+    }
+
+    async function writeBackupViaHandle(fileHandle, { requestPermission = true } = {}) {
+      const permission = await getBackupHandlePermission(fileHandle, { requestIfNeeded: requestPermission });
+      if (permission !== "granted") {
+        throw new Error("Permissão negada para gravar o backup.");
       }
       const bytes = buildBackupXlsxBytes();
       const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -4232,23 +4339,152 @@
       setTimeout(() => URL.revokeObjectURL(url), 0);
     }
 
-    async function updateSaveInfoUI(mechanism) {
+    async function getStoredBackupTarget() {
+      const [dirHandle, fileHandle, folderNameRaw, metaRaw] = await Promise.all([
+        kvGet("backupDirectoryHandle"),
+        kvGet("backupFileHandle"),
+        kvGet("backupFolderName"),
+        kvGet(BACKUP_TARGET_META_KEY)
+      ]);
+      const folderName = String(folderNameRaw || "").trim();
+      const fileName = String(fileHandle?.name || metaRaw?.fileName || "backup_artia.xlsx").trim() || "backup_artia.xlsx";
+      const meta = normalizeBackupMeta(metaRaw, { folderName, fileName });
+      return { dirHandle, fileHandle, folderName, fileName, meta };
+    }
+
+    function setSaveInfoMessage(message, mode = "", title = "") {
       const el = document.getElementById("lastSavedInfo");
       if (!el) return;
+      el.dataset.mode = mode;
+      el.textContent = message;
+      if (title) el.title = title;
+      else el.removeAttribute("title");
+      syncHeaderHeight();
+    }
+
+    async function hasStoredBackupTarget() {
+      const { dirHandle, fileHandle } = await getStoredBackupTarget();
+      return !!(dirHandle?.getFileHandle || fileHandle);
+    }
+
+    async function revalidateStoredBackupTarget({ requestPermission = false } = {}) {
+      const target = await getStoredBackupTarget();
+      const hasStoredTarget = !!(target.dirHandle || target.fileHandle);
+      if (!hasStoredTarget) {
+        const meta = await persistBackupTargetMeta(BACKUP_STATUS_NONE, {
+          folderName: "",
+          fileName: "backup_artia.xlsx",
+          label: "backup_artia.xlsx",
+          lastError: ""
+        });
+        return { ok: false, reason: "missing", target: { ...target, meta } };
+      }
+
+      let handle = target.fileHandle;
+      const folderName = target.folderName;
+      const fallbackFileName = target.fileName || "backup_artia.xlsx";
+
+      try {
+        if (target.dirHandle?.getFileHandle) {
+          handle = await target.dirHandle.getFileHandle("backup_artia.xlsx", { create: true });
+          await kvSet("backupFileHandle", handle);
+        }
+        if (!handle) throw new Error("O destino configurado não pôde ser localizado.");
+
+        const permission = await getBackupHandlePermission(handle, { requestIfNeeded: requestPermission });
+        if (permission !== "granted") {
+          const meta = await persistBackupTargetMeta(BACKUP_STATUS_PERMISSION_REQUIRED, {
+            folderName,
+            fileName: handle?.name || fallbackFileName,
+            label: formatBackupTargetLabel(folderName, handle?.name || fallbackFileName),
+            lastError: "O navegador precisa confirmar novamente a permissão de escrita."
+          });
+          return { ok: false, reason: "permission", permission, target: { ...target, fileHandle: handle, meta } };
+        }
+
+        const meta = await persistBackupTargetMeta(BACKUP_STATUS_READY, {
+          folderName,
+          fileName: handle?.name || fallbackFileName,
+          label: formatBackupTargetLabel(folderName, handle?.name || fallbackFileName),
+          lastError: ""
+        });
+        return { ok: true, target: { ...target, fileHandle: handle, meta } };
+      } catch (error) {
+        const fileName = handle?.name || fallbackFileName;
+        const meta = await persistBackupTargetMeta(BACKUP_STATUS_UNAVAILABLE, {
+          folderName,
+          fileName,
+          label: formatBackupTargetLabel(folderName, fileName),
+          lastError: error?.message || String(error)
+        });
+        return { ok: false, reason: "unavailable", error, target: { ...target, fileHandle: handle, meta } };
+      }
+    }
+
+    async function refreshBackupReminderUI() {
+      const el = document.getElementById("lastSavedInfo");
+      if (!el) return;
+
+      const target = await getStoredBackupTarget();
+      const hasTarget = !!(target.dirHandle || target.fileHandle);
+      const label = formatBackupTargetLabel(target.folderName, target.fileName);
+
+      if (target.meta.status === BACKUP_STATUS_PERMISSION_REQUIRED && hasTarget) {
+        setSaveInfoMessage("Confirme novamente o local de salvamento para reativar o backup automático.", "permission-required", target.meta.lastError);
+        return;
+      }
+
+      if (target.meta.status === BACKUP_STATUS_UNAVAILABLE && hasTarget) {
+        setSaveInfoMessage("Não foi possível acessar o local de salvamento. Defina novamente um local.", "target-unavailable", target.meta.lastError);
+        return;
+      }
+
+      if (!hasTarget) {
+        if (state.events.length >= AUTO_BACKUP_PROMPT_THRESHOLD) {
+          setSaveInfoMessage(AUTO_BACKUP_TARGET_MESSAGE, "needs-target");
+          return;
+        }
+        if (el.dataset.mode === "needs-target" || el.dataset.mode === "permission-required" || el.dataset.mode === "target-unavailable" || el.dataset.mode === "target-ready") {
+          setSaveInfoMessage("", "");
+        }
+        return;
+      }
+
+      if (el.dataset.mode === "needs-target" || el.dataset.mode === "permission-required" || el.dataset.mode === "target-unavailable" || el.dataset.mode === "target-ready" || !el.textContent.trim()) {
+        setSaveInfoMessage(`Backup automático ativo em ${label}`, "target-ready", label);
+      }
+    }
+
+    async function updateSaveInfoUI(mechanism) {
+      const target = await getStoredBackupTarget();
+      const label = formatBackupTargetLabel(target.folderName, target.fileName);
+
+      if (mechanism === "needs-target") {
+        setSaveInfoMessage(AUTO_BACKUP_TARGET_MESSAGE, "needs-target");
+        return;
+      }
+      if (mechanism === "target-ready") {
+        setSaveInfoMessage(`Backup automático ativo em ${label}`, "target-ready", label);
+        return;
+      }
+      if (mechanism === "permission-required") {
+        setSaveInfoMessage("Confirme novamente o local de salvamento para reativar o backup automático.", "permission-required", target.meta.lastError);
+        return;
+      }
+      if (mechanism === "target-unavailable") {
+        setSaveInfoMessage("Não foi possível acessar o local de salvamento. Defina novamente um local.", "target-unavailable", target.meta.lastError);
+        return;
+      }
+
       const now = new Date();
       const timeStr = pad2(now.getHours()) + ":" + pad2(now.getMinutes());
-      let pathStr = mechanism === "handle" ? "no destino selecionado" : "via download";
-      try {
-        const dirHandle = await kvGet("backupDirectoryHandle");
-        const handle = await kvGet("backupFileHandle");
-        const folderName = await kvGet("backupFolderName");
-        const fileName = handle?.name || "backup_artia.xlsx";
-        if (dirHandle || handle) {
-          pathStr = folderName ? `${folderName}/${fileName}` : fileName;
-        }
-      } catch (e) { }
-      el.textContent = `Salvo às ${timeStr} em ${pathStr}`;
-      syncHeaderHeight();
+      if (mechanism === "download") {
+        setSaveInfoMessage(`Salvo às ${timeStr} via download`, "saved-download");
+        return;
+      }
+
+      const pathStr = label || "no destino selecionado";
+      setSaveInfoMessage(`Salvo às ${timeStr} em ${pathStr}`, "saved-handle", pathStr);
     }
 
     function flashSaveButton() {
@@ -4280,34 +4516,42 @@
     async function exportBackupXLSX({ reason = "manual" } = {}) {
       if (!backupDirty && reason !== "manual") return;
       backupDirty = false;
+      const isAutomatic = reason !== "manual";
 
       try {
-        const dirHandle = await kvGet("backupDirectoryHandle");
-        let handle = await kvGet("backupFileHandle");
-        if (dirHandle?.getFileHandle) {
-          handle = await dirHandle.getFileHandle("backup_artia.xlsx", { create: true });
-          await kvSet("backupFileHandle", handle);
-        }
-        if (handle) {
-          await writeBackupViaHandle(handle);
+        const validation = await revalidateStoredBackupTarget({ requestPermission: !isAutomatic });
+        if (validation.ok && validation.target.fileHandle) {
+          await writeBackupViaHandle(validation.target.fileHandle, { requestPermission: false });
           if (reason === "manual") setModalInfo("Backup XLSX atualizado (sobrescrito) ✅", true);
-          updateSaveInfoUI("handle");
+          await updateSaveInfoUI("handle");
           flashSaveButton();
           return true;
         }
-        // sem handle: fallback (download)
+
+        if (isAutomatic) {
+          if (validation.reason === "permission") await updateSaveInfoUI("permission-required");
+          else if (validation.reason === "unavailable") await updateSaveInfoUI("target-unavailable");
+          else await refreshBackupReminderUI();
+          return false;
+        }
+
         downloadBackupFallback();
         if (reason === "manual") setModalInfo("Backup XLSX exportado. Dica: use “Definir destino do Backup” para sobrescrever sempre ✅", true);
-        updateSaveInfoUI("download");
+        await updateSaveInfoUI("download");
         flashSaveButton();
         return true;
       } catch (err) {
         console.warn(err);
+        if (isAutomatic) {
+          await persistBackupTargetMeta(BACKUP_STATUS_UNAVAILABLE, { lastError: err?.message || String(err) });
+          await updateSaveInfoUI("target-unavailable");
+          return false;
+        }
         // fallback
         try {
           downloadBackupFallback();
           if (reason === "manual") setModalInfo("Backup XLSX exportado (modo download). Para sobrescrever sempre, use “Definir destino do Backup”.", true);
-          updateSaveInfoUI("download");
+          await updateSaveInfoUI("download");
           flashSaveButton();
         } catch { }
         return false;
@@ -4567,6 +4811,7 @@
     }
     async function saveEvents() {
       await saveEventsToDB();
+      await refreshBackupReminderUI();
     }
 
     function readStoredDateRange(key) {
@@ -7047,8 +7292,10 @@
       state.editingEventId = null;
     }
 
-    function onSave() {
+    async function onSave() {
       if (!state.selection) { setModalInfo("Seleção inválida. Feche e selecione novamente."); return; }
+      const previousCount = state.events.length;
+      const isEditingExistingEvent = !!state.editingEventId;
       const dayIso = state.selection.dayIso;
       const sel = selectionFromTimeSelectors(dayIso);
       if (!sel) return;
@@ -7077,11 +7324,19 @@
         state.events.push({ id: genId(), start: sel.start.toISOString(), end: sel.end.toISOString(), day: dayIso, project, activityId, activityLabel, artiaLaunched, notes });
       }
 
-      saveEvents();
+      await saveEvents();
       showModal(false);
       state.selection = null;
       state.editingEventId = null;
       renderAll();
+
+      if (!isEditingExistingEvent && previousCount < AUTO_BACKUP_PROMPT_THRESHOLD && state.events.length >= AUTO_BACKUP_PROMPT_THRESHOLD) {
+        const hasTarget = await hasStoredBackupTarget();
+        if (!hasTarget) {
+          updateSaveInfoUI("needs-target");
+          alert(AUTO_BACKUP_TARGET_ALERT);
+        }
+      }
     }
 
     function onDelete() {
@@ -8260,6 +8515,12 @@
           await kvSet("backupDirectoryHandle", dirHandle);
           await kvSet("backupFileHandle", fileHandle);
           await kvSet("backupFolderName", dirHandle.name || "");
+          await persistBackupTargetMeta(BACKUP_STATUS_READY, {
+            folderName: dirHandle.name || "",
+            fileName: fileHandle.name || "backup_artia.xlsx",
+            label: formatBackupTargetLabel(dirHandle.name || "", fileHandle.name || "backup_artia.xlsx"),
+            lastError: ""
+          });
           return { mode: "directory", folderName: dirHandle.name || "", fileName: fileHandle.name || "backup_artia.xlsx" };
         } catch (err) {
           if (err && err.name === "AbortError") throw err;
@@ -8278,6 +8539,12 @@
         await kvSet("backupFileHandle", handle);
         await kvSet("backupDirectoryHandle", null);
         await kvSet("backupFolderName", "");
+        await persistBackupTargetMeta(BACKUP_STATUS_READY, {
+          folderName: "",
+          fileName: handle?.name || "backup_artia.xlsx",
+          label: formatBackupTargetLabel("", handle?.name || "backup_artia.xlsx"),
+          lastError: ""
+        });
         return { mode: "file", folderName: "", fileName: handle?.name || "backup_artia.xlsx" };
       }
 
@@ -8288,6 +8555,7 @@
       btnSetBackupTarget.addEventListener("click", async () => {
         try {
           const target = await configureBackupTarget();
+          await updateSaveInfoUI("target-ready");
           await exportBackupXLSX({ reason: "manual" });
           if (target.mode === "directory") {
             alert(`Pasta de salvamento definida. O backup será sobrescrito automaticamente em ${target.folderName}/${target.fileName}.`);
@@ -8859,6 +9127,8 @@
       bindGlobalHandlersOnce();
       syncTableDateRangeStorage();
       renderAll();
+      await revalidateStoredBackupTarget({ requestPermission: false });
+      await refreshBackupReminderUI();
 
       void (async () => {
         const hasStoredIdBase = await loadIdBaseFromStorage();
