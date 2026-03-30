@@ -1,0 +1,1104 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Status Online - Artia</title>
+  <meta name="description" content="Painel interno com status online, e-mails e último acesso dos usuários do sistema Artia." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --font-ui: "Manrope", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      --bg: #101319;
+      --panel: #181d25;
+      --panel-soft: #202733;
+      --line: rgba(255, 255, 255, 0.08);
+      --text: #eef3f8;
+      --muted: #9eacbd;
+      --accent: #ff5a1f;
+      --accent-soft: rgba(255, 90, 31, 0.14);
+      --ok: #49d17d;
+      --warn: #ffcc4d;
+      --danger: #ff7a7a;
+      --shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(255, 90, 31, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(73, 209, 125, 0.12), transparent 24%),
+        linear-gradient(180deg, #0c1016, #131922 48%, #0f141c);
+      color: var(--text);
+      font-family: var(--font-ui);
+    }
+
+    body {
+      padding: 28px;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page {
+      max-width: 1380px;
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: start;
+      padding: 26px 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(24, 29, 37, 0.98), rgba(18, 24, 33, 0.98));
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: #ffb08f;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 14px 0 10px;
+      font-size: clamp(30px, 5vw, 52px);
+      line-height: 0.96;
+      letter-spacing: -0.05em;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 720px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .heroActions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 12px 16px;
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .btn.primary {
+      background: linear-gradient(135deg, #ff5a1f, #ff8648);
+      color: #fff8f3;
+      border-color: rgba(255, 90, 31, 0.65);
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 12px;
+      align-items: center;
+      padding: 18px 20px;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: rgba(24, 29, 37, 0.92);
+      box-shadow: var(--shadow);
+    }
+
+    .searchWrap {
+      display: grid;
+      gap: 8px;
+    }
+
+    .toolbarLabel {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-weight: 700;
+    }
+
+    .searchInput {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      font: inherit;
+      outline: none;
+    }
+
+    .searchInput:focus {
+      border-color: rgba(255, 90, 31, 0.45);
+      box-shadow: 0 0 0 4px rgba(255, 90, 31, 0.1);
+    }
+
+    .statusLine {
+      text-align: right;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .statusLine strong {
+      color: var(--text);
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(24, 29, 37, 0.94), rgba(18, 24, 33, 0.94));
+      box-shadow: var(--shadow);
+      padding: 18px 20px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .cardLabel {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-weight: 700;
+    }
+
+    .cardValue {
+      font-size: clamp(26px, 4vw, 40px);
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .cardHint {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .panels {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(360px, 0.8fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(24, 29, 37, 0.95), rgba(18, 24, 33, 0.95));
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panelHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panelTitle {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .panelSub {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .tableWrap {
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px;
+      table-layout: fixed;
+    }
+
+    th,
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-weight: 800;
+      background: rgba(255, 255, 255, 0.03);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .peopleTable th:nth-child(1),
+    .peopleTable td:nth-child(1) {
+      width: 26%;
+    }
+
+    .peopleTable th:nth-child(2),
+    .peopleTable td:nth-child(2) {
+      width: 18%;
+    }
+
+    .peopleTable th:nth-child(3),
+    .peopleTable td:nth-child(3) {
+      width: 18%;
+    }
+
+    .peopleTable th:nth-child(4),
+    .peopleTable td:nth-child(4) {
+      width: 19%;
+    }
+
+    .peopleTable th:nth-child(5),
+    .peopleTable td:nth-child(5) {
+      width: 19%;
+    }
+
+    tbody tr:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .emailCell {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    .emailMain {
+      font-weight: 700;
+      font-size: 12px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .emailMeta {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+    }
+
+    .online .dot {
+      background: var(--ok);
+      box-shadow: 0 0 0 5px rgba(73, 209, 125, 0.12);
+    }
+
+    .offline .dot {
+      background: var(--muted);
+      box-shadow: 0 0 0 5px rgba(158, 172, 189, 0.1);
+    }
+
+    .warning {
+      color: #151007;
+      background: rgba(255, 204, 77, 0.92);
+      border-color: rgba(255, 204, 77, 0.35);
+    }
+
+    .metricStrong {
+      font-weight: 800;
+      color: var(--text);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .stackCompact {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    .codeMeta {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .sideList {
+      display: grid;
+      gap: 12px;
+      padding: 18px 20px 20px;
+    }
+
+    .sessionItem {
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+      display: grid;
+      gap: 10px;
+    }
+
+    .sessionTop {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .sessionId {
+      color: var(--muted);
+      font-size: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    .sessionEmail {
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+    .sessionMeta {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .empty {
+      padding: 24px 20px 28px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .footerNote {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+      text-align: center;
+      padding-bottom: 10px;
+    }
+
+    .authBackdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(7, 10, 14, 0.78);
+      backdrop-filter: blur(10px);
+    }
+
+    .authBackdrop.show {
+      display: flex;
+    }
+
+    .authCard {
+      width: min(460px, 100%);
+      padding: 24px;
+      border-radius: 24px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(24, 29, 37, 0.98), rgba(18, 24, 33, 0.98));
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 14px;
+    }
+
+    .authTitle {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .authText {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .authForm {
+      display: grid;
+      gap: 12px;
+    }
+
+    .authInput {
+      width: 100%;
+      padding: 14px 15px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      font: inherit;
+      outline: none;
+    }
+
+    .authInput:focus {
+      border-color: rgba(255, 90, 31, 0.45);
+      box-shadow: 0 0 0 4px rgba(255, 90, 31, 0.1);
+    }
+
+    .authError {
+      min-height: 18px;
+      color: #ff9c8f;
+      font-size: 13px;
+    }
+
+    @media (max-width: 1100px) {
+      .cards,
+      .panels {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 860px) {
+      body {
+        padding: 16px;
+      }
+
+      .hero,
+      .toolbar,
+      .cards,
+      .panels {
+        grid-template-columns: 1fr;
+      }
+
+      .heroActions,
+      .statusLine {
+        justify-content: flex-start;
+        text-align: left;
+      }
+
+      .cards {
+        gap: 12px;
+      }
+
+      table {
+        min-width: 640px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="authBackdrop" id="authBackdrop" aria-hidden="true">
+    <section class="authCard" aria-labelledby="authTitle">
+      <span class="eyebrow">Acesso Restrito</span>
+      <h2 class="authTitle" id="authTitle">Entrar em Status Online</h2>
+      <div class="authText">Digite a senha para visualizar os dados internos de presença. O acesso fica salvo neste navegador até você bloquear a página manualmente.</div>
+      <form class="authForm" id="authForm">
+        <input class="authInput" id="authPasswordInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Senha" />
+        <button class="btn primary" type="submit">Entrar</button>
+      </form>
+      <div class="authError" id="authError" aria-live="polite"></div>
+    </section>
+  </div>
+
+  <main class="page">
+    <section class="hero">
+      <div>
+        <span class="eyebrow">Painel Interno</span>
+        <h1>Status Online</h1>
+        <p>Visão em tempo real dos acessos registrados no Firebase. A página separa pessoas, dispositivos persistentes do navegador e abas individuais, para evitar que várias abas do mesmo notebook pareçam múltiplos acessos independentes.</p>
+      </div>
+      <div class="heroActions">
+        <a class="btn" href="../">Voltar ao sistema</a>
+        <button class="btn" id="btnLockPage" type="button">Bloquear</button>
+        <button class="btn primary" id="btnRefresh" type="button">Atualizar agora</button>
+      </div>
+    </section>
+
+    <section class="toolbar">
+      <div class="searchWrap">
+        <label class="toolbarLabel" for="searchInput">Filtrar por e-mail</label>
+        <input class="searchInput" id="searchInput" type="search" placeholder="Ex.: nome@empresa.com.br" />
+      </div>
+      <div class="statusLine">
+        <div><strong id="connectionState">Conectando...</strong></div>
+        <div id="lastSyncText">Aguardando dados do Firebase</div>
+      </div>
+      <div class="statusLine">
+        <div><strong>Janela online:</strong> 60s</div>
+        <div>Horário exibido em Brasília</div>
+      </div>
+    </section>
+
+    <section class="cards">
+      <article class="card">
+        <div class="cardLabel">E-mails distintos</div>
+        <div class="cardValue" id="statEmails">--</div>
+        <div class="cardHint">Usuários agrupados por e-mail informado.</div>
+      </article>
+      <article class="card">
+        <div class="cardLabel">Pessoas online</div>
+        <div class="cardValue" id="statOnlineUsers">--</div>
+        <div class="cardHint">Agrupado por e-mail informado, com ao menos um dispositivo online.</div>
+      </article>
+      <article class="card">
+        <div class="cardLabel">Dispositivos online</div>
+        <div class="cardValue" id="statOnlineDevices">--</div>
+        <div class="cardHint">Mesmo notebook/navegador compartilha um <code>clientId</code> persistente.</div>
+      </article>
+      <article class="card">
+        <div class="cardLabel">Abas online</div>
+        <div class="cardValue" id="statOnlineSessions">--</div>
+        <div class="cardHint">Cada aba aberta do sistema vira uma sessão separada.</div>
+      </article>
+      <article class="card">
+        <div class="cardLabel">Sem e-mail</div>
+        <div class="cardValue" id="statAnonymous">--</div>
+        <div class="cardHint">Sessões sem e-mail preenchido no campo de exportação.</div>
+      </article>
+    </section>
+
+    <section class="panels">
+      <article class="panel">
+        <div class="panelHeader">
+          <div>
+            <div class="panelTitle">Pessoas</div>
+            <div class="panelSub">Agrupado por e-mail, com ordenação pelo acesso mais recente.</div>
+          </div>
+          <div class="pill" id="peopleCountPill">0 resultados</div>
+        </div>
+        <div class="tableWrap">
+          <table class="peopleTable">
+            <thead>
+              <tr>
+                <th>E-mail</th>
+                <th>Status</th>
+                <th>Último acesso</th>
+                <th>Dispositivos</th>
+                <th>Abas</th>
+              </tr>
+            </thead>
+            <tbody id="peopleTableBody">
+              <tr>
+                <td colspan="5" class="empty">Carregando dados do Firebase...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panelHeader">
+          <div>
+            <div class="panelTitle">Dispositivos</div>
+            <div class="panelSub">Cada dispositivo do navegador é agrupado por <code>presence/clients</code> e consolidado com suas abas em <code>presence/sessions</code>.</div>
+          </div>
+          <div class="pill" id="deviceCountPill">0 dispositivos</div>
+        </div>
+        <div class="sideList" id="deviceList">
+          <div class="empty">Carregando dispositivos...</div>
+        </div>
+      </article>
+    </section>
+
+    <div class="footerNote">
+      Este painel é estático e lê diretamente o mesmo Firebase Realtime Database usado pelo sistema principal.
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+    import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
+
+    const ONLINE_WINDOW_MS = 60000;
+    const STATUS_ONLINE_PASSWORD = "1234";
+    const STATUS_ONLINE_UNLOCK_KEY = "statusOnlineUnlocked";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCbSEwEqqRW4M_5na2UKc-i3JOYgT40fDk",
+      authDomain: "artia-2679e.firebaseapp.com",
+      databaseURL: "https://artia-2679e-default-rtdb.firebaseio.com",
+      projectId: "artia-2679e",
+      storageBucket: "artia-2679e.firebasestorage.app",
+      messagingSenderId: "471803917424",
+      appId: "1:471803917424:web:734ce19b3227fa4d60b0b5",
+      measurementId: "G-BQ8D73SHV6"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const presenceRef = ref(db, "presence");
+
+    const authBackdropEl = document.getElementById("authBackdrop");
+    const authFormEl = document.getElementById("authForm");
+    const authPasswordInputEl = document.getElementById("authPasswordInput");
+    const authErrorEl = document.getElementById("authError");
+    const btnLockPageEl = document.getElementById("btnLockPage");
+    const searchInputEl = document.getElementById("searchInput");
+    const btnRefreshEl = document.getElementById("btnRefresh");
+    const connectionStateEl = document.getElementById("connectionState");
+    const lastSyncTextEl = document.getElementById("lastSyncText");
+    const peopleTableBodyEl = document.getElementById("peopleTableBody");
+    const deviceListEl = document.getElementById("deviceList");
+    const peopleCountPillEl = document.getElementById("peopleCountPill");
+    const deviceCountPillEl = document.getElementById("deviceCountPill");
+
+    const statEmailsEl = document.getElementById("statEmails");
+    const statOnlineUsersEl = document.getElementById("statOnlineUsers");
+    const statOnlineDevicesEl = document.getElementById("statOnlineDevices");
+    const statOnlineSessionsEl = document.getElementById("statOnlineSessions");
+    const statAnonymousEl = document.getElementById("statAnonymous");
+
+    let latestPresenceData = {};
+    let currentFilter = "";
+    let presenceUnsubscribe = null;
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function formatDateTime(valueMs) {
+      if (!Number.isFinite(valueMs) || valueMs <= 0) return "Sem registro";
+      return new Intl.DateTimeFormat("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      }).format(new Date(valueMs));
+    }
+
+    function formatRelativeTime(valueMs) {
+      if (!Number.isFinite(valueMs) || valueMs <= 0) return "Sem registro";
+      const diffMs = Date.now() - valueMs;
+      const diffSec = Math.max(0, Math.round(diffMs / 1000));
+      if (diffSec < 60) return `${diffSec}s atrás`;
+      const diffMin = Math.round(diffSec / 60);
+      if (diffMin < 60) return `${diffMin} min atrás`;
+      const diffHour = Math.round(diffMin / 60);
+      if (diffHour < 24) return `${diffHour} h atrás`;
+      const diffDay = Math.round(diffHour / 24);
+      return `${diffDay} dia(s) atrás`;
+    }
+
+    function getPresenceCollections(rawPresence) {
+      const root = rawPresence && typeof rawPresence === "object" ? rawPresence : {};
+      const sessions = {};
+      const clients = root.clients && typeof root.clients === "object" ? { ...root.clients } : {};
+
+      if (root.sessions && typeof root.sessions === "object") {
+        Object.assign(sessions, root.sessions);
+        for (const [key, value] of Object.entries(root)) {
+          if (key === "sessions" || key === "clients") continue;
+          if (value && typeof value === "object" && ("lastSeen" in value || "lastSeenMs" in value || "state" in value)) {
+            sessions[key] = value;
+          }
+        }
+        return { sessions, clients };
+      }
+
+      for (const [key, value] of Object.entries(root)) {
+        if (key === "clients") continue;
+        if (value && typeof value === "object") sessions[key] = value;
+      }
+
+      return { sessions, clients };
+    }
+
+    function normalizeSessionEntry(sessionId, raw) {
+      const email = String(raw?.email || "").trim();
+      const fallbackLastSeenMs = typeof raw?.lastSeen === "number" ? raw.lastSeen : 0;
+      const lastSeenMs = typeof raw?.lastSeenMs === "number" ? raw.lastSeenMs : fallbackLastSeenMs;
+      const online = raw?.state === "online" && Number.isFinite(lastSeenMs) && (Date.now() - lastSeenMs <= ONLINE_WINDOW_MS);
+      return {
+        sessionId,
+        clientId: String(raw?.clientId || sessionId).trim() || sessionId,
+        email,
+        state: raw?.state === "online" ? "online" : "offline",
+        online,
+        lastSeenMs: Number.isFinite(lastSeenMs) ? lastSeenMs : 0,
+        lastSeenText: String(raw?.lastSeen || "").trim()
+      };
+    }
+
+    function normalizeClientEntry(clientId, raw) {
+      const email = String(raw?.email || "").trim();
+      const fallbackLastSeenMs = typeof raw?.lastSeen === "number" ? raw.lastSeen : 0;
+      const lastSeenMs = typeof raw?.lastSeenMs === "number" ? raw.lastSeenMs : fallbackLastSeenMs;
+      return {
+        clientId,
+        email,
+        lastSeenMs: Number.isFinite(lastSeenMs) ? lastSeenMs : 0,
+        lastSeenText: String(raw?.lastSeen || "").trim(),
+        online: false,
+        totalSessions: 0,
+        onlineSessions: 0,
+        recent24hSessions: 0,
+        sessionIds: []
+      };
+    }
+
+    function summarizePresence(rawData, filterText = "") {
+      const collections = getPresenceCollections(rawData);
+      const sessions = Object.entries(collections.sessions || {})
+        .map(([sessionId, value]) => normalizeSessionEntry(sessionId, value))
+        .sort((a, b) => b.lastSeenMs - a.lastSeenMs);
+
+      const filter = String(filterText || "").trim().toLowerCase();
+      const clientMap = new Map(
+        Object.entries(collections.clients || {}).map(([clientId, value]) => [clientId, normalizeClientEntry(clientId, value)])
+      );
+
+      for (const session of sessions) {
+        const currentClient = clientMap.get(session.clientId) || normalizeClientEntry(session.clientId, {});
+        currentClient.totalSessions += 1;
+        if (session.online) currentClient.onlineSessions += 1;
+        if (session.lastSeenMs >= Date.now() - 24 * 60 * 60 * 1000) currentClient.recent24hSessions += 1;
+        if (session.lastSeenMs > currentClient.lastSeenMs) {
+          currentClient.lastSeenMs = session.lastSeenMs;
+          currentClient.lastSeenText = session.lastSeenText;
+        }
+        if (session.email && !currentClient.email) currentClient.email = session.email;
+        if (session.online) currentClient.online = true;
+        currentClient.sessionIds.push(session.sessionId);
+        clientMap.set(session.clientId, currentClient);
+      }
+
+      const clients = Array.from(clientMap.values())
+        .sort((a, b) => b.lastSeenMs - a.lastSeenMs);
+
+      const groupedMap = new Map();
+
+      for (const client of clients) {
+        const key = client.email || "__sem_email__";
+        const group = groupedMap.get(key) || {
+          email: client.email,
+          lastSeenMs: 0,
+          online: false,
+          totalClients: 0,
+          onlineClients: 0,
+          totalSessions: 0,
+          onlineSessions: 0,
+          clientIds: []
+        };
+
+        group.totalClients += 1;
+        if (client.online) group.onlineClients += 1;
+        group.totalSessions += client.totalSessions;
+        group.onlineSessions += client.onlineSessions;
+        if (client.lastSeenMs > group.lastSeenMs) group.lastSeenMs = client.lastSeenMs;
+        if (client.online) group.online = true;
+        group.clientIds.push(client.clientId);
+        groupedMap.set(key, group);
+      }
+
+      const grouped = Array.from(groupedMap.values())
+        .sort((a, b) => b.lastSeenMs - a.lastSeenMs)
+        .filter((entry) => {
+          if (!filter) return true;
+          const emailText = (entry.email || "sem email informado").toLowerCase();
+          return emailText.includes(filter);
+        });
+
+      const filteredClients = clients.filter((client) => {
+        if (!filter) return true;
+        const emailText = (client.email || "sem email informado").toLowerCase();
+        return emailText.includes(filter);
+      });
+
+      const stats = {
+        emailCount: Array.from(groupedMap.values()).filter((entry) => entry.email).length,
+        onlineUsers: Array.from(groupedMap.values()).filter((entry) => entry.online).length,
+        onlineDevices: clients.filter((client) => client.online).length,
+        onlineSessions: sessions.filter((session) => session.online).length,
+        anonymousCount: Array.from(groupedMap.values()).filter((entry) => !entry.email).length
+      };
+
+      return { clients: filteredClients, grouped, stats };
+    }
+
+    function renderStats(stats) {
+      statEmailsEl.textContent = String(stats.emailCount);
+      statOnlineUsersEl.textContent = String(stats.onlineUsers);
+      statOnlineDevicesEl.textContent = String(stats.onlineDevices);
+      statOnlineSessionsEl.textContent = String(stats.onlineSessions);
+      statAnonymousEl.textContent = String(stats.anonymousCount);
+    }
+
+    function renderPeopleTable(grouped) {
+      peopleCountPillEl.textContent = `${grouped.length} resultado(s)`;
+      if (!grouped.length) {
+        peopleTableBodyEl.innerHTML = `
+          <tr>
+            <td colspan="5" class="empty">Nenhum e-mail encontrado para o filtro atual.</td>
+          </tr>
+        `;
+        return;
+      }
+
+      peopleTableBodyEl.innerHTML = grouped.map((entry) => {
+        const emailLabel = entry.email || "Sem e-mail informado";
+        const statusClass = entry.online ? "online" : "offline";
+        const statusText = entry.online ? "Online agora" : "Offline";
+        return `
+          <tr>
+            <td>
+              <div class="emailCell">
+                <div class="emailMain">${escapeHtml(emailLabel)}</div>
+                <div class="emailMeta">${entry.totalClients} dispositivo(s) com ${entry.totalSessions} aba(s) registradas</div>
+              </div>
+            </td>
+            <td>
+              <span class="pill ${statusClass}">
+                <span class="dot"></span>
+                ${statusText}
+              </span>
+            </td>
+            <td>
+              <div class="stackCompact">
+                <div class="metricStrong">${escapeHtml(formatDateTime(entry.lastSeenMs))}</div>
+                <div class="muted">${escapeHtml(formatRelativeTime(entry.lastSeenMs))}</div>
+              </div>
+            </td>
+            <td>
+              <div class="stackCompact">
+                <div class="metricStrong">${entry.onlineClients} online / ${entry.totalClients} total</div>
+                <div class="codeMeta">IDs: ${escapeHtml(entry.clientIds.slice(0, 2).join(", "))}${entry.clientIds.length > 2 ? "..." : ""}</div>
+              </div>
+            </td>
+            <td>
+              <div class="stackCompact">
+                <div class="metricStrong">${entry.onlineSessions} online / ${entry.totalSessions} total</div>
+                <div class="muted">Total de abas deste e-mail</div>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function renderDeviceList(clients) {
+      deviceCountPillEl.textContent = `${clients.length} dispositivo(s)`;
+      if (!clients.length) {
+        deviceListEl.innerHTML = `<div class="empty">Nenhum dispositivo encontrado para o filtro atual.</div>`;
+        return;
+      }
+
+      deviceListEl.innerHTML = clients.map((client) => {
+        const statusClass = client.online ? "online" : "offline";
+        const statusText = client.online ? "Dispositivo online" : "Dispositivo offline";
+        const emailLabel = client.email || "Sem e-mail informado";
+        const warningBadge = client.email
+          ? ""
+          : `<span class="pill warning">Sem e-mail</span>`;
+        return `
+          <article class="sessionItem">
+            <div class="sessionTop">
+              <span class="pill ${statusClass}">
+                <span class="dot"></span>
+                ${statusText}
+              </span>
+              ${warningBadge}
+            </div>
+            <div class="sessionEmail">${escapeHtml(emailLabel)}</div>
+            <div class="sessionMeta">
+              <div><strong>Último acesso:</strong> ${escapeHtml(formatDateTime(client.lastSeenMs))}</div>
+              <div><strong>Relativo:</strong> ${escapeHtml(formatRelativeTime(client.lastSeenMs))}</div>
+              <div><strong>Abas:</strong> ${client.onlineSessions} online / ${client.totalSessions} total</div>
+              <div><strong>Últimas 24h:</strong> ${client.recent24hSessions} sessão(ões)</div>
+            </div>
+            <div class="sessionId">Client ID: ${escapeHtml(client.clientId)}</div>
+            <div class="sessionId">Tabs: ${escapeHtml(client.sessionIds.slice(0, 3).join(", "))}${client.sessionIds.length > 3 ? "..." : ""}</div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function renderPresenceDashboard() {
+      const summary = summarizePresence(latestPresenceData, currentFilter);
+      renderStats(summary.stats);
+      renderPeopleTable(summary.grouped);
+      renderDeviceList(summary.clients);
+    }
+
+    function updateSyncLabel(prefix = "Sincronizado") {
+      const now = new Date();
+      connectionStateEl.textContent = "Conectado ao Firebase";
+      lastSyncTextEl.textContent = `${prefix} às ${formatDateTime(now.getTime())}`;
+    }
+
+    function isStatusOnlineUnlocked() {
+      try {
+        return localStorage.getItem(STATUS_ONLINE_UNLOCK_KEY) === "true";
+      } catch {
+        return false;
+      }
+    }
+
+    function setStatusOnlineUnlocked(value) {
+      try {
+        if (value) localStorage.setItem(STATUS_ONLINE_UNLOCK_KEY, "true");
+        else localStorage.removeItem(STATUS_ONLINE_UNLOCK_KEY);
+      } catch { }
+    }
+
+    function showAuthGate(show) {
+      authBackdropEl.classList.toggle("show", show);
+      authBackdropEl.setAttribute("aria-hidden", String(!show));
+      if (show) {
+        authErrorEl.textContent = "";
+        authPasswordInputEl.value = "";
+        requestAnimationFrame(() => authPasswordInputEl.focus());
+      }
+    }
+
+    function ensurePresenceSubscription() {
+      if (presenceUnsubscribe) return;
+      presenceUnsubscribe = onValue(presenceRef, (snap) => {
+        latestPresenceData = snap.val() || {};
+        updateSyncLabel("Sincronizado");
+        renderPresenceDashboard();
+      }, (error) => {
+        console.error(error);
+        connectionStateEl.textContent = "Falha na leitura";
+        lastSyncTextEl.textContent = error?.message || "Erro ao ouvir o Firebase.";
+      });
+    }
+
+    searchInputEl.addEventListener("input", () => {
+      currentFilter = searchInputEl.value || "";
+      renderPresenceDashboard();
+    });
+
+    btnRefreshEl.addEventListener("click", async () => {
+      connectionStateEl.textContent = "Atualizando...";
+      try {
+        const snap = await get(presenceRef);
+        latestPresenceData = snap.val() || {};
+        updateSyncLabel("Atualizado manualmente");
+        renderPresenceDashboard();
+      } catch (error) {
+        console.error(error);
+        connectionStateEl.textContent = "Falha ao atualizar";
+        lastSyncTextEl.textContent = error?.message || "Não foi possível consultar o Firebase agora.";
+      }
+    });
+
+    authFormEl.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const candidate = String(authPasswordInputEl.value || "").trim();
+      if (candidate !== STATUS_ONLINE_PASSWORD) {
+        authErrorEl.textContent = "Senha incorreta.";
+        authPasswordInputEl.focus();
+        authPasswordInputEl.select();
+        return;
+      }
+      setStatusOnlineUnlocked(true);
+      showAuthGate(false);
+      ensurePresenceSubscription();
+    });
+
+    if (btnLockPageEl) {
+      btnLockPageEl.addEventListener("click", () => {
+        setStatusOnlineUnlocked(false);
+        if (presenceUnsubscribe) {
+          presenceUnsubscribe();
+          presenceUnsubscribe = null;
+        }
+        latestPresenceData = {};
+        connectionStateEl.textContent = "Bloqueado";
+        lastSyncTextEl.textContent = "Digite a senha para consultar o Firebase.";
+        showAuthGate(true);
+      });
+    }
+
+    if (isStatusOnlineUnlocked()) {
+      showAuthGate(false);
+      ensurePresenceSubscription();
+    } else {
+      connectionStateEl.textContent = "Bloqueado";
+      lastSyncTextEl.textContent = "Digite a senha para consultar o Firebase.";
+      showAuthGate(true);
+    }
+  </script>
+</body>
+
+</html>

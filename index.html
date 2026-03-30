@@ -1766,14 +1766,30 @@
     .tableFilters {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
       margin-right: auto;
     }
 
+    .tableFilters .ctrlDate {
+      width: 180px;
+      min-width: 180px;
+    }
+
     .tableFilters .ctrlSelect {
-      min-width: 240px;
-      max-width: 360px;
+      min-width: 180px;
+      max-width: 250px;
+    }
+
+    #tableProjectFilter,
+    #tableActivityFilter {
+      min-width: 210px;
+      max-width: 240px;
+    }
+
+    #tableArtiaLaunchFilter {
+      min-width: 110px;
+      max-width: 130px;
     }
 
     .filterLabelGroup {
@@ -1784,7 +1800,7 @@
     }
 
     .ctrlLabel--spaced {
-      margin-left: 8px;
+      margin-left: 4px;
     }
 
     /* ===== Gantt com cabeçalho em 2 linhas (igual Calendário) ===== */
@@ -3182,28 +3198,59 @@
     return String(localStorage.getItem("exportEmail") || "").trim();
   }
 
+  const PRESENCE_CLIENT_ID_KEY = "presenceClientId";
+
+  function getOrCreatePresenceClientId() {
+    try {
+      const existing = String(localStorage.getItem(PRESENCE_CLIENT_ID_KEY) || "").trim();
+      if (existing) return existing;
+      const created = crypto.randomUUID();
+      localStorage.setItem(PRESENCE_CLIENT_ID_KEY, created);
+      return created;
+    } catch {
+      return crypto.randomUUID();
+    }
+  }
+
   function buildPresencePayload(nextState = "online") {
     const now = new Date();
     return {
       state: nextState,
       lastSeen: formatBrasiliaLastSeen(now),
       lastSeenMs: now.getTime(),
-      email: getPresenceEmail()
+      email: getPresenceEmail(),
+      clientId,
+      tabId: sessionId
+    };
+  }
+
+  function buildClientPresencePayload() {
+    const now = new Date();
+    return {
+      clientId,
+      email: getPresenceEmail(),
+      lastSeen: formatBrasiliaLastSeen(now),
+      lastSeenMs: now.getTime(),
+      lastTabId: sessionId
     };
   }
 
   // 2) Identificador por ABA (cada aba conta como 1 online)
   const sessionId = crypto.randomUUID();
-  const meRef = ref(db, `presence/${sessionId}`);
+  const clientId = getOrCreatePresenceClientId();
+  const sessionRef = ref(db, `presence/sessions/${sessionId}`);
+  const clientRef = ref(db, `presence/clients/${clientId}`);
 
   // 3) Marca online e mantém heartbeat
   async function goOnline() {
-    await set(meRef, buildPresencePayload("online"));
-    onDisconnect(meRef).update({ state: "offline" }); // quando a aba cair, preserva o registro
+    await set(sessionRef, buildPresencePayload("online"));
+    await update(clientRef, buildClientPresencePayload());
+    onDisconnect(sessionRef).update({ state: "offline" }); // quando a aba cair, preserva o registro
   }
 
   async function syncPresenceMetadata(nextState = "online") {
-    await update(meRef, buildPresencePayload(nextState));
+    await update(sessionRef, buildPresencePayload(nextState));
+    await update(clientRef, buildClientPresencePayload());
   }
 
   window.syncPresenceMetadata = syncPresenceMetadata;
@@ -3221,16 +3268,23 @@
   // 4) Contagem (considera online quem atualizou em até 60s)
   const presenceRef = ref(db, "presence");
   onValue(presenceRef, (snap) => {
-    const data = snap.val() || {};
+    const rawPresence = snap.val() || {};
+    const sessionsNode = (rawPresence.sessions && typeof rawPresence.sessions === "object")
+      ? rawPresence.sessions
+      : rawPresence;
     const now = Date.now();
-    let count = 0;
-    for (const k in data) {
-      const lastSeenMs = typeof data[k]?.lastSeenMs === "number"
-        ? data[k].lastSeenMs
-        : (typeof data[k]?.lastSeen === "number" ? data[k].lastSeen : 0);
-      if (data[k]?.state === "online" && (now - lastSeenMs <= 60000)) count++;
+    let onlineSessions = 0;
+    for (const k in sessionsNode) {
+      if (k === "clients" || k === "sessions") continue;
+      const entry = sessionsNode[k];
+      const lastSeenMs = typeof entry?.lastSeenMs === "number"
+        ? entry.lastSeenMs
+        : (typeof entry?.lastSeen === "number" ? entry.lastSeen : 0);
+      if (entry?.state === "online" && (now - lastSeenMs <= 60000)) {
+        onlineSessions += 1;
+      }
     }
-    document.getElementById("onlineCount").textContent = count;
+    document.getElementById("onlineCount").textContent = String(onlineSessions);
   });
 
   goOnline();
@@ -7585,6 +7639,9 @@
     function exportCsvFilteredTable() {
       downloadCsvRows(getFilteredTableEvents());
     }
+    function openArtiaImportPage() {
+      window.open("https://app.artia.com/a/158857/f/159219/time_entries/import", "_blank", "noopener,noreferrer");
+    }
     function toggleExportMenu(show) {
       if (!exportCsvMenu || !btnExportCsv) return;
       const next = typeof show === "boolean" ? show : exportCsvMenu.classList.contains("hidden");
@@ -7601,12 +7658,14 @@
     if (btnExportCsvAll) {
       btnExportCsvAll.addEventListener("click", () => {
         exportCsvAll();
+        openArtiaImportPage();
         toggleExportMenu(false);
       });
     }
     if (btnExportCsvFiltered) {
       btnExportCsvFiltered.addEventListener("click", () => {
         exportCsvFilteredTable();
+        openArtiaImportPage();
         toggleExportMenu(false);
       });
     }
