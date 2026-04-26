@@ -223,7 +223,7 @@
 
     .panels {
       display: grid;
-      grid-template-columns: minmax(0, 1.2fr) minmax(360px, 0.8fr);
+      grid-template-columns: minmax(0, 1fr);
       gap: 16px;
       align-items: start;
     }
@@ -234,6 +234,31 @@
       background: linear-gradient(180deg, rgba(24, 29, 37, 0.95), rgba(18, 24, 33, 0.95));
       box-shadow: var(--shadow);
       overflow: hidden;
+    }
+
+    .devicePanel {
+      border-color: rgba(73, 209, 125, 0.22);
+      background:
+        linear-gradient(180deg, rgba(18, 36, 35, 0.96), rgba(14, 25, 30, 0.96)),
+        linear-gradient(135deg, rgba(73, 209, 125, 0.12), rgba(255, 90, 31, 0.04));
+    }
+
+    .devicePanel .panelHeader {
+      background: rgba(73, 209, 125, 0.045);
+      border-bottom-color: rgba(73, 209, 125, 0.16);
+    }
+
+    .devicePanel th {
+      background: rgba(73, 209, 125, 0.075);
+      color: #b8ddca;
+    }
+
+    .devicePanel tbody tr:nth-child(even) {
+      background: rgba(73, 209, 125, 0.025);
+    }
+
+    .devicePanel tbody tr:hover {
+      background: rgba(73, 209, 125, 0.055);
     }
 
     .panelHeader {
@@ -287,6 +312,44 @@
       z-index: 1;
     }
 
+    .sortButton {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0;
+      font: inherit;
+      letter-spacing: inherit;
+      text-transform: inherit;
+      cursor: pointer;
+    }
+
+    .sortButton:hover,
+    .sortButton:focus-visible {
+      color: var(--text);
+    }
+
+    .sortButton:focus-visible {
+      outline: 2px solid rgba(255, 90, 31, 0.42);
+      outline-offset: 4px;
+      border-radius: 6px;
+    }
+
+    .sortIcon {
+      color: rgba(158, 172, 189, 0.64);
+      font-size: 16px;
+      line-height: 1;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .sortButton.active .sortIcon {
+      color: #ffb08f;
+    }
+
     .peopleTable th:nth-child(1),
     .peopleTable td:nth-child(1) {
       width: 26%;
@@ -312,6 +375,31 @@
       width: 19%;
     }
 
+    .deviceTable th:nth-child(1),
+    .deviceTable td:nth-child(1) {
+      width: 24%;
+    }
+
+    .deviceTable th:nth-child(2),
+    .deviceTable td:nth-child(2) {
+      width: 17%;
+    }
+
+    .deviceTable th:nth-child(3),
+    .deviceTable td:nth-child(3) {
+      width: 18%;
+    }
+
+    .deviceTable th:nth-child(4),
+    .deviceTable td:nth-child(4) {
+      width: 15%;
+    }
+
+    .deviceTable th:nth-child(5),
+    .deviceTable td:nth-child(5) {
+      width: 26%;
+    }
+
     tbody tr:hover {
       background: rgba(255, 255, 255, 0.03);
     }
@@ -334,6 +422,10 @@
       color: var(--muted);
       font-size: 11px;
       line-height: 1.35;
+    }
+
+    .emailMeta:empty {
+      display: none;
     }
 
     .pill {
@@ -397,46 +489,6 @@
       line-height: 1.35;
       overflow-wrap: anywhere;
       word-break: break-word;
-    }
-
-    .sideList {
-      display: grid;
-      gap: 12px;
-      padding: 18px 20px 20px;
-    }
-
-    .sessionItem {
-      padding: 14px;
-      border-radius: 18px;
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.03);
-      display: grid;
-      gap: 10px;
-    }
-
-    .sessionTop {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .sessionId {
-      color: var(--muted);
-      font-size: 12px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    }
-
-    .sessionEmail {
-      font-weight: 700;
-      word-break: break-word;
-    }
-
-    .sessionMeta {
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.45;
     }
 
     .empty {
@@ -521,9 +573,128 @@
       font-size: 13px;
     }
 
+    .chartBackdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 180;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(7, 10, 14, 0.72);
+      backdrop-filter: blur(10px);
+    }
+
+    .chartBackdrop.show {
+      display: flex;
+    }
+
+    .chartModal {
+      width: min(1120px, 100%);
+      max-height: min(86vh, 760px);
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(24, 29, 37, 0.99), rgba(18, 24, 33, 0.99));
+      box-shadow: var(--shadow);
+    }
+
+    .chartHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 20px 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .chartTitle {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+    }
+
+    .chartSub {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .chartClose {
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      border-radius: 50%;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .chartBody {
+      padding: 20px 22px 22px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .chartFrame {
+      min-height: 430px;
+      padding: 20px 22px 18px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      background: #1f1f1f;
+      overflow-x: auto;
+    }
+
+    .comboChartSvg {
+      min-width: 860px;
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .chartGrid {
+      stroke: rgba(255, 255, 255, 0.11);
+      stroke-width: 1;
+    }
+
+    .chartAxis {
+      stroke: rgba(255, 255, 255, 0.14);
+      stroke-width: 1;
+    }
+
+    .chartTick {
+      fill: #d8dce2;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .chartXAxisLabel {
+      fill: #d8dce2;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .chartBar {
+      fill: #1387d9;
+    }
+
+    .chartValueLabel {
+      fill: #f4f7fb;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .chartEmpty {
+      padding: 90px 18px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
     @media (max-width: 1100px) {
-      .cards,
-      .panels {
+      .cards {
         grid-template-columns: 1fr 1fr;
       }
     }
@@ -535,8 +706,7 @@
 
       .hero,
       .toolbar,
-      .cards,
-      .panels {
+      .cards {
         grid-template-columns: 1fr;
       }
 
@@ -552,6 +722,18 @@
 
       table {
         min-width: 640px;
+      }
+
+      .chartBackdrop {
+        padding: 14px;
+      }
+
+      .chartHeader {
+        padding: 18px;
+      }
+
+      .chartBody {
+        padding: 16px;
       }
     }
   </style>
@@ -571,6 +753,23 @@
     </section>
   </div>
 
+  <div class="chartBackdrop" id="chartBackdrop" aria-hidden="true">
+    <section class="chartModal" role="dialog" aria-modal="true" aria-labelledby="chartTitle">
+      <div class="chartHeader">
+        <div>
+          <h2 class="chartTitle" id="chartTitle">Pessoas online por dia</h2>
+          <div class="chartSub">E-mails distintos com presença registrada em cada dia.</div>
+        </div>
+        <button class="btn chartClose" id="btnCloseChart" type="button" aria-label="Fechar gráfico">×</button>
+      </div>
+      <div class="chartBody">
+        <div class="chartFrame" id="dailyChartFrame">
+          <div class="chartEmpty">Aguardando dados do Firebase...</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
   <main class="page">
     <section class="hero">
       <div>
@@ -581,6 +780,7 @@
       <div class="heroActions">
         <a class="btn" href="../">Voltar ao sistema</a>
         <button class="btn" id="btnLockPage" type="button">Bloquear</button>
+        <button class="btn" id="btnOpenChart" type="button">Ver gráfico</button>
         <button class="btn primary" id="btnRefresh" type="button">Atualizar agora</button>
       </div>
     </section>
@@ -622,9 +822,9 @@
         <div class="cardHint">Cada aba aberta do sistema vira uma sessão separada.</div>
       </article>
       <article class="card">
-        <div class="cardLabel">Sem e-mail</div>
-        <div class="cardValue" id="statAnonymous">--</div>
-        <div class="cardHint">Sessões sem e-mail preenchido no campo de exportação.</div>
+        <div class="cardLabel">Online nos 7 dias</div>
+        <div class="cardValue" id="statRecentUsers">--</div>
+        <div class="cardHint">E-mails distintos com acesso registrado nos últimos 7 dias.</div>
       </article>
     </section>
 
@@ -633,7 +833,7 @@
         <div class="panelHeader">
           <div>
             <div class="panelTitle">Pessoas</div>
-            <div class="panelSub">Agrupado por e-mail, com ordenação pelo acesso mais recente.</div>
+            <div class="panelSub">Agrupado por e-mail; use os cabeçalhos para alternar entre acesso por hora e ordem alfabética.</div>
           </div>
           <div class="pill" id="peopleCountPill">0 resultados</div>
         </div>
@@ -641,9 +841,19 @@
           <table class="peopleTable">
             <thead>
               <tr>
-                <th>E-mail</th>
+                <th>
+                  <button class="sortButton" id="peopleEmailSortButton" type="button" aria-label="Ordenar pessoas por e-mail">
+                    <span>E-mail</span>
+                    <span class="sortIcon" id="peopleEmailSortIcon" aria-hidden="true">↕</span>
+                  </button>
+                </th>
                 <th>Status</th>
-                <th>Último acesso</th>
+                <th>
+                  <button class="sortButton active" id="peopleAccessSortButton" type="button" aria-label="Ordenar pessoas por último acesso">
+                    <span>Último acesso</span>
+                    <span class="sortIcon" id="peopleAccessSortIcon" aria-hidden="true">↓</span>
+                  </button>
+                </th>
                 <th>Dispositivos</th>
                 <th>Abas</th>
               </tr>
@@ -657,7 +867,7 @@
         </div>
       </article>
 
-      <article class="panel">
+      <article class="panel devicePanel">
         <div class="panelHeader">
           <div>
             <div class="panelTitle">Dispositivos</div>
@@ -665,8 +875,23 @@
           </div>
           <div class="pill" id="deviceCountPill">0 dispositivos</div>
         </div>
-        <div class="sideList" id="deviceList">
-          <div class="empty">Carregando dispositivos...</div>
+        <div class="tableWrap">
+          <table class="deviceTable">
+            <thead>
+              <tr>
+                <th>E-mail</th>
+                <th>Status</th>
+                <th>Último acesso</th>
+                <th>Abas</th>
+                <th>Identificadores</th>
+              </tr>
+            </thead>
+            <tbody id="deviceList">
+              <tr>
+                <td colspan="5" class="empty">Carregando dispositivos...</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </article>
     </section>
@@ -706,9 +931,17 @@
     const btnLockPageEl = document.getElementById("btnLockPage");
     const searchInputEl = document.getElementById("searchInput");
     const btnRefreshEl = document.getElementById("btnRefresh");
+    const btnOpenChartEl = document.getElementById("btnOpenChart");
+    const chartBackdropEl = document.getElementById("chartBackdrop");
+    const btnCloseChartEl = document.getElementById("btnCloseChart");
+    const dailyChartFrameEl = document.getElementById("dailyChartFrame");
     const connectionStateEl = document.getElementById("connectionState");
     const lastSyncTextEl = document.getElementById("lastSyncText");
     const peopleTableBodyEl = document.getElementById("peopleTableBody");
+    const peopleEmailSortButtonEl = document.getElementById("peopleEmailSortButton");
+    const peopleEmailSortIconEl = document.getElementById("peopleEmailSortIcon");
+    const peopleAccessSortButtonEl = document.getElementById("peopleAccessSortButton");
+    const peopleAccessSortIconEl = document.getElementById("peopleAccessSortIcon");
     const deviceListEl = document.getElementById("deviceList");
     const peopleCountPillEl = document.getElementById("peopleCountPill");
     const deviceCountPillEl = document.getElementById("deviceCountPill");
@@ -717,11 +950,21 @@
     const statOnlineUsersEl = document.getElementById("statOnlineUsers");
     const statOnlineDevicesEl = document.getElementById("statOnlineDevices");
     const statOnlineSessionsEl = document.getElementById("statOnlineSessions");
-    const statAnonymousEl = document.getElementById("statAnonymous");
+    const statRecentUsersEl = document.getElementById("statRecentUsers");
 
     let latestPresenceData = {};
     let currentFilter = "";
+    let peopleSortColumn = "access";
+    let peopleEmailSortDirection = "asc";
+    let peopleAccessSortDirection = "desc";
     let presenceUnsubscribe = null;
+
+    const saoPauloDayFormatter = new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    });
 
     function escapeHtml(value) {
       return String(value ?? "")
@@ -757,6 +1000,35 @@
       if (diffHour < 24) return `${diffHour} h atrás`;
       const diffDay = Math.round(diffHour / 24);
       return `${diffDay} dia(s) atrás`;
+    }
+
+    function getSaoPauloDateKey(valueMs) {
+      if (!Number.isFinite(valueMs) || valueMs <= 0) return "";
+      const parts = saoPauloDayFormatter.formatToParts(new Date(valueMs))
+        .reduce((acc, part) => {
+          if (part.type !== "literal") acc[part.type] = part.value;
+          return acc;
+        }, {});
+      return `${parts.year}-${parts.month}-${parts.day}`;
+    }
+
+    function getRecentDayKeys(totalDays = 7) {
+      const keys = [];
+      const nowMs = Date.now();
+      for (let offset = totalDays - 1; offset >= 0; offset -= 1) {
+        keys.push(getSaoPauloDateKey(nowMs - offset * 24 * 60 * 60 * 1000));
+      }
+      return keys;
+    }
+
+    function formatDayLabel(dayKey) {
+      const [, month, day] = String(dayKey || "").split("-");
+      return day && month ? `${day}/${month}` : "--";
+    }
+
+    function getHourlyAccessSortKey(valueMs) {
+      if (!Number.isFinite(valueMs) || valueMs <= 0) return -1;
+      return Math.floor(valueMs / (60 * 60 * 1000));
     }
 
     function getPresenceCollections(rawPresence) {
@@ -871,7 +1143,7 @@
       }
 
       const grouped = Array.from(groupedMap.values())
-        .sort((a, b) => b.lastSeenMs - a.lastSeenMs)
+        .sort(comparePeopleEntries)
         .filter((entry) => {
           if (!filter) return true;
           const emailText = (entry.email || "sem email informado").toLowerCase();
@@ -889,10 +1161,54 @@
         onlineUsers: Array.from(groupedMap.values()).filter((entry) => entry.online).length,
         onlineDevices: clients.filter((client) => client.online).length,
         onlineSessions: sessions.filter((session) => session.online).length,
-        anonymousCount: Array.from(groupedMap.values()).filter((entry) => !entry.email).length
+        recent7dUsers: Array.from(groupedMap.values())
+          .filter((entry) => entry.email && entry.lastSeenMs >= Date.now() - 7 * 24 * 60 * 60 * 1000).length
       };
 
       return { clients: filteredClients, grouped, stats };
+    }
+
+    function comparePeopleEntries(a, b) {
+      if (peopleSortColumn === "email") {
+        return comparePeopleByEmail(a, b);
+      }
+
+      if (a.online !== b.online) return a.online ? -1 : 1;
+
+      const accessA = getHourlyAccessSortKey(a.lastSeenMs);
+      const accessB = getHourlyAccessSortKey(b.lastSeenMs);
+      if (accessA < 0 || accessB < 0) {
+        if (accessA < 0 && accessB < 0) return 0;
+        return accessA < 0 ? 1 : -1;
+      }
+      if (accessA !== accessB) {
+        return peopleAccessSortDirection === "desc"
+          ? accessB - accessA
+          : accessA - accessB;
+      }
+
+      const emailA = (a.email || "sem e-mail informado").toLowerCase();
+      const emailB = (b.email || "sem e-mail informado").toLowerCase();
+      const emailCompare = emailA.localeCompare(emailB, "pt-BR", { sensitivity: "base" });
+      if (emailCompare !== 0) return emailCompare;
+
+      return b.lastSeenMs - a.lastSeenMs;
+    }
+
+    function comparePeopleByEmail(a, b) {
+      const missingA = !a.email;
+      const missingB = !b.email;
+      if (missingA !== missingB) return missingA ? 1 : -1;
+
+      const emailA = (a.email || "sem e-mail informado").toLowerCase();
+      const emailB = (b.email || "sem e-mail informado").toLowerCase();
+      const emailCompare = emailA.localeCompare(emailB, "pt-BR", { sensitivity: "base" });
+      if (emailCompare !== 0) {
+        return peopleEmailSortDirection === "asc" ? emailCompare : -emailCompare;
+      }
+
+      if (a.online !== b.online) return a.online ? -1 : 1;
+      return b.lastSeenMs - a.lastSeenMs;
     }
 
     function renderStats(stats) {
@@ -900,10 +1216,43 @@
       statOnlineUsersEl.textContent = String(stats.onlineUsers);
       statOnlineDevicesEl.textContent = String(stats.onlineDevices);
       statOnlineSessionsEl.textContent = String(stats.onlineSessions);
-      statAnonymousEl.textContent = String(stats.anonymousCount);
+      statRecentUsersEl.textContent = String(stats.recent7dUsers);
+    }
+
+    function renderPeopleSortButtons() {
+      const isEmailSortActive = peopleSortColumn === "email";
+      const isEmailAscending = peopleEmailSortDirection === "asc";
+      peopleEmailSortIconEl.textContent = isEmailSortActive ? (isEmailAscending ? "↑" : "↓") : "↕";
+      peopleEmailSortButtonEl.classList.toggle("active", isEmailSortActive);
+      peopleEmailSortButtonEl.setAttribute(
+        "aria-label",
+        isEmailSortActive
+          ? (isEmailAscending
+            ? "Pessoas ordenadas por e-mail de A a Z. Clique para inverter."
+            : "Pessoas ordenadas por e-mail de Z a A. Clique para inverter.")
+          : "Ordenar pessoas por e-mail."
+      );
+      peopleEmailSortButtonEl.title = isEmailAscending ? "E-mail A-Z" : "E-mail Z-A";
+
+      const isAccessSortActive = peopleSortColumn === "access";
+      const isNewestFirst = peopleAccessSortDirection === "desc";
+      peopleAccessSortIconEl.textContent = isAccessSortActive ? (isNewestFirst ? "↓" : "↑") : "↕";
+      peopleAccessSortButtonEl.classList.toggle("active", isAccessSortActive);
+      peopleAccessSortButtonEl.setAttribute(
+        "aria-label",
+        isAccessSortActive
+          ? (isNewestFirst
+          ? "Pessoas ordenadas por último acesso, mais recente primeiro. Clique para inverter."
+            : "Pessoas ordenadas por último acesso, mais antigo primeiro. Clique para inverter.")
+          : "Ordenar pessoas por último acesso."
+      );
+      peopleAccessSortButtonEl.title = isNewestFirst
+        ? "Mais recente primeiro, agrupado por hora"
+        : "Mais antigo primeiro, agrupado por hora";
     }
 
     function renderPeopleTable(grouped) {
+      renderPeopleSortButtons();
       peopleCountPillEl.textContent = `${grouped.length} resultado(s)`;
       if (!grouped.length) {
         peopleTableBodyEl.innerHTML = `
@@ -958,7 +1307,11 @@
     function renderDeviceList(clients) {
       deviceCountPillEl.textContent = `${clients.length} dispositivo(s)`;
       if (!clients.length) {
-        deviceListEl.innerHTML = `<div class="empty">Nenhum dispositivo encontrado para o filtro atual.</div>`;
+        deviceListEl.innerHTML = `
+          <tr>
+            <td colspan="5" class="empty">Nenhum dispositivo encontrado para o filtro atual.</td>
+          </tr>
+        `;
         return;
       }
 
@@ -970,26 +1323,144 @@
           ? ""
           : `<span class="pill warning">Sem e-mail</span>`;
         return `
-          <article class="sessionItem">
-            <div class="sessionTop">
+          <tr>
+            <td>
+              <div class="emailCell">
+                <div class="emailMain">${escapeHtml(emailLabel)}</div>
+                <div class="emailMeta">${warningBadge}</div>
+              </div>
+            </td>
+            <td>
               <span class="pill ${statusClass}">
                 <span class="dot"></span>
                 ${statusText}
               </span>
-              ${warningBadge}
-            </div>
-            <div class="sessionEmail">${escapeHtml(emailLabel)}</div>
-            <div class="sessionMeta">
-              <div><strong>Último acesso:</strong> ${escapeHtml(formatDateTime(client.lastSeenMs))}</div>
-              <div><strong>Relativo:</strong> ${escapeHtml(formatRelativeTime(client.lastSeenMs))}</div>
-              <div><strong>Abas:</strong> ${client.onlineSessions} online / ${client.totalSessions} total</div>
-              <div><strong>Últimas 24h:</strong> ${client.recent24hSessions} sessão(ões)</div>
-            </div>
-            <div class="sessionId">Client ID: ${escapeHtml(client.clientId)}</div>
-            <div class="sessionId">Tabs: ${escapeHtml(client.sessionIds.slice(0, 3).join(", "))}${client.sessionIds.length > 3 ? "..." : ""}</div>
-          </article>
+            </td>
+            <td>
+              <div class="stackCompact">
+                <div class="metricStrong">${escapeHtml(formatDateTime(client.lastSeenMs))}</div>
+                <div class="muted">${escapeHtml(formatRelativeTime(client.lastSeenMs))}</div>
+              </div>
+            </td>
+            <td>
+              <div class="stackCompact">
+                <div class="metricStrong">${client.onlineSessions} online / ${client.totalSessions} total</div>
+                <div class="muted">${client.recent24hSessions} sessão(ões) nas últimas 24h</div>
+              </div>
+            </td>
+            <td>
+              <div class="stackCompact">
+                <div class="codeMeta">Client ID: ${escapeHtml(client.clientId)}</div>
+                <div class="codeMeta">Tabs: ${escapeHtml(client.sessionIds.slice(0, 3).join(", "))}${client.sessionIds.length > 3 ? "..." : ""}</div>
+              </div>
+            </td>
+          </tr>
         `;
       }).join("");
+    }
+
+    function buildDailyPeopleSeries(rawData, totalDays = 7) {
+      const dayKeys = getRecentDayKeys(totalDays);
+      const emailSetsByDay = new Map(dayKeys.map((dayKey) => [dayKey, new Set()]));
+      const collections = getPresenceCollections(rawData);
+      const clientEmails = new Map(
+        Object.entries(collections.clients || {})
+          .map(([clientId, value]) => [clientId, String(value?.email || "").trim()])
+      );
+
+      const addPresenceRecord = (email, lastSeenMs) => {
+        const normalizedEmail = String(email || "").trim().toLowerCase();
+        if (!normalizedEmail || !Number.isFinite(lastSeenMs) || lastSeenMs <= 0) return;
+        const dayKey = getSaoPauloDateKey(lastSeenMs);
+        const emailSet = emailSetsByDay.get(dayKey);
+        if (emailSet) emailSet.add(normalizedEmail);
+      };
+
+      for (const [sessionId, value] of Object.entries(collections.sessions || {})) {
+        const session = normalizeSessionEntry(sessionId, value);
+        addPresenceRecord(session.email || clientEmails.get(session.clientId), session.lastSeenMs);
+      }
+
+      for (const [clientId, value] of Object.entries(collections.clients || {})) {
+        const client = normalizeClientEntry(clientId, value);
+        addPresenceRecord(client.email, client.lastSeenMs);
+      }
+
+      return dayKeys.map((dayKey) => ({
+        key: dayKey,
+        label: formatDayLabel(dayKey),
+        count: emailSetsByDay.get(dayKey)?.size || 0
+      }));
+    }
+
+    function getNiceChartMax(value) {
+      if (!Number.isFinite(value) || value <= 0) return 1;
+      const magnitude = 10 ** Math.floor(Math.log10(value));
+      const normalized = value / magnitude;
+      const niceNormalized = normalized <= 1
+        ? 1
+        : normalized <= 2
+          ? 2
+          : normalized <= 5
+            ? 5
+            : 10;
+      return niceNormalized * magnitude;
+    }
+
+    function renderDailyPeopleChart() {
+      const series = buildDailyPeopleSeries(latestPresenceData, 7);
+      const maxCount = Math.max(0, ...series.map((entry) => entry.count));
+
+      if (!maxCount) {
+        dailyChartFrameEl.innerHTML = `<div class="chartEmpty">Nenhum acesso com e-mail registrado nos últimos 7 dias.</div>`;
+        return;
+      }
+
+      const chartWidth = 960;
+      const chartHeight = 370;
+      const plot = { left: 58, top: 28, right: 62, bottom: 48 };
+      const plotWidth = chartWidth - plot.left - plot.right;
+      const plotHeight = chartHeight - plot.top - plot.bottom;
+      const plotBottom = plot.top + plotHeight;
+      const slotWidth = plotWidth / series.length;
+      const barWidth = Math.min(42, slotWidth * 0.36);
+      const maxBarValue = getNiceChartMax(maxCount);
+      const ticks = [0, 1, 2, 3, 4];
+      const yForBar = (value) => plotBottom - (value / maxBarValue) * plotHeight;
+      const xForIndex = (index) => plot.left + slotWidth * index + slotWidth / 2;
+
+      dailyChartFrameEl.innerHTML = `
+        <svg class="comboChartSvg" viewBox="0 0 ${chartWidth} ${chartHeight}" role="img" aria-label="Gráfico de pessoas online por dia nos últimos 7 dias">
+          ${ticks.map((tickIndex) => {
+            const ratio = tickIndex / (ticks.length - 1);
+            const y = plotBottom - ratio * plotHeight;
+            const leftValue = Math.round(maxBarValue * ratio);
+            return `
+              <line class="chartGrid" x1="${plot.left}" y1="${y.toFixed(1)}" x2="${chartWidth - plot.right}" y2="${y.toFixed(1)}"></line>
+              <text class="chartTick" x="${plot.left - 8}" y="${(y + 4).toFixed(1)}" text-anchor="end">${leftValue}</text>
+            `;
+          }).join("")}
+          ${series.map((entry, index) => {
+            const x = xForIndex(index);
+            return `<line class="chartGrid" x1="${x.toFixed(1)}" y1="${plot.top}" x2="${x.toFixed(1)}" y2="${plotBottom}"></line>`;
+          }).join("")}
+          <line class="chartAxis" x1="${plot.left}" y1="${plot.top}" x2="${plot.left}" y2="${plotBottom}"></line>
+          <line class="chartAxis" x1="${plot.left}" y1="${plotBottom}" x2="${chartWidth - plot.right}" y2="${plotBottom}"></line>
+          ${series.map((entry, index) => {
+            const xCenter = xForIndex(index);
+            const y = yForBar(entry.count);
+            const height = Math.max(0, plotBottom - y);
+            const visibleHeight = entry.count > 0 ? Math.max(4, height) : 0;
+            const barY = plotBottom - visibleHeight;
+            const labelY = Math.max(plot.top + 14, barY - 9);
+            return `
+              <rect class="chartBar" x="${(xCenter - barWidth / 2).toFixed(1)}" y="${barY.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${visibleHeight.toFixed(1)}" rx="8"></rect>
+              <text class="chartValueLabel" x="${xCenter.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="middle">${entry.count}</text>
+              <text class="chartXAxisLabel" x="${xCenter.toFixed(1)}" y="${plotBottom + 28}" text-anchor="middle">${escapeHtml(entry.label)}</text>
+            `;
+          }).join("")}
+        </svg>
+      `;
     }
 
     function renderPresenceDashboard() {
@@ -997,6 +1468,7 @@
       renderStats(summary.stats);
       renderPeopleTable(summary.grouped);
       renderDeviceList(summary.clients);
+      if (chartBackdropEl.classList.contains("show")) renderDailyPeopleChart();
     }
 
     function updateSyncLabel(prefix = "Sincronizado") {
@@ -1030,6 +1502,17 @@
       }
     }
 
+    function showDailyChart(show) {
+      chartBackdropEl.classList.toggle("show", show);
+      chartBackdropEl.setAttribute("aria-hidden", String(!show));
+      if (show) {
+        renderDailyPeopleChart();
+        requestAnimationFrame(() => btnCloseChartEl.focus());
+      } else if (document.activeElement === btnCloseChartEl) {
+        btnOpenChartEl.focus();
+      }
+    }
+
     function ensurePresenceSubscription() {
       if (presenceUnsubscribe) return;
       presenceUnsubscribe = onValue(presenceRef, (snap) => {
@@ -1046,6 +1529,44 @@
     searchInputEl.addEventListener("input", () => {
       currentFilter = searchInputEl.value || "";
       renderPresenceDashboard();
+    });
+
+    peopleEmailSortButtonEl.addEventListener("click", () => {
+      if (peopleSortColumn === "email") {
+        peopleEmailSortDirection = peopleEmailSortDirection === "asc" ? "desc" : "asc";
+      } else {
+        peopleSortColumn = "email";
+        peopleEmailSortDirection = "asc";
+      }
+      renderPresenceDashboard();
+    });
+
+    peopleAccessSortButtonEl.addEventListener("click", () => {
+      if (peopleSortColumn === "access") {
+        peopleAccessSortDirection = peopleAccessSortDirection === "desc" ? "asc" : "desc";
+      } else {
+        peopleSortColumn = "access";
+        peopleAccessSortDirection = "desc";
+      }
+      renderPresenceDashboard();
+    });
+
+    btnOpenChartEl.addEventListener("click", () => {
+      showDailyChart(true);
+    });
+
+    btnCloseChartEl.addEventListener("click", () => {
+      showDailyChart(false);
+    });
+
+    chartBackdropEl.addEventListener("click", (event) => {
+      if (event.target === chartBackdropEl) showDailyChart(false);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && chartBackdropEl.classList.contains("show")) {
+        showDailyChart(false);
+      }
     });
 
     btnRefreshEl.addEventListener("click", async () => {
@@ -1084,6 +1605,7 @@
           presenceUnsubscribe = null;
         }
         latestPresenceData = {};
+        showDailyChart(false);
         connectionStateEl.textContent = "Bloqueado";
         lastSyncTextEl.textContent = "Digite a senha para consultar o Firebase.";
         showAuthGate(true);
