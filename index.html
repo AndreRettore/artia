@@ -255,6 +255,13 @@
       color: var(--text);
     }
 
+    html.light .dragTimeTooltip {
+      background: rgba(255, 255, 255, .96);
+      border: 1px solid var(--line2);
+      color: var(--text);
+      box-shadow: 0 10px 26px rgba(0, 0, 0, .18);
+    }
+
     html.light .selectionBlock {
       /* Blocos de seleção ficam translúcidos, mais discretos no tema claro */
       background: rgba(78, 161, 255, .16);
@@ -1362,6 +1369,32 @@
       pointer-events: none;
       white-space: nowrap;
       box-shadow: var(--shadow);
+    }
+
+    .dragTimeTooltip {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 10000;
+      padding: 6px 9px;
+      border-radius: 10px;
+      background: rgba(0, 0, 0, .72);
+      border: 1px solid var(--line2);
+      color: var(--text);
+      box-shadow: var(--shadow);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transform: translate3d(-9999px, -9999px, 0);
+      transition: opacity .08s ease;
+      will-change: transform;
+    }
+
+    .dragTimeTooltip.show {
+      opacity: 1;
     }
 
     .event {
@@ -4650,6 +4683,13 @@
     function setTimeOnDate(dateOnly, hh, mm) { return new Date(dateOnly.getFullYear(), dateOnly.getMonth(), dateOnly.getDate(), hh, mm, 0, 0) }
     function minutesFromDayStart(dateTime, dayIso) { const base = parseISOToLocalDate(dayIso); return Math.round((dateTime.getTime() - base.getTime()) / 60000) }
     function durationMinutes(a, b) { return (b.getTime() - a.getTime()) / 60000 }
+    function weekdayNameFromDate(d) {
+      const dow = d.getDay();
+      return dow === 0 ? DAY_NAMES[6] : DAY_NAMES[dow - 1];
+    }
+    function formatDateWithWeekdayBR(d) {
+      return `${weekdayNameFromDate(d)}, ${formatDateBR(d)}`;
+    }
     function normalizeToStepMinutes(m) { const step = CONFIG.stepMinutes; return Math.round(m / step) * step }
     function clampMinutesRaw(m) {
       const n = Math.round(Number(m) || 0);
@@ -5177,6 +5217,22 @@
       el.style.height = Math.max(18, hY - 4) + "px";
     }
 
+    function scrollCalendarToHour(hour = 8, options = {}) {
+      if (!gridWrapEl) return;
+      const targetMins = (hour * 60) - (CONFIG.startHour * 60);
+      const top = yFromMinutes(Math.max(0, targetMins));
+      if (options.smooth) {
+        gridWrapEl.scrollTo({ top, behavior: "smooth" });
+      } else {
+        gridWrapEl.scrollTop = top;
+      }
+      initialScrollDone = true;
+    }
+
+    function scrollCalendarToHourAfterRender(hour = 8, options = {}) {
+      requestAnimationFrame(() => scrollCalendarToHour(hour, options));
+    }
+
     function overlapsExistingMinutes(dayIso, startM, endM, ignoreId = null) {
       for (const ev of state.events) {
         if (ev.id === ignoreId) continue;
@@ -5205,6 +5261,153 @@
       if (y > maxY) y = maxY;
       const rawMins = (y / slotH) * CONFIG.stepMinutes;
       return clampMinutesToDay(rawMins);
+    }
+
+    function getTotalCalendarSlots() {
+      return Math.floor(((CONFIG.endHour - CONFIG.startHour) * 60) / CONFIG.stepMinutes);
+    }
+
+    function slotIndexFromClientY(dayIso, clientY) {
+      const info = getSlotsRectForDay(dayIso);
+      if (!info) return null;
+      const slotH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--slotH"));
+      if (!Number.isFinite(slotH) || slotH <= 0) return null;
+      const totalSlots = getTotalCalendarSlots();
+      const maxY = Math.max(0, info.rect.height - 1);
+      const y = Math.max(0, Math.min(maxY, clientY - info.rect.top));
+      return Math.max(0, Math.min(totalSlots - 1, Math.floor(y / slotH)));
+    }
+
+    function dayIsoFromClientX(clientX, fallbackDayIso = null) {
+      for (const col of dayCols) {
+        const rect = col.getBoundingClientRect();
+        if (clientX >= rect.left && clientX <= rect.right) return col.dataset.dayIso;
+      }
+      return fallbackDayIso;
+    }
+
+    const DRAG_TIME_TOOLTIP_OFFSET_X = 14;
+    const DRAG_TIME_TOOLTIP_OFFSET_Y = 16;
+    const CALENDAR_AUTOSCROLL_EDGE_SLOTS = 1;
+    const CALENDAR_AUTOSCROLL_MAX_STEP_PX = 6;
+    let dragTimeTooltipEl = null;
+    const calendarAutoScroll = { rafId: 0, clientX: 0, clientY: 0 };
+
+    function ensureDragTimeTooltip() {
+      if (!dragTimeTooltipEl) {
+        dragTimeTooltipEl = document.createElement("div");
+        dragTimeTooltipEl.className = "dragTimeTooltip";
+        document.body.appendChild(dragTimeTooltipEl);
+      }
+      return dragTimeTooltipEl;
+    }
+
+    function formatDragTimeText(startM, endM) {
+      const durM = Math.max(0, endM - startM);
+      return `${formatTimeFromMinutes(startM)} → ${formatTimeFromMinutes(endM)} - ${formatDurationHuman(durM)}`;
+    }
+
+    function showDragTimeTooltip(text, clientX, clientY) {
+      const el = ensureDragTimeTooltip();
+      el.textContent = text;
+      el.classList.add("show");
+
+      const pad = 8;
+      const rect = el.getBoundingClientRect();
+      let x = clientX + DRAG_TIME_TOOLTIP_OFFSET_X;
+      let y = clientY + DRAG_TIME_TOOLTIP_OFFSET_Y;
+
+      if (x + rect.width > window.innerWidth - pad) {
+        x = clientX - rect.width - DRAG_TIME_TOOLTIP_OFFSET_X;
+      }
+      if (y + rect.height > window.innerHeight - pad) {
+        y = clientY - rect.height - DRAG_TIME_TOOLTIP_OFFSET_Y;
+      }
+
+      x = Math.max(pad, Math.min(window.innerWidth - rect.width - pad, x));
+      y = Math.max(pad, Math.min(window.innerHeight - rect.height - pad, y));
+      el.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
+    }
+
+    function showDragTimeTooltipForRange(startM, endM, clientX, clientY) {
+      showDragTimeTooltip(formatDragTimeText(startM, endM), clientX, clientY);
+    }
+
+    function hideDragTimeTooltip() {
+      if (dragTimeTooltipEl) dragTimeTooltipEl.classList.remove("show");
+    }
+
+    function getCalendarAutoScrollEdgePx() {
+      const slotH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--slotH"));
+      return Math.max(14, (Number.isFinite(slotH) && slotH > 0 ? slotH : 20) * CALENDAR_AUTOSCROLL_EDGE_SLOTS);
+    }
+
+    function getCalendarAutoScrollDelta(clientY) {
+      if (!gridWrapEl) return 0;
+      const rect = gridWrapEl.getBoundingClientRect();
+      const edge = Math.min(getCalendarAutoScrollEdgePx(), Math.max(12, rect.height / 4));
+      let direction = 0;
+      let intensity = 0;
+
+      if (clientY < rect.top + edge) {
+        direction = -1;
+        intensity = (rect.top + edge - clientY) / edge;
+      } else if (clientY > rect.bottom - edge) {
+        direction = 1;
+        intensity = (clientY - (rect.bottom - edge)) / edge;
+      }
+
+      if (!direction) return 0;
+      const maxScrollTop = Math.max(0, gridWrapEl.scrollHeight - gridWrapEl.clientHeight);
+      if (direction < 0 && gridWrapEl.scrollTop <= 0) return 0;
+      if (direction > 0 && gridWrapEl.scrollTop >= maxScrollTop - 1) return 0;
+
+      const eased = Math.min(1, Math.max(0, intensity));
+      return direction * Math.max(1, Math.ceil(CALENDAR_AUTOSCROLL_MAX_STEP_PX * eased * eased));
+    }
+
+    function hasActiveCalendarMouseDrag() {
+      return state.view === "calendar" && (drag.active || eventDrag.active);
+    }
+
+    function refreshActiveCalendarDragFromPointer(clientX, clientY) {
+      if (drag.active) {
+        updateSelectionDragFromPointer(clientX, clientY);
+      } else if (eventDrag.active) {
+        updateEventDragFromPointer(clientX, clientY);
+      }
+    }
+
+    function runCalendarAutoScroll() {
+      calendarAutoScroll.rafId = 0;
+      if (!hasActiveCalendarMouseDrag()) return;
+
+      const deltaY = getCalendarAutoScrollDelta(calendarAutoScroll.clientY);
+      if (!deltaY) return;
+
+      gridWrapEl.scrollTop += deltaY;
+      refreshActiveCalendarDragFromPointer(calendarAutoScroll.clientX, calendarAutoScroll.clientY);
+      calendarAutoScroll.rafId = requestAnimationFrame(runCalendarAutoScroll);
+    }
+
+    function syncCalendarAutoScroll(clientX, clientY) {
+      calendarAutoScroll.clientX = clientX;
+      calendarAutoScroll.clientY = clientY;
+
+      if (!hasActiveCalendarMouseDrag() || !getCalendarAutoScrollDelta(clientY)) {
+        stopCalendarAutoScroll();
+        return;
+      }
+
+      if (!calendarAutoScroll.rafId) {
+        calendarAutoScroll.rafId = requestAnimationFrame(runCalendarAutoScroll);
+      }
+    }
+
+    function stopCalendarAutoScroll() {
+      if (!calendarAutoScroll.rafId) return;
+      cancelAnimationFrame(calendarAutoScroll.rafId);
+      calendarAutoScroll.rafId = 0;
     }
 
     // Destaca a linha correspondente ao horário atual nas colunas do calendário
@@ -5346,10 +5549,12 @@
       block.style.top = (yFromMinutes(topM) + 2) + "px";
       block.style.height = Math.max(18, yFromMinutes(durM) - 4) + "px";
 
-      const hint = document.createElement("div");
-      hint.className = "selectionHint";
-      hint.textContent = `${formatTimeFromMinutes(topM)} → ${formatTimeFromMinutes(endM)} • ${formatDurationHuman(durM)}`;
-      block.appendChild(hint);
+      if (!dragTimeTooltipEl?.classList.contains("show")) {
+        const hint = document.createElement("div");
+        hint.className = "selectionHint";
+        hint.textContent = formatDragTimeText(topM, endM);
+        block.appendChild(hint);
+      }
       col.appendChild(block);
     }
 
@@ -5366,10 +5571,12 @@
       evId: null,
       dayIso: null,
       origDayIso: null,
+      lastDayIso: null,
       el: null,
       ghostEl: null,
       origStartM: 0,
       origEndM: 0,
+      downClientX: 0,
       downClientY: 0,
       pointerStartM: 0,
       lastStartM: 0,
@@ -5402,6 +5609,7 @@
       eventDrag.ghostEl = null;
       eventDrag.origStartM = startM;
       eventDrag.origEndM = endM;
+      eventDrag.downClientX = e.clientX;
       eventDrag.downClientY = e.clientY;
       eventDrag.pointerStartM = pointerM;
       eventDrag.lastStartM = startM;
@@ -5409,6 +5617,8 @@
 
       drag.active = false;
       state.selection = null;
+      hideDragTimeTooltip();
+      stopCalendarAutoScroll();
       renderSelection();
     }
 
@@ -5446,41 +5656,33 @@
       eventDrag.evId = null;
       eventDrag.dayIso = null;
       eventDrag.origDayIso = null;
+      eventDrag.lastDayIso = null;
       eventDrag.el = null;
       eventDrag.origStartM = 0;
       eventDrag.origEndM = 0;
+      eventDrag.downClientX = 0;
       eventDrag.downClientY = 0;
       eventDrag.pointerStartM = 0;
       eventDrag.lastStartM = 0;
       eventDrag.lastEndM = 0;
+      hideDragTimeTooltip();
+      stopCalendarAutoScroll();
     }
 
-    function onEventDragMove(e) {
-      if (state.view !== "calendar") return;
-      if (!eventDrag.pending) return;
-
-      const movedPx = Math.abs(e.clientY - eventDrag.downClientY);
-      if (!eventDrag.active) {
-        if (movedPx < DRAG_THRESHOLD_PX) return;
-        activateEventDrag();
-      }
-
-      e.preventDefault();
-
+    function updateEventDragFromPointer(clientX, clientY) {
+      if (!eventDrag.active) return;
       let curDayIso = eventDrag.lastDayIso || eventDrag.dayIso;
       if (eventDrag.mode === "move") {
-        const hitCol = document.elementFromPoint(e.clientX, e.clientY)?.closest(".dayCol");
-        if (hitCol && hitCol.dataset.dayIso !== curDayIso) {
-          curDayIso = hitCol.dataset.dayIso;
+        const hitDayIso = dayIsoFromClientX(clientX, curDayIso);
+        if (hitDayIso && hitDayIso !== curDayIso) {
+          curDayIso = hitDayIso;
           eventDrag.lastDayIso = curDayIso;
-          hitCol.appendChild(eventDrag.el);
-
-          // Re-establish pointer start relative to the new column so drag isn't offset incorrectly
-          eventDrag.pointerStartM = minutesFromClientY(curDayIso, eventDrag.downClientY);
+          const hitCol = dayCols.find(c => c.dataset.dayIso === curDayIso);
+          if (hitCol) hitCol.appendChild(eventDrag.el);
         }
       }
 
-      const curPointerM = minutesFromClientY(curDayIso, e.clientY);
+      const curPointerM = minutesFromClientY(curDayIso, clientY);
       let deltaM = normalizeToStepMinutes(curPointerM - eventDrag.pointerStartM);
 
       const step = CONFIG.stepMinutes;
@@ -5519,6 +5721,22 @@
 
       const timesEl = eventDrag.el.querySelector(".times");
       if (timesEl) timesEl.textContent = `${formatTimeFromMinutes(newStart)} → ${formatTimeFromMinutes(newEnd)}`;
+      showDragTimeTooltipForRange(newStart, newEnd, clientX, clientY);
+    }
+
+    function onEventDragMove(e) {
+      if (state.view !== "calendar") return;
+      if (!eventDrag.pending) return;
+
+      const movedPx = Math.hypot(e.clientX - eventDrag.downClientX, e.clientY - eventDrag.downClientY);
+      if (!eventDrag.active) {
+        if (movedPx < DRAG_THRESHOLD_PX) return;
+        activateEventDrag();
+      }
+
+      e.preventDefault();
+      syncCalendarAutoScroll(e.clientX, e.clientY);
+      updateEventDragFromPointer(e.clientX, e.clientY);
     }
 
     function onEventDragEnd() {
@@ -6793,10 +7011,7 @@
           }
         }
         if (!initialScrollDone) {
-          const targetMins = (8 * 60) - (CONFIG.startHour * 60);
-          const y = yFromMinutes(Math.max(0, targetMins));
-          gridWrapEl.scrollTop = y;
-          initialScrollDone = true;
+          scrollCalendarToHour();
         }
       } else if (state.view === "table") {
         daysHeaderEl.classList.add("hidden");
@@ -6904,9 +7119,7 @@
       e.preventDefault();
       clearHoverPreview();
       drag.active = true; drag.dayIso = hit.dayIso; drag.startSlot = hit.slotIndex; drag.currentSlot = hit.slotIndex;
-      const start = dateFromDayAndSlot(drag.dayIso, drag.startSlot);
-      const end = dateFromDayAndSlot(drag.dayIso, drag.startSlot + 1);
-      state.selection = { dayIso: drag.dayIso, start, end }; renderSelection();
+      updateSelectionDragFromPointer(e.clientX, e.clientY);
     }
     function onMouseMoveGridHover(e) {
       if (state.view !== "calendar") return;
@@ -6919,10 +7132,18 @@
     function onMouseMoveGlobal(e) {
       if (state.view !== "calendar") return;
       if (!drag.active) return;
-      const hit = slotFromEventTarget(e.target); if (!hit || hit.dayIso !== drag.dayIso) return;
-      drag.currentSlot = hit.slotIndex;
+      e.preventDefault();
+      syncCalendarAutoScroll(e.clientX, e.clientY);
+      updateSelectionDragFromPointer(e.clientX, e.clientY);
+    }
 
-      const totalSlots = Math.floor(((CONFIG.endHour - CONFIG.startHour) * 60) / CONFIG.stepMinutes);
+    function updateSelectionDragFromPointer(clientX, clientY) {
+      if (!drag.active || !drag.dayIso) return;
+      const slotIndex = slotIndexFromClientY(drag.dayIso, clientY);
+      if (slotIndex == null) return;
+      drag.currentSlot = slotIndex;
+
+      const totalSlots = getTotalCalendarSlots();
       const a = drag.startSlot, b = drag.currentSlot;
       let startSlot = Math.min(a, b), endSlot = Math.max(a, b) + 1;
       startSlot = Math.max(0, Math.min(totalSlots - 1, startSlot));
@@ -6930,12 +7151,20 @@
 
       const start = dateFromDayAndSlot(drag.dayIso, startSlot);
       const end = dateFromDayAndSlot(drag.dayIso, endSlot);
-      state.selection = { dayIso: drag.dayIso, start, end }; renderSelection();
+      state.selection = { dayIso: drag.dayIso, start, end };
+      renderSelection();
+      showDragTimeTooltipForRange(startSlot * CONFIG.stepMinutes, endSlot * CONFIG.stepMinutes, clientX, clientY);
     }
     function onMouseUpGlobal() {
-      if (state.view !== "calendar") return;
+      if (state.view !== "calendar") {
+        hideDragTimeTooltip();
+        stopCalendarAutoScroll();
+        return;
+      }
       if (!drag.active) return;
       drag.active = false;
+      hideDragTimeTooltip();
+      stopCalendarAutoScroll();
       renderHoverPreview();
       if (!state.selection) return;
       if (durationMinutes(state.selection.start, state.selection.end) <= 0) { state.selection = null; renderSelection(); return; }
@@ -7017,7 +7246,10 @@
         modalBackdrop.setAttribute("aria-hidden", "false");
         setModalInfo("");
         updatePasteButtonState();
-        requestAnimationFrame(() => projectInputEl.focus());
+        requestAnimationFrame(() => {
+          window.syncWorkplaceButtonsFromNotes?.();
+          projectInputEl.focus();
+        });
       } else {
         modalBackdrop.classList.remove("show");
         modalBackdrop.setAttribute("aria-hidden", "true");
@@ -7224,7 +7456,7 @@
       const sM = clampMinutesRaw(minutesFromDayStart(sel.start, sel.dayIso));
       const eM = clampMinutesRaw(minutesFromDayStart(sel.end, sel.dayIso));
       const durM = Math.max(0, eM - sM);
-      modalWhenEl.textContent = `${formatDateBR(parseISOToLocalDate(sel.dayIso))} ${formatTimeFromMinutes(sM)} → ${formatTimeFromMinutes(eM)}`;
+      modalWhenEl.textContent = `${formatDateWithWeekdayBR(parseISOToLocalDate(sel.dayIso))} ${formatTimeFromMinutes(sM)} → ${formatTimeFromMinutes(eM)}`;
       if (modalDurationEl) modalDurationEl.textContent = `Duração: ${formatDurationHuman(durM)}`;
     }
     function overlapsExisting(dayIso, start, end, ignoreId = null) {
@@ -7438,6 +7670,7 @@
       if (clip.activityLabel) activityNameInputEl.value = clip.activityLabel;
       activityIdInputEl.value = clip.activityId || "";
       notesInputEl.value = clip.notes || "";
+      window.syncWorkplaceButtonsFromNotes?.();
       setEventModalProjectColor(projectInputEl.value);
       setIdLookupStatus("ok", "ID colado (não alterado)");
       setModalInfo("Campos colados.");
@@ -7751,7 +7984,7 @@
       state.weekStart = startOfWeekMonday(new Date());
       state.selectedEventId = null;
       state.selection = null; state.editingEventId = null; renderAll();
-      document.getElementById("gridWrap").scrollTop = 0;
+      if (state.view === "calendar") scrollCalendarToHourAfterRender(8, { smooth: true });
     }
     btnPrev.addEventListener("click", () => goWeek(-1));
     btnNext.addEventListener("click", () => goWeek(1));
@@ -7807,7 +8040,13 @@
 
 
     // Alternância de visão
-    btnViewCalendar.addEventListener("click", () => switchView("calendar"));
+    btnViewCalendar.addEventListener("click", () => {
+      if (state.view === "calendar") {
+        scrollCalendarToHourAfterRender(8, { smooth: true });
+        return;
+      }
+      switchView("calendar");
+    });
     btnViewTable.addEventListener("click", () => switchView("table"));
     btnViewGantt.addEventListener("click", () => switchView("gantt"));
 
@@ -9226,7 +9465,7 @@
 
       function getNotesEl(modalEl) {
         if (!modalEl) return null;
-        return modalEl.querySelector('#notes, #observations, #obs, #observation, textarea[name="notes"], textarea[name="observations"], textarea');
+        return modalEl.querySelector('#notesInput, #notes, #observations, #obs, #observation, textarea[name="notes"], textarea[name="observations"], textarea');
       }
 
       function setActive(modalEl, loc) {
@@ -9250,6 +9489,19 @@
         return m ? m[1] : "";
       }
 
+      function syncFromNotes(modalEl) {
+        const notesEl = getNotesEl(modalEl);
+        if (!notesEl) {
+          setActive(modalEl, "");
+          return;
+        }
+        setActive(modalEl, inferLocationFromNotes(notesEl.value));
+      }
+
+      window.syncWorkplaceButtonsFromNotes = () => {
+        document.querySelectorAll(".modal, .popup, .dialog, #eventModal, #modal, .event-modal").forEach(syncFromNotes);
+      };
+
       document.addEventListener("click", (e) => {
         const btn = e.target.closest && e.target.closest(".workplace-btn");
         if (!btn) return;
@@ -9261,12 +9513,13 @@
       document.addEventListener("focusin", (e) => {
         const modalEl = e.target.closest && e.target.closest(".modal, .popup, .dialog, #eventModal, #modal, .event-modal");
         if (!modalEl) return;
-        if (modalEl.__locInitDone) return;
-        const notesEl = getNotesEl(modalEl);
-        if (!notesEl) return;
-        const loc = inferLocationFromNotes(notesEl.value);
-        if (loc) setActive(modalEl, loc);
-        modalEl.__locInitDone = true;
+        syncFromNotes(modalEl);
+      });
+
+      document.addEventListener("input", (e) => {
+        const modalEl = e.target.closest && e.target.closest(".modal, .popup, .dialog, #eventModal, #modal, .event-modal");
+        if (!modalEl || e.target !== getNotesEl(modalEl)) return;
+        syncFromNotes(modalEl);
       });
     })();
 
