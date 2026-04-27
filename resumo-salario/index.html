@@ -1,0 +1,1515 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Resumo Salário - Exxata Apontamentos</title>
+  <meta name="description" content="Resumo salarial mensal calculado a partir dos apontamentos de horas." />
+  <link rel="icon" type="image/svg+xml" href="../favicon-exxata-clock-red.svg" />
+  <link rel="icon" type="image/png" href="../share-preview.png" />
+  <link rel="apple-touch-icon" href="../share-preview.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --font-ui: "Manrope", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      --bg: #121212;
+      --panel: #1e1e1e;
+      --panel2: #2d2d2d;
+      --text: #e0e0e0;
+      --muted: #a0a0a0;
+      --line: #333333;
+      --line2: #3e3e3e;
+      --accent: #0078d4;
+      --accent2: #2196f3;
+      --danger: #e53935;
+      --ok: #4caf50;
+      --warn: #fdd835;
+      --shadow: 0 2px 5px rgba(0, 0, 0, .30);
+      --radius: 8px;
+      --headerH: 54px;
+    }
+
+    :root.light {
+      --bg: #f7f9fb;
+      --panel: #ffffff;
+      --panel2: #f1f3f5;
+      --text: #1e1e1e;
+      --muted: #555555;
+      --line: #d0d0d0;
+      --line2: #c5c5c5;
+      --accent: #0078d4;
+      --accent2: #2196f3;
+      --danger: #d32f2f;
+      --ok: #388e3c;
+      --warn: #fbc02d;
+      --shadow: 0 2px 4px rgba(0, 0, 0, .08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font-ui);
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+      font-family: var(--font-ui);
+    }
+
+    header.topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 8px 18px 7px 20px;
+      min-height: 0;
+      background: var(--panel2);
+      border-bottom: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .topbarRow {
+      min-width: 0;
+      display: grid;
+      align-items: center;
+      gap: 6px 10px;
+    }
+
+    .topbarRow--top {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .topbarRow--middle {
+      grid-template-columns: max-content minmax(0, 1fr);
+    }
+
+    .topbarRow--bottom {
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    }
+
+    .siteBrand {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0;
+      margin-bottom: 1px;
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+
+    .siteBrand__word {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -.05em;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .siteBrand__word--accent {
+      color: #d51d07;
+      margin-left: 4px;
+    }
+
+    .headerUtilityBar,
+    .viewBtns,
+    .rightActions,
+    .periodMeta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    .headerUtilityBar,
+    .rightActions,
+    .periodMeta {
+      justify-content: flex-end;
+    }
+
+    .headerUtilityBar,
+    .viewBtns {
+      flex-wrap: nowrap;
+    }
+
+    .rightActions .btn,
+    .viewBtns .btn {
+      justify-content: center;
+      text-align: center;
+    }
+
+    .viewBtns .btn {
+      width: 100px;
+      min-width: 100px;
+    }
+
+    .viewBtns .btn.summaryNavBtn {
+      width: 132px;
+      min-width: 132px;
+    }
+
+    .utilityControls {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .utilityBtn {
+      min-width: 38px;
+      min-height: 38px;
+      padding: 0 9px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .utilityBtn svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .settingsWrap {
+      position: relative;
+      display: inline-flex;
+    }
+
+    .settingsMenu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      z-index: 130;
+      display: flex;
+      flex-direction: column;
+      min-width: 190px;
+      padding: 4px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+
+    .settingsMenu__action {
+      width: 100%;
+      justify-content: flex-start;
+      margin: 2px 0;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid var(--line2);
+      background: rgba(255, 255, 255, .04);
+      color: var(--text);
+      padding: 7px 9px;
+      border-radius: 8px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: transform .05s ease, background .15s ease, border-color .15s ease;
+      user-select: none;
+      white-space: nowrap;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, .06);
+      border-color: rgba(255, 255, 255, .18);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn.primary {
+      border-color: rgba(78, 161, 255, .45);
+      background: rgba(78, 161, 255, .12);
+    }
+
+    .btn.ghost {
+      background: transparent;
+      border-color: var(--line);
+    }
+
+    .btnSm {
+      padding: 6px 9px;
+      font-size: 11px;
+      border-radius: 8px;
+    }
+
+    .btnIcon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      opacity: .9;
+    }
+
+    .btnIcon svg {
+      width: 13px;
+      height: 13px;
+      display: block;
+      fill: currentColor;
+    }
+
+    .range {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 11px;
+      border-radius: 11px;
+      border: 1px solid var(--line);
+      background: rgba(0, 0, 0, .18);
+      min-width: 230px;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .range strong {
+      font-weight: 650;
+    }
+
+    .rangeSm {
+      padding: 6px 9px;
+      border-radius: 9px;
+      min-width: 220px;
+    }
+
+    .statusPill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(0, 0, 0, .18);
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .statusPill.ok .statusDot {
+      background: var(--ok);
+      box-shadow: 0 0 0 4px rgba(66, 211, 146, .12);
+    }
+
+    .statusPill.warn .statusDot {
+      background: var(--warn);
+      box-shadow: 0 0 0 4px rgba(255, 200, 97, .12);
+    }
+
+    .statusDot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .22);
+    }
+
+    .srOnly {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .app {
+      height: calc(100vh - var(--headerH));
+      height: calc(100dvh - var(--headerH));
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .gridWrap {
+      position: relative;
+      height: 100%;
+      overflow: auto;
+      scrollbar-gutter: stable both-edges;
+      padding: 16px 18px 18px;
+    }
+
+    .gridWrap::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+
+    .gridWrap::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, .12);
+      border-radius: 999px;
+      border: 3px solid rgba(0, 0, 0, 0);
+      background-clip: padding-box;
+    }
+
+    .salaryLayout {
+      width: min(1420px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(420px, 600px) minmax(420px, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .detailPanel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .salarySheet {
+      width: 100%;
+      min-width: 0;
+      max-width: 600px;
+      margin: 0;
+      background: #fff;
+      color: #050505;
+      border: 1px solid #d8d8d8;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 10px 12px 12px;
+      font-family: var(--font-ui);
+    }
+
+    .sheetHeader {
+      display: grid;
+      grid-template-columns: 98px 1fr 98px;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      margin-bottom: 6px;
+    }
+
+    .sheetLogo {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .sheetLogo img {
+      display: block;
+      width: 92px;
+      height: auto;
+    }
+
+    .sheetTitle {
+      margin: 0;
+      text-align: center;
+      font-size: 20px;
+      font-weight: 850;
+      letter-spacing: 0;
+      font-family: var(--font-ui);
+    }
+
+    .excelTable {
+      --sheetRowH: 26px;
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-top: 1px solid #202020;
+      border-left: 1px solid #202020;
+      table-layout: fixed;
+      margin: 0;
+      font-family: var(--font-ui);
+    }
+
+    .excelTable th,
+    .excelTable td {
+      border: 0;
+      border-right: 1px solid #202020;
+      border-bottom: 1px solid #202020;
+      height: var(--sheetRowH);
+      padding: 0 5px;
+      font-size: 12px;
+      line-height: 1;
+      vertical-align: middle;
+    }
+
+    .excelTable th {
+      background: #000;
+      color: #fff;
+      text-align: center;
+      font-weight: 820;
+    }
+
+    .excelTable .label {
+      font-weight: 780;
+    }
+
+    .excelTable .value,
+    .excelTable .qty,
+    .excelTable .money {
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .excelTable .center {
+      text-align: center;
+    }
+
+    .tableInput {
+      width: 100%;
+      min-width: 0;
+      height: 18px;
+      max-height: 18px;
+      padding: 0 3px;
+      border: 0;
+      border-radius: 0;
+      appearance: none;
+      background: transparent;
+      color: inherit;
+      text-align: center;
+      font: inherit;
+      line-height: 18px;
+      font-variant-numeric: tabular-nums;
+      outline: none;
+      transition: background .14s ease, box-shadow .14s ease;
+    }
+
+    .tableInput::-webkit-calendar-picker-indicator {
+      transform: scale(.78);
+      margin: 0;
+    }
+
+    .excelTable td:has(.tableInput) {
+      cursor: text;
+      transition: background .14s ease, box-shadow .14s ease;
+    }
+
+    .excelTable td:has(.tableInput):hover {
+      background: rgba(0, 120, 212, .12);
+      box-shadow: inset 0 0 0 1px rgba(0, 120, 212, .70);
+    }
+
+    .monthCell {
+      cursor: pointer;
+    }
+
+    .tableInput:hover {
+      background: rgba(0, 120, 212, .08);
+    }
+
+    .tableInput:focus {
+      background: rgba(0, 120, 212, .10);
+      box-shadow: inset 0 0 0 1px #0078d4;
+    }
+
+    .tableInput.needsValue {
+      background: rgba(253, 216, 53, .18);
+      box-shadow: inset 0 0 0 1px rgba(170, 119, 0, .55);
+    }
+
+    .tableInput.needsValue::placeholder {
+      color: #8a5a00;
+      opacity: 1;
+    }
+
+    .excelTable .mutedDash {
+      text-align: center;
+    }
+
+    .totalBar {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-top: 1px solid #202020;
+      border-left: 1px solid #202020;
+      table-layout: fixed;
+      margin: 9px 0 9px;
+      font-family: var(--font-ui);
+    }
+
+    .totalBar td {
+      border: 0;
+      border-right: 1px solid #202020;
+      border-bottom: 1px solid #202020;
+      background: #d9d9d9;
+      padding: 3px 6px;
+      font-size: 13px;
+      line-height: 1.05;
+      font-weight: 850;
+      text-align: center;
+    }
+
+    .detailPanel {
+      overflow: hidden;
+      align-self: stretch;
+    }
+
+    .detailPanelHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .detailPanelHeader h2 {
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .detailTableWrap {
+      overflow: auto;
+      max-height: calc(100vh - var(--headerH) - 104px);
+    }
+
+    .detailTable {
+      width: 100%;
+      min-width: 620px;
+      border-collapse: collapse;
+    }
+
+    .detailTable th,
+    .detailTable td {
+      border-bottom: 1px solid var(--line);
+      padding: 7px 8px;
+      font-size: 11px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .detailTable th {
+      color: var(--muted);
+      background: var(--panel2);
+      font-weight: 750;
+    }
+
+    .detailTable th:first-child,
+    .detailTable td:first-child {
+      text-align: left;
+    }
+
+    .detailTable tbody tr:hover {
+      background: rgba(78, 161, 255, .08);
+    }
+
+    .emptyState {
+      padding: 20px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .sheetScroll {
+      overflow: visible;
+    }
+
+    @media (max-width: 1080px) {
+      .salaryLayout {
+        grid-template-columns: 1fr;
+      }
+
+      .detailTableWrap {
+        max-height: none;
+      }
+    }
+
+    @media (max-width:760px) {
+      header.topbar {
+        gap: 8px;
+        padding: 8px 12px;
+      }
+
+      .topbarRow,
+      .topbarRow--top,
+      .topbarRow--middle,
+      .topbarRow--bottom {
+        grid-template-columns: 1fr;
+        width: 100%;
+      }
+
+      .headerUtilityBar,
+      .viewBtns,
+      .rightActions,
+      .periodMeta {
+        align-items: flex-start;
+        justify-content: flex-start;
+        width: 100%;
+      }
+
+      .viewBtns {
+        flex-wrap: wrap;
+      }
+
+      .viewBtns .btn,
+      .rightActions .btn {
+        width: auto;
+        min-width: 0;
+      }
+
+      .rangeSm {
+        min-width: unset;
+        width: 100%;
+      }
+
+      .siteBrand {
+        width: 100%;
+      }
+
+      .salarySheet {
+        padding: 12px;
+      }
+
+      .sheetScroll {
+        overflow-x: auto;
+      }
+    }
+
+    @media print {
+      body {
+        overflow: visible;
+        background: #fff;
+      }
+
+      header.topbar,
+      .detailPanel {
+        display: none !important;
+      }
+
+      .app,
+      .gridWrap {
+        height: auto;
+        overflow: visible;
+        padding: 0;
+      }
+
+      .salaryLayout {
+        display: block;
+        width: 100%;
+        margin: 0;
+      }
+
+      .sheetScroll {
+        overflow: visible;
+      }
+
+      .salarySheet {
+        min-width: 0;
+        border: none;
+        box-shadow: none;
+        border-radius: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="topbar">
+    <h1 class="srOnly">Resumo Salário - Exxata Apontamentos</h1>
+    <div class="topbarRow topbarRow--top">
+      <div class="siteBrand" aria-hidden="true">
+        <span class="siteBrand__word">Exxata</span>
+        <span class="siteBrand__word siteBrand__word--accent">Apontamentos</span>
+      </div>
+      <div class="headerUtilityBar">
+        <div class="utilityControls">
+          <button class="btn btnSm utilityBtn" id="btnToggleTheme" type="button"
+            title="Alternar entre Modo Claro e Escuro" aria-label="Alternar entre modo claro e escuro">
+            <span class="btnIcon">☀</span>
+          </button>
+          <div class="settingsWrap">
+            <button class="btn btnSm utilityBtn" id="btnSettings" type="button"
+              title="Configurações" aria-label="Abrir configurações" aria-controls="settingsMenu" aria-haspopup="true"
+              aria-expanded="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path
+                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                </path>
+              </svg>
+            </button>
+            <div id="settingsMenu" class="settingsMenu hidden" aria-label="Menu de configurações">
+              <button class="btn btnSm settingsMenu__action" id="btnPrint" type="button">
+                <span class="btnIcon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path
+                      d="M6 9V3h12v6h1a3 3 0 0 1 3 3v5h-4v4H6v-4H2v-5a3 3 0 0 1 3-3h1Zm2-4v4h8V5H8Zm8 14v-5H8v5h8Zm2-4h2v-3a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v3h2v-3h12v3Z" />
+                  </svg>
+                </span>
+                <span>Imprimir</span>
+              </button>
+              <button class="btn btnSm settingsMenu__action" id="btnApplyDefaults" type="button">
+                <span class="btnIcon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 5V2L7 7l5 5V9a5 5 0 1 1-4.58 7H5.26A7 7 0 1 0 12 5Z" />
+                  </svg>
+                </span>
+                <span>Valores padrão</span>
+              </button>
+              <button class="btn btnSm settingsMenu__action" id="btnBackSettings" type="button">
+                <span class="btnIcon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M10 4 2 12l8 8v-6h12v-4H10V4Z" />
+                  </svg>
+                </span>
+                <span>Apontamentos</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="topbarRow topbarRow--middle">
+      <nav class="viewBtns" aria-label="Navegação de páginas">
+        <a class="btn btnSm ghost" href="../">
+          <span class="btnIcon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1.5A2.5 2.5 0 0 1 22 6.5v14A2.5 2.5 0 0 1 19.5 23h-15A2.5 2.5 0 0 1 2 20.5v-14A2.5 2.5 0 0 1 4.5 4H6V3a1 1 0 0 1 1-1Zm12.5 7H4.5v11.5c0 .28.22.5.5.5h14.5a.5.5 0 0 0 .5-.5V9Z" />
+            </svg>
+          </span>
+          <span>Calendário</span>
+        </a>
+        <button class="btn btnSm primary summaryNavBtn" type="button">
+          <span class="btnIcon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 3h16v18H4V3Zm2 2v14h12V5H6Zm2 3h8v2H8V8Zm0 4h8v2H8v-2Zm0 4h5v2H8v-2Z" />
+            </svg>
+          </span>
+          <span>Resumo Salário</span>
+        </button>
+      </nav>
+      <div class="rightActions">
+        <div class="statusPill warn" id="dataStatus" role="status" aria-live="polite">
+          <span class="statusDot"></span><span id="dataStatusText">Carregando apontamentos</span>
+        </div>
+        <button class="btn btnSm" id="btnReload" type="button">
+          <span class="btnIcon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M20 6v6h-6l2.35-2.35A6 6 0 1 0 18 14h2a8 8 0 1 1-2.24-5.55L20 6Z" />
+            </svg>
+          </span>
+          <span>Atualizar</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="app">
+    <div class="gridWrap">
+      <div class="salaryLayout">
+        <section class="sheetScroll">
+            <article class="salarySheet" aria-labelledby="salaryTitle">
+              <header class="sheetHeader">
+                <div class="sheetLogo" aria-label="Exxata">
+                  <img src="./logo-exxata-color.png" alt="Exxata" />
+                </div>
+                <h2 class="sheetTitle" id="salaryTitle">RESUMO SALÁRIO</h2>
+                <div></div>
+              </header>
+
+              <table class="excelTable" aria-label="Resumo do colaborador">
+                <colgroup>
+                  <col style="width: 45%" />
+                  <col style="width: 55%" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th colspan="2">Colaborador</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="label">E-mail</td>
+                    <td class="value">
+                      <input class="tableInput" id="employeeEmailInput" type="email" autocomplete="email"
+                        aria-label="E-mail do colaborador" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="label">Nome</td>
+                    <td class="value">
+                      <input class="tableInput" id="employeeNameInput" autocomplete="name" aria-label="Nome do colaborador"
+                        placeholder="Insira o nome" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="label">Mês / Ano</td>
+                    <td class="value monthCell" id="monthCell">
+                      <input class="tableInput" id="monthInput" type="month" aria-label="Mês e ano" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="label">Valor Hora trabalhada</td>
+                    <td class="value">
+                      <input class="tableInput moneyInput" id="hourRateInput" inputmode="decimal"
+                        aria-label="Valor hora trabalhada" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="label">V.A. (4 a 6h) - Casa</td>
+                    <td class="value">
+                      <input class="tableInput moneyInput" id="homeMidInput" inputmode="decimal"
+                        aria-label="Vale alimentação casa de 4 a 6 horas" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="label">V.A. ( > 6h) - Casa</td>
+                    <td class="value">
+                      <input class="tableInput moneyInput" id="homeHighInput" inputmode="decimal"
+                        aria-label="Vale alimentação casa acima de 6 horas" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="label">V.A. (4 a 6h) - Escritório</td>
+                    <td class="value">
+                      <input class="tableInput moneyInput" id="officeMidInput" inputmode="decimal"
+                        aria-label="Vale alimentação escritório de 4 a 6 horas" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="label">V.A. ( > 6h) - Escritório</td>
+                    <td class="value">
+                      <input class="tableInput moneyInput" id="officeHighInput" inputmode="decimal"
+                        aria-label="Vale alimentação escritório acima de 6 horas" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="label">Vale Transporte / Dia</td>
+                    <td class="value">
+                      <input class="tableInput moneyInput" id="transportInput" inputmode="decimal"
+                        aria-label="Vale transporte por dia" />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <table class="totalBar" aria-label="Total salarial">
+                <colgroup>
+                  <col style="width: 45%" />
+                  <col style="width: 55%" />
+                </colgroup>
+                <tbody>
+                  <tr>
+                    <td>TOTAL</td>
+                    <td id="grandTotal">0,00</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <table class="excelTable summaryTable" aria-label="Resumo dos cálculos">
+                <colgroup>
+                  <col style="width: 45%" />
+                  <col style="width: 27.5%" />
+                  <col style="width: 27.5%" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Descrição</th>
+                    <th>Qtd.</th>
+                    <th>Valor (R$)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="label">Horas trabalhadas</td>
+                    <td class="qty" id="workedQty">0:00</td>
+                    <td class="money" id="workedAmount">0,00</td>
+                  </tr>
+                  <tr>
+                    <td class="label">Vale Alimentação</td>
+                    <td class="qty" id="foodQty">0</td>
+                    <td class="money" id="foodAmount">0,00</td>
+                  </tr>
+                  <tr>
+                    <td class="label">V.A. (&lt; 4h)</td>
+                    <td class="qty" id="lt4Qty">0</td>
+                    <td class="money" id="lt4Amount">R$ 0,00</td>
+                  </tr>
+                  <tr>
+                    <td class="label">V.A. (4 a 6h) - Casa</td>
+                    <td class="qty" id="homeMidQty">0</td>
+                    <td class="money" id="homeMidAmount">0,00</td>
+                  </tr>
+                  <tr>
+                    <td class="label">V.A. ( &gt; 6h) - Casa</td>
+                    <td class="qty" id="homeHighQty">0</td>
+                    <td class="money" id="homeHighAmount">0,00</td>
+                  </tr>
+                  <tr>
+                    <td class="label">V.A. (4 a 6h) - Escritório</td>
+                    <td class="qty" id="officeMidQty">0</td>
+                    <td class="money" id="officeMidAmount">0,00</td>
+                  </tr>
+                  <tr>
+                    <td class="label">V.A. ( &gt; 6h) - Escritório</td>
+                    <td class="qty" id="officeHighQty">0</td>
+                    <td class="money" id="officeHighAmount">0,00</td>
+                  </tr>
+                  <tr>
+                    <td class="label">Vale Transporte</td>
+                    <td class="qty" id="transportQty">0</td>
+                    <td class="money" id="transportAmount">0,00</td>
+                  </tr>
+                </tbody>
+              </table>
+            </article>
+        </section>
+
+          <section class="detailPanel" aria-labelledby="dailyTitle">
+            <div class="detailPanelHeader">
+              <h2 id="dailyTitle">Detalhamento diário</h2>
+              <span class="statusPill" id="unknownStatus"><span class="statusDot"></span><span id="unknownStatusText">Locais conferidos</span></span>
+            </div>
+            <div class="detailTableWrap" id="dailyWrap"></div>
+          </section>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const DB_NAME = "artia_offline_db_v1";
+    const DB_VERSION = 1;
+    const LS_EVENTS_KEY = "offline_week_calendar_events_v5";
+    const SETTINGS_KEY = "salary_summary_settings_v1";
+    const BRL = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const DAY_FORMATTER = new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" });
+    const MONTH_NAMES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+    const DEFAULT_SETTINGS = {
+      employeeEmail: "",
+      employeeName: "",
+      hourRate: 11.5,
+      homeMid: 10,
+      homeHigh: 22,
+      officeMid: 14,
+      officeHigh: 35,
+      transportDay: 12
+    };
+
+    let allEvents = [];
+    let currentSummary = null;
+
+    const els = {
+      employeeEmail: document.getElementById("employeeEmailInput"),
+      employeeName: document.getElementById("employeeNameInput"),
+      month: document.getElementById("monthInput"),
+      hourRate: document.getElementById("hourRateInput"),
+      homeMid: document.getElementById("homeMidInput"),
+      homeHigh: document.getElementById("homeHighInput"),
+      officeMid: document.getElementById("officeMidInput"),
+      officeHigh: document.getElementById("officeHighInput"),
+      transport: document.getElementById("transportInput"),
+      dataStatus: document.getElementById("dataStatus"),
+      dataStatusText: document.getElementById("dataStatusText"),
+      monthRangeText: document.getElementById("monthRangeText"),
+      unknownStatus: document.getElementById("unknownStatus"),
+      unknownStatusText: document.getElementById("unknownStatusText"),
+      dailyWrap: document.getElementById("dailyWrap")
+    };
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains("events")) {
+            db.createObjectStore("events", { keyPath: "id" });
+          }
+          if (!db.objectStoreNames.contains("kv")) {
+            db.createObjectStore("kv", { keyPath: "key" });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error || new Error("Falha ao abrir IndexedDB"));
+      });
+    }
+
+    async function loadEventsFromDB() {
+      const db = await openDB();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction("events", "readonly");
+        const st = tx.objectStore("events");
+        const req = st.getAll();
+        req.onsuccess = () => resolve(Array.isArray(req.result) ? req.result : []);
+        req.onerror = () => reject(req.error || new Error("Falha ao ler apontamentos"));
+      });
+    }
+
+    function loadEventsFromLocalStorage() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(LS_EVENTS_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function normalizeEvent(ev) {
+      return {
+        id: String(ev?.id ?? ""),
+        start: String(ev?.start ?? ""),
+        end: String(ev?.end ?? ""),
+        day: String(ev?.day ?? ""),
+        project: String(ev?.project ?? ""),
+        activityLabel: String(ev?.activityLabel ?? ""),
+        activityId: String(ev?.activityId ?? ""),
+        notes: String(ev?.notes ?? ""),
+        artiaLaunched: Boolean(ev?.artiaLaunched)
+      };
+    }
+
+    function parseMoney(value) {
+      const raw = String(value ?? "").trim();
+      if (!raw) return 0;
+      const clean = raw.replace(/[^\d,.-]/g, "");
+      if (clean.includes(",")) {
+        return Number(clean.replace(/\./g, "").replace(",", ".")) || 0;
+      }
+      return Number(clean) || 0;
+    }
+
+    function formatMoney(value) {
+      return `R$ ${BRL.format(Number.isFinite(value) ? value : 0)}`;
+    }
+
+    function setMoneyInput(el, value) {
+      el.value = formatMoney(value);
+    }
+
+    function formatMinutes(minutes) {
+      const safe = Math.max(0, Math.round(minutes || 0));
+      const h = Math.floor(safe / 60);
+      const m = safe % 60;
+      return `${h}:${String(m).padStart(2, "0")}`;
+    }
+
+    function formatMonthShort(monthValue) {
+      const [year, month] = String(monthValue || "").split("-").map(Number);
+      if (!year || !month) return "--/--";
+      return `${MONTH_NAMES[month - 1]}/${String(year).slice(-2)}`;
+    }
+
+    function monthBounds(monthValue) {
+      const [year, month] = String(monthValue || "").split("-").map(Number);
+      if (!year || !month) return null;
+      const start = `${year}-${String(month).padStart(2, "0")}-01`;
+      const lastDay = new Date(year, month, 0).getDate();
+      const end = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+      return { year, month, start, end };
+    }
+
+    function detectInitialMonth(events) {
+      const months = events
+        .map(ev => String(ev.day || "").slice(0, 7))
+        .filter(month => /^\d{4}-\d{2}$/.test(month))
+        .sort();
+      if (months.length) return months[months.length - 1];
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    }
+
+    function getStoredSettings() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+        return parsed && typeof parsed === "object" ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function readSettings() {
+      return {
+        employeeEmail: String(els.employeeEmail.value || "").trim(),
+        employeeName: String(els.employeeName.value || "").trim(),
+        month: String(els.month.value || "").trim(),
+        hourRate: parseMoney(els.hourRate.value),
+        homeMid: parseMoney(els.homeMid.value),
+        homeHigh: parseMoney(els.homeHigh.value),
+        officeMid: parseMoney(els.officeMid.value),
+        officeHigh: parseMoney(els.officeHigh.value),
+        transportDay: parseMoney(els.transport.value)
+      };
+    }
+
+    function saveSettings() {
+      try {
+        const settings = readSettings();
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        localStorage.setItem("exportEmail", settings.employeeEmail);
+      } catch { }
+    }
+
+    function populateSettings(events) {
+      const stored = getStoredSettings();
+      const settings = { ...DEFAULT_SETTINGS, ...stored };
+      els.employeeEmail.value = settings.employeeEmail || localStorage.getItem("exportEmail") || DEFAULT_SETTINGS.employeeEmail;
+      els.employeeName.value = settings.employeeName || "";
+      els.month.value = settings.month || detectInitialMonth(events);
+      setMoneyInput(els.hourRate, Number(settings.hourRate ?? DEFAULT_SETTINGS.hourRate));
+      setMoneyInput(els.homeMid, Number(settings.homeMid ?? DEFAULT_SETTINGS.homeMid));
+      setMoneyInput(els.homeHigh, Number(settings.homeHigh ?? DEFAULT_SETTINGS.homeHigh));
+      setMoneyInput(els.officeMid, Number(settings.officeMid ?? DEFAULT_SETTINGS.officeMid));
+      setMoneyInput(els.officeHigh, Number(settings.officeHigh ?? DEFAULT_SETTINGS.officeHigh));
+      setMoneyInput(els.transport, Number(settings.transportDay ?? DEFAULT_SETTINGS.transportDay));
+    }
+
+    function normalizeLocation(notes) {
+      const match = String(notes || "").match(/^\s*\[(Casa|Escritorio|Escritório|Cliente)\]\s*/i);
+      if (!match) return "unknown";
+      const loc = match[1].normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      if (loc === "casa") return "home";
+      if (loc === "cliente" || loc === "escritorio") return "office";
+      return "unknown";
+    }
+
+    function eventDurationMinutes(ev) {
+      const start = new Date(ev.start);
+      const end = new Date(ev.end);
+      const diff = end.getTime() - start.getTime();
+      if (!Number.isFinite(diff) || diff <= 0) return 0;
+      return Math.round(diff / 60000);
+    }
+
+    function sortByDate(a, b) {
+      return a.date.localeCompare(b.date);
+    }
+
+    function classifyDay(day) {
+      if (day.officeMinutes > day.homeMinutes) return "office";
+      if (day.homeMinutes > day.officeMinutes) return "home";
+      if (day.officeMinutes > 0) return "office";
+      if (day.homeMinutes > 0) return "home";
+      return "unknown";
+    }
+
+    function calculate(events, settings) {
+      const bounds = monthBounds(settings.month);
+      const daysMap = new Map();
+      if (!bounds) {
+        return null;
+      }
+
+      const filtered = events.filter(ev => ev.day >= bounds.start && ev.day <= bounds.end);
+      for (const ev of filtered) {
+        const minutes = eventDurationMinutes(ev);
+        if (!minutes) continue;
+        const date = ev.day;
+        if (!daysMap.has(date)) {
+          daysMap.set(date, { date, homeMinutes: 0, officeMinutes: 0, unknownMinutes: 0, totalMinutes: 0, events: 0 });
+        }
+        const day = daysMap.get(date);
+        const location = normalizeLocation(ev.notes);
+        if (location === "home") day.homeMinutes += minutes;
+        else if (location === "office") day.officeMinutes += minutes;
+        else day.unknownMinutes += minutes;
+        day.totalMinutes += minutes;
+        day.events += 1;
+      }
+
+      const dayRows = Array.from(daysMap.values()).sort(sortByDate);
+      const counts = {
+        lt4: 0,
+        homeMid: 0,
+        homeHigh: 0,
+        officeMid: 0,
+        officeHigh: 0,
+        transport: 0,
+        unknownBenefit: 0
+      };
+
+      let totalMinutes = 0;
+      for (const day of dayRows) {
+        totalMinutes += day.totalMinutes;
+        const totalHours = day.totalMinutes / 60;
+        day.kind = classifyDay(day);
+        day.benefitLabel = "Sem V.A.";
+        day.transport = day.officeMinutes > 0;
+        if (day.transport) counts.transport += 1;
+
+        if (totalHours < 4) {
+          counts.lt4 += 1;
+          day.benefitLabel = "V.A. < 4h";
+          continue;
+        }
+        if (day.kind === "unknown") {
+          counts.unknownBenefit += 1;
+          day.benefitLabel = "Sem local";
+          continue;
+        }
+        if (day.kind === "home") {
+          if (totalHours < 6) {
+            counts.homeMid += 1;
+            day.benefitLabel = "Casa 4 a 6h";
+          } else {
+            counts.homeHigh += 1;
+            day.benefitLabel = "Casa > 6h";
+          }
+          continue;
+        }
+        if (totalHours < 6) {
+          counts.officeMid += 1;
+          day.benefitLabel = "Escritório 4 a 6h";
+        } else {
+          counts.officeHigh += 1;
+          day.benefitLabel = "Escritório > 6h";
+        }
+      }
+
+      const workedAmount = (totalMinutes / 60) * settings.hourRate;
+      const homeMidAmount = counts.homeMid * settings.homeMid;
+      const homeHighAmount = counts.homeHigh * settings.homeHigh;
+      const officeMidAmount = counts.officeMid * settings.officeMid;
+      const officeHighAmount = counts.officeHigh * settings.officeHigh;
+      const foodAmount = homeMidAmount + homeHighAmount + officeMidAmount + officeHighAmount;
+      const transportAmount = counts.transport * settings.transportDay;
+      const total = workedAmount + foodAmount + transportAmount;
+
+      return {
+        bounds,
+        filtered,
+        dayRows,
+        totalMinutes,
+        counts,
+        workedAmount,
+        homeMidAmount,
+        homeHighAmount,
+        officeMidAmount,
+        officeHighAmount,
+        foodQty: counts.homeMid + counts.homeHigh + counts.officeMid + counts.officeHigh,
+        foodAmount,
+        transportAmount,
+        total
+      };
+    }
+
+    function text(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    }
+
+    function dateLabel(dateIso) {
+      const [year, month, day] = dateIso.split("-").map(Number);
+      return DAY_FORMATTER.format(new Date(year, month - 1, day)).replace(".", "");
+    }
+
+    function renderDailyRows(summary) {
+      if (!summary.dayRows.length) {
+        els.dailyWrap.innerHTML = `<div class="emptyState">Nenhum apontamento no mês selecionado.</div>`;
+        return;
+      }
+      const rows = summary.dayRows.map(day => {
+        const kindLabel = day.kind === "office" ? "Escritório/Cliente" : (day.kind === "home" ? "Casa" : "Sem local");
+        return `<tr>
+          <td>${dateLabel(day.date)}</td>
+          <td>${formatMinutes(day.homeMinutes)}</td>
+          <td>${formatMinutes(day.officeMinutes)}</td>
+          <td>${formatMinutes(day.unknownMinutes)}</td>
+          <td>${formatMinutes(day.totalMinutes)}</td>
+          <td>${kindLabel}</td>
+          <td>${day.benefitLabel}</td>
+          <td>${day.transport ? "Sim" : "Não"}</td>
+        </tr>`;
+      }).join("");
+      els.dailyWrap.innerHTML = `<table class="detailTable">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Casa</th>
+            <th>Escritório/Cliente</th>
+            <th>Sem local</th>
+            <th>Total</th>
+            <th>Regra</th>
+            <th>V.A.</th>
+            <th>V.T.</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+    }
+
+    function setStatus(summary) {
+      const eventsInMonth = summary?.filtered.length || 0;
+      els.dataStatus.classList.toggle("ok", eventsInMonth > 0);
+      els.dataStatus.classList.toggle("warn", eventsInMonth === 0);
+      els.dataStatusText.textContent = `${eventsInMonth} apontamento${eventsInMonth === 1 ? "" : "s"} no mês`;
+
+      const unknownDays = summary?.counts.unknownBenefit || 0;
+      const unknownMinutes = (summary?.dayRows || []).reduce((sum, day) => sum + day.unknownMinutes, 0);
+      els.unknownStatus.classList.toggle("warn", unknownDays > 0 || unknownMinutes > 0);
+      els.unknownStatus.classList.toggle("ok", unknownDays === 0 && unknownMinutes === 0);
+      if (unknownDays > 0 || unknownMinutes > 0) {
+        els.unknownStatusText.textContent = `${unknownDays} dia${unknownDays === 1 ? "" : "s"} sem local para V.A.`;
+      } else {
+        els.unknownStatusText.textContent = "Locais conferidos";
+      }
+    }
+
+    function render() {
+      const settings = readSettings();
+      const summary = calculate(allEvents, settings);
+      currentSummary = summary;
+
+      text("monthRangeText", summary ? `${summary.bounds.start.split("-").reverse().join("/")} → ${summary.bounds.end.split("-").reverse().join("/")}` : "--/--/----");
+      els.employeeName.classList.toggle("needsValue", !settings.employeeName);
+      els.employeeName.title = settings.employeeName ? "" : "Insira o nome do colaborador.";
+
+      if (!summary) return;
+
+      text("grandTotal", formatMoney(summary.total));
+      text("workedQty", formatMinutes(summary.totalMinutes));
+      text("workedAmount", formatMoney(summary.workedAmount));
+      text("foodQty", String(summary.foodQty));
+      text("foodAmount", formatMoney(summary.foodAmount));
+      text("lt4Qty", String(summary.counts.lt4));
+      text("lt4Amount", formatMoney(0));
+      text("homeMidQty", String(summary.counts.homeMid));
+      text("homeMidAmount", formatMoney(summary.homeMidAmount));
+      text("homeHighQty", String(summary.counts.homeHigh));
+      text("homeHighAmount", formatMoney(summary.homeHighAmount));
+      text("officeMidQty", String(summary.counts.officeMid));
+      text("officeMidAmount", formatMoney(summary.officeMidAmount));
+      text("officeHighQty", String(summary.counts.officeHigh));
+      text("officeHighAmount", formatMoney(summary.officeHighAmount));
+      text("transportQty", String(summary.counts.transport));
+      text("transportAmount", formatMoney(summary.transportAmount));
+
+      renderDailyRows(summary);
+      setStatus(summary);
+      saveSettings();
+    }
+
+    async function refreshEvents() {
+      let dbEvents = [];
+      try {
+        dbEvents = await loadEventsFromDB();
+      } catch { }
+      const fallbackEvents = dbEvents.length ? [] : loadEventsFromLocalStorage();
+      allEvents = (dbEvents.length ? dbEvents : fallbackEvents).map(normalizeEvent);
+      render();
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.classList.toggle("light", theme === "light");
+      const btn = document.getElementById("btnToggleTheme");
+      if (btn) btn.querySelector(".btnIcon").textContent = theme === "light" ? "☾" : "☀";
+    }
+
+    function setupSettingsMenu() {
+      const btnSettings = document.getElementById("btnSettings");
+      const settingsMenu = document.getElementById("settingsMenu");
+      if (!btnSettings || !settingsMenu) return;
+      btnSettings.addEventListener("click", (event) => {
+        event.stopPropagation();
+        settingsMenu.classList.toggle("hidden");
+        btnSettings.setAttribute("aria-expanded", String(!settingsMenu.classList.contains("hidden")));
+      });
+      document.addEventListener("click", (event) => {
+        if (!btnSettings.contains(event.target) && !settingsMenu.contains(event.target)) {
+          settingsMenu.classList.add("hidden");
+          btnSettings.setAttribute("aria-expanded", "false");
+        }
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          settingsMenu.classList.add("hidden");
+          btnSettings.setAttribute("aria-expanded", "false");
+        }
+      });
+    }
+
+    function syncHeaderHeight() {
+      const header = document.querySelector("header.topbar");
+      if (!header) return;
+      document.documentElement.style.setProperty("--headerH", `${Math.ceil(header.getBoundingClientRect().height)}px`);
+    }
+
+    function setupControls() {
+      const savedTheme = localStorage.getItem("theme") || "dark";
+      applyTheme(savedTheme);
+      document.getElementById("btnToggleTheme")?.addEventListener("click", () => {
+        const next = document.documentElement.classList.contains("light") ? "dark" : "light";
+        localStorage.setItem("theme", next);
+        applyTheme(next);
+      });
+      document.getElementById("btnBackSettings")?.addEventListener("click", () => {
+        window.location.href = "../";
+      });
+      document.getElementById("btnPrint")?.addEventListener("click", () => window.print());
+      document.getElementById("btnReload")?.addEventListener("click", refreshEvents);
+      document.getElementById("monthCell")?.addEventListener("click", () => {
+        els.month.focus({ preventScroll: true });
+        if (typeof els.month.showPicker === "function") {
+          try { els.month.showPicker(); } catch { }
+        }
+      });
+      document.getElementById("btnApplyDefaults")?.addEventListener("click", () => {
+        const month = els.month.value || detectInitialMonth(allEvents);
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+          ...DEFAULT_SETTINGS,
+          employeeEmail: localStorage.getItem("exportEmail") || DEFAULT_SETTINGS.employeeEmail,
+          month
+        }));
+        populateSettings(allEvents);
+        render();
+      });
+      [els.employeeEmail, els.employeeName, els.month].forEach(el => el.addEventListener("input", render));
+      [els.hourRate, els.homeMid, els.homeHigh, els.officeMid, els.officeHigh, els.transport].forEach(el => {
+        el.addEventListener("input", render);
+        el.addEventListener("blur", () => {
+          setMoneyInput(el, parseMoney(el.value));
+          render();
+        });
+      });
+    }
+
+    async function init() {
+      setupSettingsMenu();
+      setupControls();
+      syncHeaderHeight();
+      window.addEventListener("resize", syncHeaderHeight);
+      if (typeof ResizeObserver !== "undefined") {
+        const header = document.querySelector("header.topbar");
+        if (header) new ResizeObserver(syncHeaderHeight).observe(header);
+      }
+      allEvents = (await loadEventsFromDB()).map(normalizeEvent);
+      if (!allEvents.length) {
+        allEvents = loadEventsFromLocalStorage().map(normalizeEvent);
+      }
+      populateSettings(allEvents);
+      render();
+    }
+
+    init().catch(() => {
+      allEvents = loadEventsFromLocalStorage().map(normalizeEvent);
+      populateSettings(allEvents);
+      render();
+    });
+  </script>
+</body>
+
+</html>
