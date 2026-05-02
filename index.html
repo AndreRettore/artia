@@ -2653,6 +2653,12 @@
       color: #fff;
     }
 
+    .activitySuggestionsMenu.isKeyboardNav .activitySuggestionOption:hover:not(.isActive),
+    .activitySuggestionsMenu.isKeyboardNav .activitySuggestionOption.isSelected:not(.isActive) {
+      background: transparent;
+      color: var(--text);
+    }
+
     .activitySuggestionEmpty {
       padding: 8px 10px;
       color: var(--muted);
@@ -2687,6 +2693,12 @@
 
     html.light .activitySuggestionOption.isSelected {
       background: rgba(26, 115, 232, .16);
+      color: var(--text);
+    }
+
+    html.light .activitySuggestionsMenu.isKeyboardNav .activitySuggestionOption:hover:not(.isActive),
+    html.light .activitySuggestionsMenu.isKeyboardNav .activitySuggestionOption.isSelected:not(.isActive) {
+      background: transparent;
       color: var(--text);
     }
 
@@ -7880,6 +7892,7 @@
     function closeActivitySuggestionsMenu() {
       if (!activitySuggestionsMenu) return;
       activitySuggestionsMenu.classList.add("hidden");
+      activitySuggestionsMenu.classList.remove("isKeyboardNav");
       activitySuggestionsToggle?.setAttribute("aria-expanded", "false");
       activitySuggestionsCurrentOptions = [];
       activitySuggestionsActiveIndex = -1;
@@ -7928,7 +7941,10 @@
         if (index === activitySuggestionsActiveIndex) option.classList.add("isActive");
         option.setAttribute("aria-selected", index === activitySuggestionsActiveIndex ? "true" : "false");
         option.addEventListener("mousedown", (e) => e.preventDefault());
-        option.addEventListener("mouseenter", () => setActivitySuggestionsActiveIndex(index, { scroll: false }));
+        option.addEventListener("pointermove", () => {
+          activitySuggestionsMenu.classList.remove("isKeyboardNav");
+          setActivitySuggestionsActiveIndex(index, { scroll: false });
+        });
         option.addEventListener("click", () => selectActivitySuggestion(name));
         fragment.appendChild(option);
       }
@@ -7940,6 +7956,7 @@
       if (!activitySuggestionsMenu) return;
       renderActivitySuggestionsMenu({ mode });
       activitySuggestionsMenu.classList.remove("hidden");
+      activitySuggestionsMenu.classList.remove("isKeyboardNav");
       activitySuggestionsToggle?.setAttribute("aria-expanded", "true");
       setActivitySuggestionsActiveIndex(activitySuggestionsActiveIndex);
       if (!activityNameInputEl.value.trim()) activitySuggestionsMenu.scrollTop = 0;
@@ -8279,6 +8296,7 @@
           if (!isActivitySuggestionsMenuOpen()) {
             openActivitySuggestionsMenu({ mode: activityNameInputEl.value.trim() ? "search" : "all" });
           }
+          activitySuggestionsMenu?.classList.add("isKeyboardNav");
           setActivitySuggestionsActiveIndex(activitySuggestionsActiveIndex + (e.key === "ArrowDown" ? 1 : -1));
         } else if (e.key === "Enter" && isActivitySuggestionsMenuOpen()) {
           if (selectActiveActivitySuggestion()) {
