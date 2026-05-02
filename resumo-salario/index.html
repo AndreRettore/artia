@@ -848,7 +848,7 @@
                     <td class="label">E-mail</td>
                     <td class="value">
                       <input class="tableInput" id="employeeEmailInput" type="email" autocomplete="email"
-                        aria-label="E-mail do colaborador" />
+                        aria-label="E-mail do colaborador" placeholder="Insira o e-mail" />
                     </td>
                   </tr>
                   <tr>
@@ -1000,19 +1000,27 @@
     const BRL = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const DAY_FORMATTER = new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" });
     const MONTH_NAMES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+    const REFRESH_INTERVAL_MS = 2500;
     const DEFAULT_SETTINGS = {
       employeeEmail: "",
       employeeName: "",
       hourRate: 11.5,
+      homeMid: 12,
+      homeHigh: 24,
+      officeMid: 16,
+      officeHigh: 37,
+      transportDay: 12
+    };
+    const LEGACY_DEFAULT_SETTINGS = {
       homeMid: 10,
       homeHigh: 22,
       officeMid: 14,
-      officeHigh: 35,
-      transportDay: 12
+      officeHigh: 35
     };
 
     let allEvents = [];
     let currentSummary = null;
+    let eventsSignature = "";
 
     const els = {
       employeeEmail: document.getElementById("employeeEmailInput"),
@@ -1167,6 +1175,11 @@
     function populateSettings(events) {
       const stored = getStoredSettings();
       const settings = { ...DEFAULT_SETTINGS, ...stored };
+      ["homeMid", "homeHigh", "officeMid", "officeHigh"].forEach(key => {
+        if (stored[key] === undefined || Number(stored[key]) === LEGACY_DEFAULT_SETTINGS[key]) {
+          settings[key] = DEFAULT_SETTINGS[key];
+        }
+      });
       els.employeeEmail.value = settings.employeeEmail || localStorage.getItem("exportEmail") || DEFAULT_SETTINGS.employeeEmail;
       els.employeeName.value = settings.employeeName || "";
       els.month.value = settings.month || detectInitialMonth(events);
@@ -1375,6 +1388,8 @@
       currentSummary = summary;
 
       text("monthRangeText", summary ? `${summary.bounds.start.split("-").reverse().join("/")} → ${summary.bounds.end.split("-").reverse().join("/")}` : "--/--/----");
+      els.employeeEmail.classList.toggle("needsValue", !settings.employeeEmail);
+      els.employeeEmail.title = settings.employeeEmail ? "" : "Insira o e-mail do colaborador.";
       els.employeeName.classList.toggle("needsValue", !settings.employeeName);
       els.employeeName.title = settings.employeeName ? "" : "Insira o nome do colaborador.";
 
@@ -1403,13 +1418,37 @@
       saveSettings();
     }
 
-    async function refreshEvents() {
+    function getEventsSignature(events) {
+      return JSON.stringify(events.map(ev => [
+        ev.id,
+        ev.day,
+        ev.start,
+        ev.end,
+        ev.notes,
+        ev.project,
+        ev.activityLabel,
+        ev.activityId
+      ]).sort((a, b) => String(a[0]).localeCompare(String(b[0])) || String(a[2]).localeCompare(String(b[2]))));
+    }
+
+    async function loadCurrentEvents() {
       let dbEvents = [];
       try {
         dbEvents = await loadEventsFromDB();
       } catch { }
       const fallbackEvents = dbEvents.length ? [] : loadEventsFromLocalStorage();
-      allEvents = (dbEvents.length ? dbEvents : fallbackEvents).map(normalizeEvent);
+      return (dbEvents.length ? dbEvents : fallbackEvents).map(normalizeEvent);
+    }
+
+    async function refreshEvents({ force = false } = {}) {
+      const nextEvents = await loadCurrentEvents();
+      const nextSignature = getEventsSignature(nextEvents);
+      if (!force && nextSignature === eventsSignature) return;
+      eventsSignature = nextSignature;
+      allEvents = nextEvents;
+      if (!els.month.value) {
+        els.month.value = detectInitialMonth(allEvents);
+      }
       render();
     }
 
@@ -1460,7 +1499,7 @@
         window.location.href = "../";
       });
       document.getElementById("btnPrint")?.addEventListener("click", () => window.print());
-      document.getElementById("btnReload")?.addEventListener("click", refreshEvents);
+      document.getElementById("btnReload")?.addEventListener("click", () => refreshEvents({ force: true }));
       document.getElementById("monthCell")?.addEventListener("click", () => {
         els.month.focus({ preventScroll: true });
         if (typeof els.month.showPicker === "function") {
@@ -1485,6 +1524,20 @@
           render();
         });
       });
+      window.addEventListener("focus", () => refreshEvents());
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) refreshEvents();
+      });
+      window.addEventListener("storage", (event) => {
+        if (event.key === "exportEmail" && !els.employeeEmail.value.trim()) {
+          els.employeeEmail.value = event.newValue || "";
+          render();
+        }
+        if (event.key === LS_EVENTS_KEY) {
+          refreshEvents();
+        }
+      });
+      setInterval(() => refreshEvents(), REFRESH_INTERVAL_MS);
     }
 
     async function init() {
@@ -1496,16 +1549,15 @@
         const header = document.querySelector("header.topbar");
         if (header) new ResizeObserver(syncHeaderHeight).observe(header);
       }
-      allEvents = (await loadEventsFromDB()).map(normalizeEvent);
-      if (!allEvents.length) {
-        allEvents = loadEventsFromLocalStorage().map(normalizeEvent);
-      }
+      allEvents = await loadCurrentEvents();
+      eventsSignature = getEventsSignature(allEvents);
       populateSettings(allEvents);
       render();
     }
 
     init().catch(() => {
       allEvents = loadEventsFromLocalStorage().map(normalizeEvent);
+      eventsSignature = getEventsSignature(allEvents);
       populateSettings(allEvents);
       render();
     });
