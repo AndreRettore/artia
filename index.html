@@ -2565,6 +2565,131 @@
       font-size: 12px;
     }
 
+    .activityCombo {
+      position: relative;
+    }
+
+    .activityCombo input[type="text"] {
+      padding-right: 42px;
+    }
+
+    .activityCombo input[type="text"]::-webkit-calendar-picker-indicator {
+      display: none !important;
+      opacity: 0;
+    }
+
+    .activityComboBtn {
+      position: absolute;
+      right: 7px;
+      top: 50%;
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transform: translateY(-50%);
+      border: 1px solid transparent;
+      border-radius: 9px;
+      background: transparent;
+      color: rgba(225, 235, 246, .82);
+      cursor: pointer;
+    }
+
+    .activityComboBtn::before {
+      content: "";
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 6px solid currentColor;
+    }
+
+    .activityComboBtn:hover,
+    .activityComboBtn:focus-visible {
+      border-color: rgba(148, 186, 229, .24);
+      background: rgba(255, 255, 255, .07);
+      outline: none;
+    }
+
+    .activitySuggestionsMenu {
+      position: absolute;
+      z-index: 30;
+      left: 0;
+      right: 0;
+      top: calc(100% + 6px);
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 4px;
+      border: 1px solid rgba(148, 186, 229, .24);
+      border-radius: 10px;
+      background: rgba(15, 26, 39, .98);
+      box-shadow: 0 18px 44px rgba(0, 0, 0, .44);
+    }
+
+    .activitySuggestionOption {
+      width: 100%;
+      display: block;
+      padding: 8px 10px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      font-size: 12px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .activitySuggestionOption:hover,
+    .activitySuggestionOption:focus-visible,
+    .activitySuggestionOption.isActive {
+      background: rgba(78, 161, 255, .16);
+      outline: none;
+    }
+
+    .activitySuggestionOption.isSelected {
+      background: rgba(78, 161, 255, .22);
+      color: #fff;
+    }
+
+    .activitySuggestionEmpty {
+      padding: 8px 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    html.light .activityComboBtn {
+      color: rgba(15, 23, 42, .72);
+    }
+
+    html.light .activityComboBtn:hover,
+    html.light .activityComboBtn:focus-visible {
+      border-color: var(--line2);
+      background: rgba(15, 23, 42, .06);
+    }
+
+    html.light .activitySuggestionsMenu {
+      background: #fff;
+      border-color: var(--line2);
+      box-shadow: 0 18px 34px rgba(15, 23, 42, .18);
+    }
+
+    html.light .activitySuggestionOption {
+      color: var(--text);
+    }
+
+    html.light .activitySuggestionOption:hover,
+    html.light .activitySuggestionOption:focus-visible,
+    html.light .activitySuggestionOption.isActive {
+      background: rgba(26, 115, 232, .10);
+    }
+
+    html.light .activitySuggestionOption.isSelected {
+      background: rgba(26, 115, 232, .16);
+      color: var(--text);
+    }
+
     .eventModal textarea {
       min-height: 72px;
     }
@@ -3901,7 +4026,7 @@
             <label for="importModeSelect">Modo de importação</label>
             <select id="importModeSelect">
               <option value="replace">Substituir todos os eventos atuais</option>
-              <option value="merge">Mesclar com os eventos atuais</option>
+              <option value="merge" selected>Mesclar com os eventos atuais</option>
             </select>
           </div>
         </div>
@@ -4011,15 +4136,20 @@
 
         <div class="row">
           <label for="activityNameInput">Atividade (Nome)</label>
-          <input type="text" id="activityNameInput" placeholder="Digite para buscar..." autocomplete="off"
-            list="activityDatalist" />
-          <datalist id="activityDatalist"></datalist>
+          <div class="activityCombo" id="activityCombo">
+            <input type="text" id="activityNameInput" placeholder="Digite para buscar..." autocomplete="off" />
+            <button class="activityComboBtn" id="activitySuggestionsToggle" type="button"
+              title="Mostrar atividades do projeto" aria-label="Mostrar atividades do projeto"
+              aria-controls="activitySuggestionsMenu" aria-expanded="false"></button>
+            <div class="activitySuggestionsMenu hidden" id="activitySuggestionsMenu" role="listbox"
+              aria-label="Atividades do projeto"></div>
+          </div>
         </div>
 
         <div class="row grid2">
           <div class="row">
             <label for="activityIdInput">ID Artia (varia por projeto e por atividade)</label>
-            <input type="text" id="activityIdInput" placeholder="Preenchido automaticamente se existir na base"
+            <input type="text" id="activityIdInput" placeholder="Preenchido automaticamente pela base"
               autocomplete="off" />
           </div>
           <div class="row rowAlignEnd">
@@ -4893,6 +5023,9 @@
     function normKey(s) {
       return String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ").replace(/[–—]/g, "-").replace(/\s*-\s*/g, " - ").replace(/\u00A0/g, " ");
     }
+    function searchKey(s) {
+      return normKey(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
     function normalizeProjectCode(value) {
       const raw = String(value ?? "").trim().replace(/\u00A0/g, " ");
       if (!raw) return "";
@@ -5111,17 +5244,6 @@
         localStorage.setItem(LS_CLIP_KEY, JSON.stringify(payload));
       } catch { }
     }
-    function ensureSelectHasValue(selectEl, value) {
-      const v = String(value ?? "").trim();
-      if (!v) return;
-      const exists = Array.from(selectEl.options).some(o => o.value === v);
-      if (!exists) {
-        const opt = document.createElement("option");
-        opt.value = v; opt.textContent = v;
-        selectEl.appendChild(opt);
-      }
-    }
-
     async function loadIdBaseFromStorage() {
       try {
         const idx = await kvGet(LS_IDBASE_KEY);
@@ -7343,8 +7465,10 @@
     const endTimeInputEl = document.getElementById("endTimeInput");
     const timeHintEl = document.getElementById("timeHint");
     const projectInputEl = document.getElementById("projectInput");
+    const activityComboEl = document.getElementById("activityCombo");
     const activityNameInputEl = document.getElementById("activityNameInput");
-    const activityDatalistEl = document.getElementById("activityDatalist");
+    const activitySuggestionsToggle = document.getElementById("activitySuggestionsToggle");
+    const activitySuggestionsMenu = document.getElementById("activitySuggestionsMenu");
     const activityIdInputEl = document.getElementById("activityIdInput");
     const artiaLaunchedInputEl = document.getElementById("artiaLaunchedInput");
     const notesInputEl = document.getElementById("notesInput");
@@ -7587,6 +7711,7 @@
           projectInputEl.focus();
         });
       } else {
+        closeActivitySuggestionsMenu();
         stopNotesDictation({ silent: true });
         setNotesDictationStatus("");
         modalBackdrop.classList.remove("show");
@@ -7642,6 +7767,33 @@
       idLookupPill.classList.remove("ok", "warn");
       idLookupPill.classList.add(kind === "ok" ? "ok" : "warn");
       idLookupText.textContent = text;
+    }
+
+    function validateCurrentActivityId() {
+      const project = (projectInputEl.value || "").trim();
+      const activityName = (activityNameInputEl.value || "").trim();
+      const activityId = (activityIdInputEl.value || "").trim();
+
+      if (!state.idBaseIndex) { setIdLookupStatus("warn", "ID: preencha manualmente (base não consultada)"); return; }
+      if (!project || !activityName) { setIdLookupStatus("warn", "ID: selecione projeto e atividade"); return; }
+
+      const expectedId = lookupIdFor(project, activityName);
+      if (!expectedId) {
+        setIdLookupStatus("warn", activityId ? "ID informado manualmente — não encontrado na base" : "ID não encontrado na base");
+        return;
+      }
+
+      if (!activityId) {
+        setIdLookupStatus("warn", "ID vazio — esperado pela base");
+        return;
+      }
+
+      if (normKey(activityId) === normKey(expectedId)) {
+        setIdLookupStatus("ok", "ID correto conforme a base");
+        return;
+      }
+
+      setIdLookupStatus("warn", "ID alterado e incorreto");
     }
 
     function setAllowBrokenTimes(enabled, { persist = true } = {}) {
@@ -7713,14 +7865,115 @@
       return names.length ? names : [...ACTIVITY_NAMES];
     }
 
-    function fillActivityNames(project = "", keepValue = "") {
-      activityDatalistEl.innerHTML = "";
-      for (const name of getActivitySuggestionsForProject(project)) {
-        const opt = document.createElement("option");
-        opt.value = name;
-        activityDatalistEl.appendChild(opt);
+    function fillActivityNames() {
+      if (isActivitySuggestionsMenuOpen()) renderActivitySuggestionsMenu();
+    }
+
+    function isActivitySuggestionsMenuOpen() {
+      return !!activitySuggestionsMenu && !activitySuggestionsMenu.classList.contains("hidden");
+    }
+
+    let activitySuggestionsMode = "all";
+    let activitySuggestionsCurrentOptions = [];
+    let activitySuggestionsActiveIndex = -1;
+
+    function closeActivitySuggestionsMenu() {
+      if (!activitySuggestionsMenu) return;
+      activitySuggestionsMenu.classList.add("hidden");
+      activitySuggestionsToggle?.setAttribute("aria-expanded", "false");
+      activitySuggestionsCurrentOptions = [];
+      activitySuggestionsActiveIndex = -1;
+    }
+
+    function renderActivitySuggestionsMenu({ mode = activitySuggestionsMode } = {}) {
+      if (!activitySuggestionsMenu) return;
+      const previousActiveValue = activitySuggestionsCurrentOptions[activitySuggestionsActiveIndex] || "";
+      activitySuggestionsMode = mode;
+      const allOptions = getActivitySuggestionsForProject(projectInputEl.value || "");
+      const query = searchKey(activityNameInputEl.value);
+      const options = mode === "search" && query
+        ? allOptions.filter((name) => searchKey(name).includes(query))
+        : allOptions;
+      const currentKey = normKey(activityNameInputEl.value);
+      activitySuggestionsMenu.innerHTML = "";
+      activitySuggestionsCurrentOptions = options;
+
+      if (!options.length) {
+        activitySuggestionsActiveIndex = -1;
+        const empty = document.createElement("div");
+        empty.className = "activitySuggestionEmpty";
+        empty.textContent = mode === "search"
+          ? "Nenhuma atividade encontrada para a busca."
+          : "Nenhuma atividade encontrada para este projeto.";
+        activitySuggestionsMenu.appendChild(empty);
+        return;
       }
-      ensureSelectHasValue(activityDatalistEl, keepValue);
+
+      const selectedIndex = currentKey ? options.findIndex((name) => normKey(name) === currentKey) : -1;
+      const previousIndex = currentKey && previousActiveValue ? options.findIndex((name) => name === previousActiveValue) : -1;
+      activitySuggestionsActiveIndex = currentKey && previousIndex >= 0
+        ? previousIndex
+        : (currentKey && selectedIndex >= 0 ? selectedIndex : 0);
+
+      const fragment = document.createDocumentFragment();
+      for (const [index, name] of options.entries()) {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "activitySuggestionOption";
+        option.textContent = name;
+        option.dataset.index = String(index);
+        option.setAttribute("role", "option");
+        const selected = currentKey && normKey(name) === currentKey;
+        if (selected) option.classList.add("isSelected");
+        if (index === activitySuggestionsActiveIndex) option.classList.add("isActive");
+        option.setAttribute("aria-selected", index === activitySuggestionsActiveIndex ? "true" : "false");
+        option.addEventListener("mousedown", (e) => e.preventDefault());
+        option.addEventListener("mouseenter", () => setActivitySuggestionsActiveIndex(index, { scroll: false }));
+        option.addEventListener("click", () => selectActivitySuggestion(name));
+        fragment.appendChild(option);
+      }
+      activitySuggestionsMenu.appendChild(fragment);
+      setActivitySuggestionsActiveIndex(activitySuggestionsActiveIndex, { scroll: false });
+    }
+
+    function openActivitySuggestionsMenu({ mode = "all" } = {}) {
+      if (!activitySuggestionsMenu) return;
+      renderActivitySuggestionsMenu({ mode });
+      activitySuggestionsMenu.classList.remove("hidden");
+      activitySuggestionsToggle?.setAttribute("aria-expanded", "true");
+      setActivitySuggestionsActiveIndex(activitySuggestionsActiveIndex);
+      if (!activityNameInputEl.value.trim()) activitySuggestionsMenu.scrollTop = 0;
+    }
+
+    function setActivitySuggestionsActiveIndex(index, { scroll = true } = {}) {
+      const count = activitySuggestionsCurrentOptions.length;
+      if (!activitySuggestionsMenu || !count) {
+        activitySuggestionsActiveIndex = -1;
+        return;
+      }
+      activitySuggestionsActiveIndex = ((index % count) + count) % count;
+      const options = Array.from(activitySuggestionsMenu.querySelectorAll(".activitySuggestionOption"));
+      options.forEach((option, optionIndex) => {
+        const active = optionIndex === activitySuggestionsActiveIndex;
+        option.classList.toggle("isActive", active);
+        option.setAttribute("aria-selected", active ? "true" : "false");
+        if (active && scroll) option.scrollIntoView({ block: "nearest" });
+      });
+    }
+
+    function selectActivitySuggestion(name, { keepFocus = true } = {}) {
+      activityNameInputEl.value = name;
+      closeActivitySuggestionsMenu();
+      clearTimeout(activityNameInputEl._t);
+      maybeAutoFillId();
+      if (keepFocus) activityNameInputEl.focus();
+    }
+
+    function selectActiveActivitySuggestion(options = {}) {
+      const name = activitySuggestionsCurrentOptions[activitySuggestionsActiveIndex];
+      if (!name) return false;
+      selectActivitySuggestion(name, options);
+      return true;
     }
     function resetModalFields() {
       projectInputEl.value = "";
@@ -7986,7 +8239,66 @@
       clearTimeout(projectInputEl._t);
       projectInputEl._t = setTimeout(maybeAutoFillId, 120);
     });
-    activityNameInputEl.addEventListener("input", () => { clearTimeout(activityNameInputEl._t); activityNameInputEl._t = setTimeout(maybeAutoFillId, 120); });
+    activityNameInputEl.addEventListener("input", () => {
+      openActivitySuggestionsMenu({ mode: "search" });
+      clearTimeout(activityNameInputEl._t);
+      activityNameInputEl._t = setTimeout(maybeAutoFillId, 120);
+    });
+    let skipNextActivityFocusOpen = false;
+    activityNameInputEl.addEventListener("focus", () => {
+      if (skipNextActivityFocusOpen) {
+        skipNextActivityFocusOpen = false;
+        return;
+      }
+      openActivitySuggestionsMenu({ mode: "all" });
+      if (activityNameInputEl.value) {
+        requestAnimationFrame(() => activityNameInputEl.select());
+      }
+    });
+    if (activitySuggestionsToggle) {
+      activitySuggestionsToggle.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+      });
+      activitySuggestionsToggle.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isActivitySuggestionsMenuOpen() && activitySuggestionsMode === "all") {
+          skipNextActivityFocusOpen = true;
+          closeActivitySuggestionsMenu();
+        } else {
+          openActivitySuggestionsMenu({ mode: "all" });
+        }
+        activityNameInputEl.focus();
+      });
+    }
+    if (activityComboEl) {
+      activityComboEl.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!isActivitySuggestionsMenuOpen()) {
+            openActivitySuggestionsMenu({ mode: activityNameInputEl.value.trim() ? "search" : "all" });
+          }
+          setActivitySuggestionsActiveIndex(activitySuggestionsActiveIndex + (e.key === "ArrowDown" ? 1 : -1));
+        } else if (e.key === "Enter" && isActivitySuggestionsMenuOpen()) {
+          if (selectActiveActivitySuggestion()) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        } else if (e.key === "Tab" && isActivitySuggestionsMenuOpen()) {
+          selectActiveActivitySuggestion({ keepFocus: false });
+        } else if (e.key === "Escape" && isActivitySuggestionsMenuOpen()) {
+          e.preventDefault();
+          e.stopPropagation();
+          closeActivitySuggestionsMenu();
+        }
+      });
+    }
+    document.addEventListener("click", (e) => {
+      if (!activityComboEl || activityComboEl.contains(e.target)) return;
+      closeActivitySuggestionsMenu();
+    });
+    activityIdInputEl.addEventListener("input", validateCurrentActivityId);
     initNotesDictation();
 
     // Copiar/Colar campos do evento (Projeto/Atividade/ID/Observação)
@@ -8011,7 +8323,7 @@
       notesInputEl.value = clip.notes || "";
       window.syncWorkplaceButtonsFromNotes?.();
       setEventModalProjectColor(projectInputEl.value);
-      setIdLookupStatus("ok", "ID colado (não alterado)");
+      validateCurrentActivityId();
       setModalInfo("Campos colados.");
     });
 
@@ -8047,7 +8359,6 @@
       refreshModalWhen();
     });
 
-    modalBackdrop.addEventListener("click", (e) => { if (e.target === modalBackdrop) closeModalDiscardSelection(); });
     window.addEventListener("keydown", (e) => { if (e.key === "Escape" && modalBackdrop.classList.contains("show")) closeModalDiscardSelection(); });
     if (helpBackdrop) {
       helpBackdrop.addEventListener("click", (e) => {
@@ -9061,7 +9372,7 @@
           throw new Error("Não encontrei linhas válidas para importar com o mapeamento informado.");
         }
 
-        const replaceAll = (importModeSelect?.value || "replace") === "replace";
+        const replaceAll = (importModeSelect?.value || "merge") === "replace";
         if (replaceAll) {
           state.events = imported;
         } else {
@@ -9110,7 +9421,7 @@
           importConfigState.sheets = sheets;
 
           if (importConfigFileName) importConfigFileName.textContent = `Arquivo: ${file.name || "-"}`;
-          if (importModeSelect) importModeSelect.value = "replace";
+          if (importModeSelect) importModeSelect.value = "merge";
           if (importSheetSelect) {
             importSheetSelect.innerHTML = "";
             for (const sheet of sheets) {
