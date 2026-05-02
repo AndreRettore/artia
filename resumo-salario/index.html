@@ -344,6 +344,22 @@
       display: none !important;
     }
 
+    .onlineBadge {
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      z-index: 9999;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, .18);
+      background: rgba(0, 0, 0, .35);
+      color: #fff;
+      backdrop-filter: blur(8px);
+      font-family: var(--font-ui);
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
     .app {
       height: calc(100vh - var(--headerH));
       height: calc(100dvh - var(--headerH));
@@ -727,6 +743,133 @@
 </head>
 
 <body>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+    import { getDatabase, ref, onValue, set, onDisconnect, update } from
+      "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCbSEwEqqRW4M_5na2UKc-i3JOYgT40fDk",
+      authDomain: "artia-2679e.firebaseapp.com",
+      databaseURL: "https://artia-2679e-default-rtdb.firebaseio.com",
+      projectId: "artia-2679e",
+      storageBucket: "artia-2679e.firebasestorage.app",
+      messagingSenderId: "471803917424",
+      appId: "1:471803917424:web:734ce19b3227fa4d60b0b5",
+      measurementId: "G-BQ8D73SHV6"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    function formatBrasiliaLastSeen(date = new Date()) {
+      const parts = new Intl.DateTimeFormat("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      }).formatToParts(date);
+
+      const getPart = (type) => parts.find((part) => part.type === type)?.value || "";
+      return `${getPart("day")}/${getPart("month")}/${getPart("year")} ${getPart("hour")}:${getPart("minute")}:${getPart("second")} (Horario de Brasilia)`;
+    }
+
+    function getPresenceEmail() {
+      return String(localStorage.getItem("exportEmail") || "").trim();
+    }
+
+    const PRESENCE_CLIENT_ID_KEY = "presenceClientId";
+
+    function getOrCreatePresenceClientId() {
+      try {
+        const existing = String(localStorage.getItem(PRESENCE_CLIENT_ID_KEY) || "").trim();
+        if (existing) return existing;
+        const created = crypto.randomUUID();
+        localStorage.setItem(PRESENCE_CLIENT_ID_KEY, created);
+        return created;
+      } catch {
+        return crypto.randomUUID();
+      }
+    }
+
+    function buildPresencePayload(nextState = "online") {
+      const now = new Date();
+      return {
+        state: nextState,
+        lastSeen: formatBrasiliaLastSeen(now),
+        lastSeenMs: now.getTime(),
+        email: getPresenceEmail(),
+        clientId,
+        tabId: sessionId
+      };
+    }
+
+    function buildClientPresencePayload() {
+      const now = new Date();
+      return {
+        clientId,
+        email: getPresenceEmail(),
+        lastSeen: formatBrasiliaLastSeen(now),
+        lastSeenMs: now.getTime(),
+        lastTabId: sessionId
+      };
+    }
+
+    const sessionId = crypto.randomUUID();
+    const clientId = getOrCreatePresenceClientId();
+    const sessionRef = ref(db, `presence/sessions/${sessionId}`);
+    const clientRef = ref(db, `presence/clients/${clientId}`);
+
+    async function goOnline() {
+      await set(sessionRef, buildPresencePayload("online"));
+      await update(clientRef, buildClientPresencePayload());
+      onDisconnect(sessionRef).update({ state: "offline" });
+    }
+
+    async function syncPresenceMetadata(nextState = "online") {
+      await update(sessionRef, buildPresencePayload(nextState));
+      await update(clientRef, buildClientPresencePayload());
+    }
+
+    window.syncPresenceMetadata = syncPresenceMetadata;
+
+    function scheduleOfflinePresenceUpdate() {
+      syncPresenceMetadata("offline").catch(() => { });
+    }
+
+    window.addEventListener("pagehide", scheduleOfflinePresenceUpdate);
+    window.addEventListener("beforeunload", scheduleOfflinePresenceUpdate);
+
+    setInterval(() => syncPresenceMetadata().catch(() => { }), 15000);
+
+    const presenceRef = ref(db, "presence");
+    onValue(presenceRef, (snap) => {
+      const rawPresence = snap.val() || {};
+      const sessionsNode = (rawPresence.sessions && typeof rawPresence.sessions === "object")
+        ? rawPresence.sessions
+        : rawPresence;
+      const now = Date.now();
+      let onlineSessions = 0;
+      for (const k in sessionsNode) {
+        if (k === "clients" || k === "sessions") continue;
+        const entry = sessionsNode[k];
+        const lastSeenMs = typeof entry?.lastSeenMs === "number"
+          ? entry.lastSeenMs
+          : (typeof entry?.lastSeen === "number" ? entry.lastSeen : 0);
+        if (entry?.state === "online" && (now - lastSeenMs <= 60000)) {
+          onlineSessions += 1;
+        }
+      }
+      document.getElementById("onlineCount").textContent = String(onlineSessions);
+    });
+
+    goOnline();
+  </script>
+
   <header class="topbar">
     <h1 class="srOnly">Resumo Salário - Exxata Apontamentos</h1>
     <div class="topbarRow topbarRow--top">
@@ -819,6 +962,10 @@
       </div>
     </div>
   </header>
+
+  <div id="onlineBadge" class="onlineBadge" aria-live="polite">
+    🟢 <span id="onlineCount">--</span> online
+  </div>
 
   <main class="app">
     <div class="gridWrap">
@@ -1516,7 +1663,11 @@
         populateSettings(allEvents);
         render();
       });
-      [els.employeeEmail, els.employeeName, els.month].forEach(el => el.addEventListener("input", render));
+      els.employeeEmail.addEventListener("input", () => {
+        render();
+        try { window.syncPresenceMetadata && window.syncPresenceMetadata().catch(() => { }); } catch { }
+      });
+      [els.employeeName, els.month].forEach(el => el.addEventListener("input", render));
       [els.hourRate, els.homeMid, els.homeHigh, els.officeMid, els.officeHigh, els.transport].forEach(el => {
         el.addEventListener("input", render);
         el.addEventListener("blur", () => {
