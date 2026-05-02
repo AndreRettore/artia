@@ -7373,6 +7373,8 @@
     let notesDictationActive = false;
     let notesDictationStopRequested = false;
     let notesDictationAnchor = null;
+    let notesDictationProgrammaticInput = false;
+    let notesDictationRestartAfterManualEdit = false;
 
     function setNotesDictationStatus(message = "") {
       if (notesDictationStatusEl) notesDictationStatusEl.textContent = message;
@@ -7407,20 +7409,131 @@
       const tail = after && !/^\s/.test(after) ? " " : "";
       const next = before + lead + dictated + tail + after;
       const cursor = (before + lead + dictated).length;
-      notesInputEl.value = next;
-      notesInputEl.focus();
-      notesInputEl.selectionStart = cursor;
-      notesInputEl.selectionEnd = cursor;
-      notesInputEl.dispatchEvent(new Event("input", { bubbles: true }));
+      notesDictationProgrammaticInput = true;
+      try {
+        notesInputEl.value = next;
+        notesInputEl.focus();
+        notesInputEl.selectionStart = cursor;
+        notesInputEl.selectionEnd = cursor;
+        notesInputEl.dispatchEvent(new Event("input", { bubbles: true }));
+      } finally {
+        notesDictationProgrammaticInput = false;
+      }
     }
 
-    function stopNotesDictation({ silent = false } = {}) {
+    function stopNotesDictation({ silent = false, abort = false } = {}) {
+      notesDictationRestartAfterManualEdit = false;
       notesDictationStopRequested = true;
-      if (notesRecognition && notesDictationActive) {
-        try { notesRecognition.stop(); } catch { }
+      const recognition = notesRecognition;
+      if (recognition && notesDictationActive) {
+        try {
+          if (abort && typeof recognition.abort === "function") recognition.abort();
+          else recognition.stop();
+        } catch { }
       }
       setNotesDictationActive(false);
+      if (abort) {
+        notesDictationAnchor = null;
+        if (notesRecognition === recognition) notesRecognition = null;
+      }
       if (!silent) setNotesDictationStatus("Ditado pausado.");
+    }
+
+    function startNotesDictation({ restarting = false } = {}) {
+      notesDictationStopRequested = false;
+      notesRecognition = createNotesRecognition();
+      try {
+        notesRecognition.start();
+        return true;
+      } catch {
+        notesDictationRestartAfterManualEdit = false;
+        notesDictationAnchor = null;
+        notesRecognition = null;
+        setNotesDictationActive(false);
+        if (!restarting) setModalInfo("Não foi possível iniciar o ditado por voz.");
+        return false;
+      }
+    }
+
+    function restartNotesDictationAfterManualEdit() {
+      if (!notesRecognition || !notesDictationActive || notesDictationRestartAfterManualEdit) return;
+      notesDictationRestartAfterManualEdit = true;
+      notesDictationStopRequested = false;
+      notesDictationAnchor = null;
+      setNotesDictationActive(true);
+      setNotesDictationStatus("Continuando ditado a partir da edição.");
+      try {
+        if (typeof notesRecognition.abort === "function") notesRecognition.abort();
+        else notesRecognition.stop();
+      } catch {
+        notesDictationRestartAfterManualEdit = false;
+        startNotesDictation({ restarting: true });
+      }
+    }
+
+    function createNotesRecognition() {
+      const recognition = new NotesSpeechRecognition();
+      recognition.lang = "pt-BR";
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        if (notesRecognition !== recognition) return;
+        notesDictationStopRequested = false;
+        captureNotesDictationAnchor();
+        setNotesDictationActive(true);
+        setNotesDictationStatus("Ouvindo observação.");
+      };
+
+      recognition.onresult = (event) => {
+        if (notesRecognition !== recognition) return;
+        let finalText = "";
+        let interimText = "";
+        for (let i = 0; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal) finalText += " " + (result[0]?.transcript || "");
+          else interimText += " " + (result[0]?.transcript || "");
+        }
+        const dictated = `${finalText} ${interimText}`.replace(/\s+/g, " ").trim();
+        if (dictated) {
+          renderDictatedNotesText(dictated);
+          setNotesDictationStatus(interimText.trim() ? "Transcrevendo observação." : "Texto ditado inserido na observação.");
+        }
+      };
+
+      recognition.onerror = (event) => {
+        if (notesRecognition !== recognition) return;
+        if (event.error === "aborted") return;
+        notesDictationStopRequested = true;
+        setNotesDictationActive(false);
+        const messages = {
+          "audio-capture": "Não encontrei um microfone disponível.",
+          "not-allowed": "Permissão do microfone negada.",
+          "no-speech": "Não captei fala. Tente novamente.",
+          network: "Ditado por voz indisponível no momento."
+        };
+        const message = messages[event.error] || "Não foi possível iniciar o ditado por voz.";
+        setNotesDictationStatus(message);
+        setModalInfo(message);
+        notesDictationAnchor = null;
+        if (notesRecognition === recognition) notesRecognition = null;
+      };
+
+      recognition.onend = () => {
+        if (notesRecognition !== recognition) return;
+        if (notesDictationRestartAfterManualEdit) {
+          notesDictationRestartAfterManualEdit = false;
+          notesDictationAnchor = null;
+          startNotesDictation({ restarting: true });
+          return;
+        }
+        setNotesDictationActive(false);
+        notesDictationAnchor = null;
+        notesRecognition = null;
+        if (!notesDictationStopRequested) setNotesDictationStatus("Ditado encerrado.");
+      };
+      return recognition;
     }
 
     function initNotesDictation() {
@@ -7436,54 +7549,10 @@
         return;
       }
 
-      notesRecognition = new NotesSpeechRecognition();
-      notesRecognition.lang = "pt-BR";
-      notesRecognition.continuous = true;
-      notesRecognition.interimResults = true;
-      notesRecognition.maxAlternatives = 1;
-
-      notesRecognition.onstart = () => {
-        notesDictationStopRequested = false;
-        captureNotesDictationAnchor();
-        setNotesDictationActive(true);
-        setNotesDictationStatus("Ouvindo observação.");
-      };
-
-      notesRecognition.onresult = (event) => {
-        let finalText = "";
-        let interimText = "";
-        for (let i = 0; i < event.results.length; i++) {
-          const result = event.results[i];
-          if (result.isFinal) finalText += " " + (result[0]?.transcript || "");
-          else interimText += " " + (result[0]?.transcript || "");
-        }
-        const dictated = `${finalText} ${interimText}`.replace(/\s+/g, " ").trim();
-        if (dictated) {
-          renderDictatedNotesText(dictated);
-          setNotesDictationStatus(interimText.trim() ? "Transcrevendo observação." : "Texto ditado inserido na observação.");
-        }
-      };
-
-      notesRecognition.onerror = (event) => {
-        if (event.error === "aborted") return;
-        notesDictationStopRequested = true;
-        setNotesDictationActive(false);
-        const messages = {
-          "audio-capture": "Não encontrei um microfone disponível.",
-          "not-allowed": "Permissão do microfone negada.",
-          "no-speech": "Não captei fala. Tente novamente.",
-          network: "Ditado por voz indisponível no momento."
-        };
-        const message = messages[event.error] || "Não foi possível iniciar o ditado por voz.";
-        setNotesDictationStatus(message);
-        setModalInfo(message);
-      };
-
-      notesRecognition.onend = () => {
-        setNotesDictationActive(false);
-        notesDictationAnchor = null;
-        if (!notesDictationStopRequested) setNotesDictationStatus("Ditado encerrado.");
-      };
+      notesInputEl.addEventListener("input", () => {
+        if (notesDictationProgrammaticInput) return;
+        restartNotesDictationAfterManualEdit();
+      });
 
       btnDictateNotesEl.addEventListener("click", () => {
         if (notesDictationActive) {
@@ -7492,11 +7561,7 @@
         }
         notesDictationStopRequested = false;
         setModalInfo("");
-        try {
-          notesRecognition.start();
-        } catch {
-          stopNotesDictation({ silent: true });
-        }
+        startNotesDictation();
       });
     }
 
