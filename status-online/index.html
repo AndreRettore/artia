@@ -6,6 +6,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Status Online - Artia</title>
   <meta name="description" content="Painel interno com status online, e-mails e último acesso dos usuários do sistema Artia." />
+  <link rel="icon" type="image/svg+xml" href="../favicon-exxata-clock-red.svg" />
+  <link rel="icon" type="image/png" href="../share-preview.png" />
+  <link rel="apple-touch-icon" href="../share-preview.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet" />
@@ -62,11 +65,11 @@
     .hero {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
-      gap: 16px;
+      gap: 14px;
       align-items: start;
-      padding: 26px 28px;
+      padding: 18px 22px;
       border: 1px solid var(--line);
-      border-radius: 28px;
+      border-radius: 24px;
       background: linear-gradient(180deg, rgba(24, 29, 37, 0.98), rgba(18, 24, 33, 0.98));
       box-shadow: var(--shadow);
     }
@@ -86,18 +89,18 @@
     }
 
     h1 {
-      margin: 14px 0 10px;
-      font-size: clamp(30px, 5vw, 52px);
-      line-height: 0.96;
-      letter-spacing: -0.05em;
+      margin: 10px 0 8px;
+      font-size: 44px;
+      line-height: 1;
+      letter-spacing: 0;
     }
 
     .hero p {
       margin: 0;
-      max-width: 720px;
+      max-width: 700px;
       color: var(--muted);
-      font-size: 15px;
-      line-height: 1.5;
+      font-size: 14px;
+      line-height: 1.45;
     }
 
     .heroActions {
@@ -105,6 +108,11 @@
       gap: 10px;
       flex-wrap: wrap;
       justify-content: flex-end;
+    }
+
+    .heroActions .btn {
+      padding: 10px 14px;
+      border-radius: 12px;
     }
 
     .btn {
@@ -132,56 +140,12 @@
       border-color: rgba(255, 90, 31, 0.65);
     }
 
-    .toolbar {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto auto;
-      gap: 12px;
-      align-items: center;
-      padding: 18px 20px;
-      border-radius: 22px;
-      border: 1px solid var(--line);
-      background: rgba(24, 29, 37, 0.92);
-      box-shadow: var(--shadow);
-    }
-
-    .searchWrap {
-      display: grid;
-      gap: 8px;
-    }
-
-    .toolbarLabel {
-      color: var(--muted);
+    .btn.compact {
+      padding: 9px 12px;
+      border-radius: 999px;
       font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      font-weight: 700;
-    }
-
-    .searchInput {
-      width: 100%;
-      padding: 13px 14px;
-      border-radius: 14px;
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.04);
-      color: var(--text);
-      font: inherit;
-      outline: none;
-    }
-
-    .searchInput:focus {
-      border-color: rgba(255, 90, 31, 0.45);
-      box-shadow: 0 0 0 4px rgba(255, 90, 31, 0.1);
-    }
-
-    .statusLine {
-      text-align: right;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.4;
-    }
-
-    .statusLine strong {
-      color: var(--text);
+      font-weight: 800;
+      white-space: nowrap;
     }
 
     .cards {
@@ -270,6 +234,14 @@
       border-bottom: 1px solid var(--line);
     }
 
+    .panelHeaderActions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
     .panelTitle {
       font-size: 18px;
       font-weight: 800;
@@ -283,6 +255,10 @@
 
     .tableWrap {
       overflow: auto;
+    }
+
+    .deviceTableWrap.isCollapsed {
+      display: none;
     }
 
     table {
@@ -348,6 +324,42 @@
 
     .sortButton.active .sortIcon {
       color: #ffb08f;
+    }
+
+    .thStack {
+      display: grid;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .thLabel {
+      display: inline-flex;
+      align-items: center;
+      min-height: 20px;
+    }
+
+    .columnFilter {
+      width: min(260px, 100%);
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.045);
+      color: var(--text);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0;
+      text-transform: none;
+      outline: none;
+    }
+
+    .columnFilter::placeholder {
+      color: rgba(158, 172, 189, 0.72);
+    }
+
+    .columnFilter:focus {
+      border-color: rgba(255, 90, 31, 0.45);
+      box-shadow: 0 0 0 3px rgba(255, 90, 31, 0.1);
     }
 
     .peopleTable th:nth-child(1),
@@ -603,38 +615,101 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 14px;
-      padding: 20px 22px;
+      gap: 12px;
+      padding: 12px 16px;
       border-bottom: 1px solid var(--line);
     }
 
     .chartTitle {
       margin: 0;
-      font-size: 22px;
+      font-size: 18px;
       line-height: 1.1;
-      letter-spacing: -0.03em;
+      letter-spacing: -0.02em;
     }
 
     .chartSub {
-      margin-top: 6px;
+      margin-top: 3px;
       color: var(--muted);
-      font-size: 13px;
-      line-height: 1.4;
+      font-size: 12px;
+      line-height: 1.25;
     }
 
     .chartClose {
-      width: 42px;
-      height: 42px;
+      width: 34px;
+      height: 34px;
       padding: 0;
       border-radius: 50%;
-      font-size: 22px;
+      font-size: 20px;
       line-height: 1;
     }
 
     .chartBody {
-      padding: 20px 22px 22px;
+      padding: 12px 16px 16px;
       display: grid;
-      gap: 14px;
+      gap: 10px;
+    }
+
+    .chartControls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .chartField {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .chartField label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .chartDateInput {
+      width: 148px;
+      min-height: 36px;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      color-scheme: dark;
+      font: inherit;
+      outline: none;
+    }
+
+    .chartDateInput:focus {
+      border-color: rgba(255, 90, 31, 0.45);
+      box-shadow: 0 0 0 4px rgba(255, 90, 31, 0.1);
+    }
+
+    .chartControls .btn {
+      min-height: 36px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+
+    .chartRangeError {
+      flex-basis: 100%;
+      min-height: 0;
+      color: #ffb08f;
+      font-size: 13px;
+    }
+
+    .chartRangeError:empty {
+      display: none;
     }
 
     .chartFrame {
@@ -705,15 +780,20 @@
       }
 
       .hero,
-      .toolbar,
       .cards {
         grid-template-columns: 1fr;
       }
 
-      .heroActions,
-      .statusLine {
+      .hero {
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 34px;
+      }
+
+      .heroActions {
         justify-content: flex-start;
-        text-align: left;
       }
 
       .cards {
@@ -729,11 +809,20 @@
       }
 
       .chartHeader {
-        padding: 18px;
+        padding: 12px 14px;
       }
 
       .chartBody {
-        padding: 16px;
+        padding: 12px 14px 14px;
+      }
+
+      .chartControls {
+        align-items: stretch;
+      }
+
+      .chartField,
+      .chartControls .btn {
+        width: 100%;
       }
     }
   </style>
@@ -763,6 +852,19 @@
         <button class="btn chartClose" id="btnCloseChart" type="button" aria-label="Fechar gráfico">×</button>
       </div>
       <div class="chartBody">
+        <form class="chartControls" id="chartRangeForm">
+          <div class="chartField">
+            <label for="chartStartDate">Data inicial</label>
+            <input class="chartDateInput" id="chartStartDate" type="date" />
+          </div>
+          <div class="chartField">
+            <label for="chartEndDate">Data final</label>
+            <input class="chartDateInput" id="chartEndDate" type="date" />
+          </div>
+          <button class="btn" id="btnLast7ChartRange" type="button">Últimos 7 dias</button>
+          <button class="btn" id="btnLast30ChartRange" type="button">Últimos 30 dias</button>
+          <div class="chartRangeError" id="chartRangeError" aria-live="polite"></div>
+        </form>
         <div class="chartFrame" id="dailyChartFrame">
           <div class="chartEmpty">Aguardando dados do Firebase...</div>
         </div>
@@ -782,21 +884,6 @@
         <button class="btn" id="btnLockPage" type="button">Bloquear</button>
         <button class="btn" id="btnOpenChart" type="button">Ver gráfico</button>
         <button class="btn primary" id="btnRefresh" type="button">Atualizar agora</button>
-      </div>
-    </section>
-
-    <section class="toolbar">
-      <div class="searchWrap">
-        <label class="toolbarLabel" for="searchInput">Filtrar por e-mail</label>
-        <input class="searchInput" id="searchInput" type="search" placeholder="Ex.: nome@empresa.com.br" />
-      </div>
-      <div class="statusLine">
-        <div><strong id="connectionState">Conectando...</strong></div>
-        <div id="lastSyncText">Aguardando dados do Firebase</div>
-      </div>
-      <div class="statusLine">
-        <div><strong>Janela online:</strong> 60s</div>
-        <div>Horário exibido em Brasília</div>
       </div>
     </section>
 
@@ -842,10 +929,13 @@
             <thead>
               <tr>
                 <th>
-                  <button class="sortButton" id="peopleEmailSortButton" type="button" aria-label="Ordenar pessoas por e-mail">
-                    <span>E-mail</span>
-                    <span class="sortIcon" id="peopleEmailSortIcon" aria-hidden="true">↕</span>
-                  </button>
+                  <div class="thStack">
+                    <button class="sortButton" id="peopleEmailSortButton" type="button" aria-label="Ordenar pessoas por e-mail">
+                      <span>E-mail</span>
+                      <span class="sortIcon" id="peopleEmailSortIcon" aria-hidden="true">↕</span>
+                    </button>
+                    <input class="columnFilter" id="peopleEmailFilter" type="search" placeholder="Filtrar e-mail" aria-label="Filtrar pessoas por e-mail" />
+                  </div>
                 </th>
                 <th>Status</th>
                 <th>
@@ -873,13 +963,21 @@
             <div class="panelTitle">Dispositivos</div>
             <div class="panelSub">Cada dispositivo do navegador é agrupado por <code>presence/clients</code> e consolidado com suas abas em <code>presence/sessions</code>.</div>
           </div>
-          <div class="pill" id="deviceCountPill">0 dispositivos</div>
+          <div class="panelHeaderActions">
+            <button class="btn compact" id="btnToggleDevices" type="button" aria-expanded="false" aria-controls="deviceTableWrap">Exibir tabela</button>
+            <div class="pill" id="deviceCountPill">0 dispositivos</div>
+          </div>
         </div>
-        <div class="tableWrap">
+        <div class="tableWrap deviceTableWrap isCollapsed" id="deviceTableWrap">
           <table class="deviceTable">
             <thead>
               <tr>
-                <th>E-mail</th>
+                <th>
+                  <div class="thStack">
+                    <span class="thLabel">E-mail</span>
+                    <input class="columnFilter" id="deviceEmailFilter" type="search" placeholder="Filtrar e-mail" aria-label="Filtrar dispositivos por e-mail" />
+                  </div>
+                </th>
                 <th>Status</th>
                 <th>Último acesso</th>
                 <th>Abas</th>
@@ -906,6 +1004,8 @@
     import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
 
     const ONLINE_WINDOW_MS = 60000;
+    const DEFAULT_CHART_DAYS = 30;
+    const MAX_CHART_DAYS = 366;
     const STATUS_ONLINE_PASSWORD = "1234";
     const STATUS_ONLINE_UNLOCK_KEY = "statusOnlineUnlocked";
 
@@ -929,19 +1029,28 @@
     const authPasswordInputEl = document.getElementById("authPasswordInput");
     const authErrorEl = document.getElementById("authError");
     const btnLockPageEl = document.getElementById("btnLockPage");
-    const searchInputEl = document.getElementById("searchInput");
     const btnRefreshEl = document.getElementById("btnRefresh");
     const btnOpenChartEl = document.getElementById("btnOpenChart");
     const chartBackdropEl = document.getElementById("chartBackdrop");
     const btnCloseChartEl = document.getElementById("btnCloseChart");
+    const chartRangeFormEl = document.getElementById("chartRangeForm");
+    const chartStartDateEl = document.getElementById("chartStartDate");
+    const chartEndDateEl = document.getElementById("chartEndDate");
+    const btnLast7ChartRangeEl = document.getElementById("btnLast7ChartRange");
+    const btnLast30ChartRangeEl = document.getElementById("btnLast30ChartRange");
+    const chartRangeErrorEl = document.getElementById("chartRangeError");
     const dailyChartFrameEl = document.getElementById("dailyChartFrame");
     const connectionStateEl = document.getElementById("connectionState");
     const lastSyncTextEl = document.getElementById("lastSyncText");
     const peopleTableBodyEl = document.getElementById("peopleTableBody");
+    const peopleEmailFilterEl = document.getElementById("peopleEmailFilter");
     const peopleEmailSortButtonEl = document.getElementById("peopleEmailSortButton");
     const peopleEmailSortIconEl = document.getElementById("peopleEmailSortIcon");
     const peopleAccessSortButtonEl = document.getElementById("peopleAccessSortButton");
     const peopleAccessSortIconEl = document.getElementById("peopleAccessSortIcon");
+    const deviceEmailFilterEl = document.getElementById("deviceEmailFilter");
+    const btnToggleDevicesEl = document.getElementById("btnToggleDevices");
+    const deviceTableWrapEl = document.getElementById("deviceTableWrap");
     const deviceListEl = document.getElementById("deviceList");
     const peopleCountPillEl = document.getElementById("peopleCountPill");
     const deviceCountPillEl = document.getElementById("deviceCountPill");
@@ -953,10 +1062,13 @@
     const statRecentUsersEl = document.getElementById("statRecentUsers");
 
     let latestPresenceData = {};
-    let currentFilter = "";
+    let peopleEmailFilter = "";
+    let deviceEmailFilter = "";
+    let devicesTableVisible = false;
     let peopleSortColumn = "access";
     let peopleEmailSortDirection = "asc";
     let peopleAccessSortDirection = "desc";
+    let chartRange = null;
     let presenceUnsubscribe = null;
 
     const saoPauloDayFormatter = new Intl.DateTimeFormat("pt-BR", {
@@ -965,6 +1077,8 @@
       month: "2-digit",
       year: "numeric"
     });
+
+    chartRange = getDefaultChartRange();
 
     function escapeHtml(value) {
       return String(value ?? "")
@@ -1012,13 +1126,64 @@
       return `${parts.year}-${parts.month}-${parts.day}`;
     }
 
-    function getRecentDayKeys(totalDays = 7) {
+    function parseDateKeyToUtcDate(dayKey) {
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dayKey || ""));
+      if (!match) return null;
+      const [, year, month, day] = match;
+      const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+      if (
+        date.getUTCFullYear() !== Number(year)
+        || date.getUTCMonth() !== Number(month) - 1
+        || date.getUTCDate() !== Number(day)
+      ) {
+        return null;
+      }
+      return date;
+    }
+
+    function formatUtcDateKey(date) {
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(date.getUTCDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function addDaysToDateKey(dayKey, offsetDays) {
+      const date = parseDateKeyToUtcDate(dayKey);
+      if (!date) return "";
+      date.setUTCDate(date.getUTCDate() + offsetDays);
+      return formatUtcDateKey(date);
+    }
+
+    function getDayKeysBetween(startKey, endKey) {
+      const startDate = parseDateKeyToUtcDate(startKey);
+      const endDate = parseDateKeyToUtcDate(endKey);
+      if (!startDate || !endDate || startDate > endDate) return [];
+
       const keys = [];
-      const nowMs = Date.now();
-      for (let offset = totalDays - 1; offset >= 0; offset -= 1) {
-        keys.push(getSaoPauloDateKey(nowMs - offset * 24 * 60 * 60 * 1000));
+      const cursor = new Date(startDate.getTime());
+      while (cursor <= endDate && keys.length <= MAX_CHART_DAYS) {
+        keys.push(formatUtcDateKey(cursor));
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
       }
       return keys;
+    }
+
+    function getRecentChartRange(days) {
+      const chartDays = Math.max(1, Math.min(MAX_CHART_DAYS, Number(days) || DEFAULT_CHART_DAYS));
+      const endKey = getSaoPauloDateKey(Date.now());
+      return {
+        startKey: addDaysToDateKey(endKey, -(chartDays - 1)),
+        endKey
+      };
+    }
+
+    function getDefaultChartRange() {
+      return getRecentChartRange(DEFAULT_CHART_DAYS);
+    }
+
+    function getChartRangeLabel(range) {
+      return `${formatDayLabel(range.startKey)} a ${formatDayLabel(range.endKey)}`;
     }
 
     function formatDayLabel(dayKey) {
@@ -1088,13 +1253,14 @@
       };
     }
 
-    function summarizePresence(rawData, filterText = "") {
+    function summarizePresence(rawData, peopleFilterText = "", deviceFilterText = "") {
       const collections = getPresenceCollections(rawData);
       const sessions = Object.entries(collections.sessions || {})
         .map(([sessionId, value]) => normalizeSessionEntry(sessionId, value))
         .sort((a, b) => b.lastSeenMs - a.lastSeenMs);
 
-      const filter = String(filterText || "").trim().toLowerCase();
+      const peopleFilter = String(peopleFilterText || "").trim().toLowerCase();
+      const deviceFilter = String(deviceFilterText || "").trim().toLowerCase();
       const clientMap = new Map(
         Object.entries(collections.clients || {}).map(([clientId, value]) => [clientId, normalizeClientEntry(clientId, value)])
       );
@@ -1145,15 +1311,15 @@
       const grouped = Array.from(groupedMap.values())
         .sort(comparePeopleEntries)
         .filter((entry) => {
-          if (!filter) return true;
+          if (!peopleFilter) return true;
           const emailText = (entry.email || "sem email informado").toLowerCase();
-          return emailText.includes(filter);
+          return emailText.includes(peopleFilter);
         });
 
       const filteredClients = clients.filter((client) => {
-        if (!filter) return true;
+        if (!deviceFilter) return true;
         const emailText = (client.email || "sem email informado").toLowerCase();
-        return emailText.includes(filter);
+        return emailText.includes(deviceFilter);
       });
 
       const stats = {
@@ -1304,7 +1470,14 @@
       }).join("");
     }
 
+    function renderDeviceTableVisibility() {
+      deviceTableWrapEl.classList.toggle("isCollapsed", !devicesTableVisible);
+      btnToggleDevicesEl.textContent = devicesTableVisible ? "Ocultar tabela" : "Exibir tabela";
+      btnToggleDevicesEl.setAttribute("aria-expanded", String(devicesTableVisible));
+    }
+
     function renderDeviceList(clients) {
+      renderDeviceTableVisibility();
       deviceCountPillEl.textContent = `${clients.length} dispositivo(s)`;
       if (!clients.length) {
         deviceListEl.innerHTML = `
@@ -1359,8 +1532,40 @@
       }).join("");
     }
 
-    function buildDailyPeopleSeries(rawData, totalDays = 7) {
-      const dayKeys = getRecentDayKeys(totalDays);
+    function syncChartRangeInputs() {
+      if (!chartRange) chartRange = getDefaultChartRange();
+      chartStartDateEl.value = chartRange.startKey;
+      chartEndDateEl.value = chartRange.endKey;
+      chartRangeErrorEl.textContent = "";
+    }
+
+    function setChartRange(startKey, endKey) {
+      const dayKeys = getDayKeysBetween(startKey, endKey);
+      if (!dayKeys.length) {
+        chartRangeErrorEl.textContent = "Selecione uma data inicial e final válidas.";
+        return false;
+      }
+      if (dayKeys.length > MAX_CHART_DAYS) {
+        chartRangeErrorEl.textContent = `Selecione um intervalo de até ${MAX_CHART_DAYS} dias.`;
+        return false;
+      }
+
+      chartRange = { startKey, endKey };
+      syncChartRangeInputs();
+      renderDailyPeopleChart();
+      return true;
+    }
+
+    function applyChartRangeFromInputs() {
+      if (!chartStartDateEl.value || !chartEndDateEl.value) {
+        chartRangeErrorEl.textContent = "Preencha as duas datas para atualizar o gráfico.";
+        return;
+      }
+      setChartRange(chartStartDateEl.value, chartEndDateEl.value);
+    }
+
+    function buildDailyPeopleSeries(rawData, startKey, endKey) {
+      const dayKeys = getDayKeysBetween(startKey, endKey);
       const emailSetsByDay = new Map(dayKeys.map((dayKey) => [dayKey, new Set()]));
       const collections = getPresenceCollections(rawData);
       const clientEmails = new Map(
@@ -1408,15 +1613,21 @@
     }
 
     function renderDailyPeopleChart() {
-      const series = buildDailyPeopleSeries(latestPresenceData, 7);
+      if (!chartRange) chartRange = getDefaultChartRange();
+      const series = buildDailyPeopleSeries(latestPresenceData, chartRange.startKey, chartRange.endKey);
       const maxCount = Math.max(0, ...series.map((entry) => entry.count));
 
-      if (!maxCount) {
-        dailyChartFrameEl.innerHTML = `<div class="chartEmpty">Nenhum acesso com e-mail registrado nos últimos 7 dias.</div>`;
+      if (!series.length) {
+        dailyChartFrameEl.innerHTML = `<div class="chartEmpty">Selecione um intervalo válido para montar o gráfico.</div>`;
         return;
       }
 
-      const chartWidth = 960;
+      if (!maxCount) {
+        dailyChartFrameEl.innerHTML = `<div class="chartEmpty">Nenhum acesso com e-mail registrado entre ${escapeHtml(getChartRangeLabel(chartRange))}.</div>`;
+        return;
+      }
+
+      const chartWidth = Math.max(960, series.length * 42 + 120);
       const chartHeight = 370;
       const plot = { left: 58, top: 28, right: 62, bottom: 48 };
       const plotWidth = chartWidth - plot.left - plot.right;
@@ -1430,7 +1641,7 @@
       const xForIndex = (index) => plot.left + slotWidth * index + slotWidth / 2;
 
       dailyChartFrameEl.innerHTML = `
-        <svg class="comboChartSvg" viewBox="0 0 ${chartWidth} ${chartHeight}" role="img" aria-label="Gráfico de pessoas online por dia nos últimos 7 dias">
+        <svg class="comboChartSvg" style="width: ${chartWidth}px; min-width: ${chartWidth}px;" viewBox="0 0 ${chartWidth} ${chartHeight}" role="img" aria-label="Gráfico de pessoas online por dia entre ${escapeHtml(getChartRangeLabel(chartRange))}">
           ${ticks.map((tickIndex) => {
             const ratio = tickIndex / (ticks.length - 1);
             const y = plotBottom - ratio * plotHeight;
@@ -1464,17 +1675,21 @@
     }
 
     function renderPresenceDashboard() {
-      const summary = summarizePresence(latestPresenceData, currentFilter);
+      const summary = summarizePresence(latestPresenceData, peopleEmailFilter, deviceEmailFilter);
       renderStats(summary.stats);
       renderPeopleTable(summary.grouped);
       renderDeviceList(summary.clients);
       if (chartBackdropEl.classList.contains("show")) renderDailyPeopleChart();
     }
 
+    function setConnectionStatus(statusText, detailText = "") {
+      if (connectionStateEl) connectionStateEl.textContent = statusText;
+      if (lastSyncTextEl) lastSyncTextEl.textContent = detailText;
+    }
+
     function updateSyncLabel(prefix = "Sincronizado") {
       const now = new Date();
-      connectionStateEl.textContent = "Conectado ao Firebase";
-      lastSyncTextEl.textContent = `${prefix} às ${formatDateTime(now.getTime())}`;
+      setConnectionStatus("Conectado ao Firebase", `${prefix} às ${formatDateTime(now.getTime())}`);
     }
 
     function isStatusOnlineUnlocked() {
@@ -1506,6 +1721,7 @@
       chartBackdropEl.classList.toggle("show", show);
       chartBackdropEl.setAttribute("aria-hidden", String(!show));
       if (show) {
+        syncChartRangeInputs();
         renderDailyPeopleChart();
         requestAnimationFrame(() => btnCloseChartEl.focus());
       } else if (document.activeElement === btnCloseChartEl) {
@@ -1521,14 +1737,23 @@
         renderPresenceDashboard();
       }, (error) => {
         console.error(error);
-        connectionStateEl.textContent = "Falha na leitura";
-        lastSyncTextEl.textContent = error?.message || "Erro ao ouvir o Firebase.";
+        setConnectionStatus("Falha na leitura", error?.message || "Erro ao ouvir o Firebase.");
       });
     }
 
-    searchInputEl.addEventListener("input", () => {
-      currentFilter = searchInputEl.value || "";
+    peopleEmailFilterEl.addEventListener("input", () => {
+      peopleEmailFilter = peopleEmailFilterEl.value || "";
       renderPresenceDashboard();
+    });
+
+    deviceEmailFilterEl.addEventListener("input", () => {
+      deviceEmailFilter = deviceEmailFilterEl.value || "";
+      renderPresenceDashboard();
+    });
+
+    btnToggleDevicesEl.addEventListener("click", () => {
+      devicesTableVisible = !devicesTableVisible;
+      renderDeviceTableVisibility();
     });
 
     peopleEmailSortButtonEl.addEventListener("click", () => {
@@ -1551,6 +1776,25 @@
       renderPresenceDashboard();
     });
 
+    chartRangeFormEl.addEventListener("submit", (event) => {
+      event.preventDefault();
+    });
+
+    chartStartDateEl.addEventListener("input", applyChartRangeFromInputs);
+    chartStartDateEl.addEventListener("change", applyChartRangeFromInputs);
+    chartEndDateEl.addEventListener("input", applyChartRangeFromInputs);
+    chartEndDateEl.addEventListener("change", applyChartRangeFromInputs);
+
+    btnLast7ChartRangeEl.addEventListener("click", () => {
+      const range = getRecentChartRange(7);
+      setChartRange(range.startKey, range.endKey);
+    });
+
+    btnLast30ChartRangeEl.addEventListener("click", () => {
+      const range = getRecentChartRange(30);
+      setChartRange(range.startKey, range.endKey);
+    });
+
     btnOpenChartEl.addEventListener("click", () => {
       showDailyChart(true);
     });
@@ -1570,7 +1814,7 @@
     });
 
     btnRefreshEl.addEventListener("click", async () => {
-      connectionStateEl.textContent = "Atualizando...";
+      setConnectionStatus("Atualizando...");
       try {
         const snap = await get(presenceRef);
         latestPresenceData = snap.val() || {};
@@ -1578,8 +1822,7 @@
         renderPresenceDashboard();
       } catch (error) {
         console.error(error);
-        connectionStateEl.textContent = "Falha ao atualizar";
-        lastSyncTextEl.textContent = error?.message || "Não foi possível consultar o Firebase agora.";
+        setConnectionStatus("Falha ao atualizar", error?.message || "Não foi possível consultar o Firebase agora.");
       }
     });
 
@@ -1606,8 +1849,7 @@
         }
         latestPresenceData = {};
         showDailyChart(false);
-        connectionStateEl.textContent = "Bloqueado";
-        lastSyncTextEl.textContent = "Digite a senha para consultar o Firebase.";
+        setConnectionStatus("Bloqueado", "Digite a senha para consultar o Firebase.");
         showAuthGate(true);
       });
     }
@@ -1616,8 +1858,7 @@
       showAuthGate(false);
       ensurePresenceSubscription();
     } else {
-      connectionStateEl.textContent = "Bloqueado";
-      lastSyncTextEl.textContent = "Digite a senha para consultar o Firebase.";
+      setConnectionStatus("Bloqueado", "Digite a senha para consultar o Firebase.");
       showAuthGate(true);
     }
   </script>
