@@ -2569,6 +2569,126 @@
       min-height: 72px;
     }
 
+    .eventModal .notesDictationField {
+      position: relative;
+    }
+
+    .eventModal .notesDictationField textarea {
+      padding-right: 62px;
+    }
+
+    .eventModal .dictateBtn {
+      position: absolute;
+      right: 11px;
+      bottom: 11px;
+      width: 34px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      background: transparent;
+      box-shadow: none;
+      cursor: pointer;
+      transition: background .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease, opacity .16s ease;
+    }
+
+    .eventModal .dictateBtn img {
+      width: 16px;
+      height: 16px;
+      display: block;
+      filter: invert(72%) saturate(0%) brightness(92%);
+      opacity: .72;
+      pointer-events: none;
+      transition: filter .16s ease, opacity .16s ease;
+    }
+
+    .eventModal .dictateBtn:hover {
+      background: rgba(148, 163, 184, .10);
+    }
+
+    .eventModal .dictateBtn:focus-visible {
+      outline: none;
+      box-shadow:
+        0 0 0 4px rgba(78, 161, 255, .28),
+        inset 0 1px 0 rgba(255, 255, 255, .16);
+    }
+
+    .eventModal .dictateBtn.is-listening {
+      border-color: rgba(132, 186, 255, .96);
+      background: rgba(47, 111, 216, .96);
+      box-shadow:
+        0 0 0 4px rgba(78, 161, 255, .22),
+        0 0 22px rgba(78, 161, 255, .44),
+        inset 0 1px 0 rgba(255, 255, 255, .18);
+      animation: notesDictationPulse 1.25s ease-in-out infinite;
+    }
+
+    .eventModal .dictateBtn.is-listening img {
+      filter: invert(1);
+      opacity: .96;
+    }
+
+    .eventModal .dictateBtn:disabled,
+    .eventModal .dictateBtn.is-disabled {
+      opacity: .42;
+      cursor: not-allowed;
+      filter: grayscale(.35);
+      transform: none;
+      box-shadow: none;
+    }
+
+    html.light .eventModal .dictateBtn {
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    html.light .eventModal .dictateBtn img {
+      filter: none;
+      opacity: .44;
+    }
+
+    html.light .eventModal .dictateBtn:hover {
+      background: rgba(15, 23, 42, .06);
+    }
+
+    html.light .eventModal .dictateBtn.is-listening {
+      border-color: rgba(26, 115, 232, .64);
+      background: rgba(232, 240, 254, .96);
+      box-shadow:
+        0 0 0 4px rgba(26, 115, 232, .16),
+        0 0 18px rgba(26, 115, 232, .24),
+        inset 0 1px 0 rgba(255, 255, 255, .72);
+    }
+
+    html.light .eventModal .dictateBtn.is-listening img {
+      filter: none;
+      opacity: .68;
+    }
+
+    @keyframes notesDictationPulse {
+      0%,
+      100% {
+        transform: translateY(-1px) scale(1);
+      }
+
+      50% {
+        transform: translateY(-1px) scale(1.05);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .eventModal .dictateBtn {
+        transition: none;
+      }
+
+      .eventModal .dictateBtn.is-listening {
+        animation: none;
+      }
+    }
+
     .eventModal .idAutoPill {
       padding: 5px 8px;
       gap: 6px;
@@ -3886,7 +4006,7 @@
 
         <div class="row">
           <label for="projectInput">Projeto (nº do projeto)*</label>
-          <input type="text" id="projectInput" placeholder="Ex.: 1360" autocomplete="off" />
+          <input type="text" id="projectInput" placeholder="Ex.: 0922" autocomplete="off" />
         </div>
 
         <div class="row">
@@ -3933,8 +4053,14 @@
           </div>
 
           <label for="notesInput">Observação</label>
-
-          <textarea id="notesInput" placeholder="Escreva observações..."></textarea>
+          <div class="notesDictationField">
+            <textarea id="notesInput" placeholder="[Local] Escreva observações..."></textarea>
+            <button class="dictateBtn" id="btnDictateNotes" type="button" aria-label="Ditar observação"
+              aria-pressed="false" title="Ditar observação">
+              <img src="assets/microfone.png" alt="" aria-hidden="true" />
+            </button>
+            <span class="srOnly" id="notesDictationStatus" aria-live="polite"></span>
+          </div>
         </div>
       </div>
 
@@ -7222,6 +7348,8 @@
     const activityIdInputEl = document.getElementById("activityIdInput");
     const artiaLaunchedInputEl = document.getElementById("artiaLaunchedInput");
     const notesInputEl = document.getElementById("notesInput");
+    const btnDictateNotesEl = document.getElementById("btnDictateNotes");
+    const notesDictationStatusEl = document.getElementById("notesDictationStatus");
     const btnCopyFieldsEl = document.getElementById("btnCopyFields");
     const btnPasteFieldsEl = document.getElementById("btnPasteFields");
     const idLookupPill = document.getElementById("idLookupPill");
@@ -7240,6 +7368,138 @@
       modalInfoEl.classList.remove("hidden"); modalInfoTextEl.textContent = msg;
     }
 
+    const NotesSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let notesRecognition = null;
+    let notesDictationActive = false;
+    let notesDictationStopRequested = false;
+    let notesDictationAnchor = null;
+
+    function setNotesDictationStatus(message = "") {
+      if (notesDictationStatusEl) notesDictationStatusEl.textContent = message;
+    }
+
+    function setNotesDictationActive(active) {
+      notesDictationActive = Boolean(active);
+      if (!btnDictateNotesEl) return;
+      btnDictateNotesEl.classList.toggle("is-listening", notesDictationActive);
+      btnDictateNotesEl.setAttribute("aria-pressed", notesDictationActive ? "true" : "false");
+      btnDictateNotesEl.title = notesDictationActive ? "Parar ditado" : "Ditar observação";
+      btnDictateNotesEl.setAttribute("aria-label", notesDictationActive ? "Parar ditado" : "Ditar observação");
+    }
+
+    function captureNotesDictationAnchor() {
+      const current = notesInputEl.value || "";
+      const hasCursor = Number.isInteger(notesInputEl.selectionStart) && Number.isInteger(notesInputEl.selectionEnd);
+      const start = hasCursor ? notesInputEl.selectionStart : current.length;
+      const end = hasCursor ? notesInputEl.selectionEnd : current.length;
+      notesDictationAnchor = {
+        before: current.slice(0, start),
+        after: current.slice(end)
+      };
+    }
+
+    function renderDictatedNotesText(text) {
+      const dictated = String(text || "").replace(/\s+/g, " ").trim();
+      if (!notesDictationAnchor) captureNotesDictationAnchor();
+      const before = notesDictationAnchor?.before || "";
+      const after = notesDictationAnchor?.after || "";
+      const lead = before && !/\s$/.test(before) ? " " : "";
+      const tail = after && !/^\s/.test(after) ? " " : "";
+      const next = before + lead + dictated + tail + after;
+      const cursor = (before + lead + dictated).length;
+      notesInputEl.value = next;
+      notesInputEl.focus();
+      notesInputEl.selectionStart = cursor;
+      notesInputEl.selectionEnd = cursor;
+      notesInputEl.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    function stopNotesDictation({ silent = false } = {}) {
+      notesDictationStopRequested = true;
+      if (notesRecognition && notesDictationActive) {
+        try { notesRecognition.stop(); } catch { }
+      }
+      setNotesDictationActive(false);
+      if (!silent) setNotesDictationStatus("Ditado pausado.");
+    }
+
+    function initNotesDictation() {
+      if (!btnDictateNotesEl) return;
+      const isLocalHost = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+      const hasSecureContext = window.isSecureContext || isLocalHost || location.protocol === "file:";
+      if (!NotesSpeechRecognition || !hasSecureContext) {
+        btnDictateNotesEl.disabled = true;
+        btnDictateNotesEl.classList.add("is-disabled");
+        btnDictateNotesEl.title = "Ditado por voz indisponível neste navegador";
+        btnDictateNotesEl.setAttribute("aria-label", "Ditado por voz indisponível neste navegador");
+        setNotesDictationStatus("Ditado por voz indisponível neste navegador.");
+        return;
+      }
+
+      notesRecognition = new NotesSpeechRecognition();
+      notesRecognition.lang = "pt-BR";
+      notesRecognition.continuous = true;
+      notesRecognition.interimResults = true;
+      notesRecognition.maxAlternatives = 1;
+
+      notesRecognition.onstart = () => {
+        notesDictationStopRequested = false;
+        captureNotesDictationAnchor();
+        setNotesDictationActive(true);
+        setNotesDictationStatus("Ouvindo observação.");
+      };
+
+      notesRecognition.onresult = (event) => {
+        let finalText = "";
+        let interimText = "";
+        for (let i = 0; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal) finalText += " " + (result[0]?.transcript || "");
+          else interimText += " " + (result[0]?.transcript || "");
+        }
+        const dictated = `${finalText} ${interimText}`.replace(/\s+/g, " ").trim();
+        if (dictated) {
+          renderDictatedNotesText(dictated);
+          setNotesDictationStatus(interimText.trim() ? "Transcrevendo observação." : "Texto ditado inserido na observação.");
+        }
+      };
+
+      notesRecognition.onerror = (event) => {
+        if (event.error === "aborted") return;
+        notesDictationStopRequested = true;
+        setNotesDictationActive(false);
+        const messages = {
+          "audio-capture": "Não encontrei um microfone disponível.",
+          "not-allowed": "Permissão do microfone negada.",
+          "no-speech": "Não captei fala. Tente novamente.",
+          network: "Ditado por voz indisponível no momento."
+        };
+        const message = messages[event.error] || "Não foi possível iniciar o ditado por voz.";
+        setNotesDictationStatus(message);
+        setModalInfo(message);
+      };
+
+      notesRecognition.onend = () => {
+        setNotesDictationActive(false);
+        notesDictationAnchor = null;
+        if (!notesDictationStopRequested) setNotesDictationStatus("Ditado encerrado.");
+      };
+
+      btnDictateNotesEl.addEventListener("click", () => {
+        if (notesDictationActive) {
+          stopNotesDictation();
+          return;
+        }
+        notesDictationStopRequested = false;
+        setModalInfo("");
+        try {
+          notesRecognition.start();
+        } catch {
+          stopNotesDictation({ silent: true });
+        }
+      });
+    }
+
     function updatePasteButtonState() {
       const clip = getClipboardFields();
       const has = !!(clip && (clip.project || clip.activityLabel || clip.activityId || clip.notes));
@@ -7252,6 +7512,7 @@
           modalDateInput.value = state.selection.dayIso;
         }
         setEventModalProjectColor(projectInputEl.value);
+        setNotesDictationStatus("");
         modalBackdrop.classList.add("show");
         modalBackdrop.setAttribute("aria-hidden", "false");
         setModalInfo("");
@@ -7261,6 +7522,8 @@
           projectInputEl.focus();
         });
       } else {
+        stopNotesDictation({ silent: true });
+        setNotesDictationStatus("");
         modalBackdrop.classList.remove("show");
         modalBackdrop.setAttribute("aria-hidden", "true");
       }
@@ -7659,6 +7922,7 @@
       projectInputEl._t = setTimeout(maybeAutoFillId, 120);
     });
     activityNameInputEl.addEventListener("input", () => { clearTimeout(activityNameInputEl._t); activityNameInputEl._t = setTimeout(maybeAutoFillId, 120); });
+    initNotesDictation();
 
     // Copiar/Colar campos do evento (Projeto/Atividade/ID/Observação)
     if (btnCopyFieldsEl) btnCopyFieldsEl.addEventListener("click", () => {
