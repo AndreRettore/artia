@@ -36,7 +36,7 @@ Fluxo resumido:
 - **Presença online**: Firebase Realtime Database (SDK modular no cliente)
 - **Persistência local principal**: IndexedDB
 - **Persistência auxiliar**: localStorage
-- **Leitura/escrita XLSX**: implementação própria no JS para importação/exportação no front
+- **Leitura/escrita XLSX e importação CSV**: implementação própria no JS para importação/exportação no front
 - **Servidor local**: Node.js simples em `local-dev-server.js`
 - **Funções serverless**: Vercel Functions em `api/`
 - **Banco Artia**: MySQL via `mysql2`
@@ -70,7 +70,7 @@ Fluxo resumido:
   - ajuda (`#helpBackdrop`)
   - arredondamento de horários (`#roundingBackdrop`)
   - evento (criar/editar) (`#modalBackdrop`)
-  - importação XLSX (`#importConfigBackdrop`)
+  - importação XLSX/CSV (`#importConfigBackdrop`)
 
 ## 5. Modelo de dados
 
@@ -225,11 +225,11 @@ O parser:
 
 ### 9.2 Importar apontamentos
 
-Botão: `Importar Apontamentos (XLSX)`
+Botão: `Importar Apontamentos (XLSX/CSV)`
 
 Fluxo:
 
-- lê as abas disponíveis do arquivo
+- lê as abas disponíveis do XLSX ou cria uma aba virtual para CSV
 - permite escolher aba e cabeçalho
 - cria eventos no formato interno
 - permite substituir tudo ou mesclar

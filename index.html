@@ -388,6 +388,16 @@
       color: var(--text);
     }
 
+    html.light .importDropZone {
+      background: rgba(15, 23, 42, .035);
+      border-color: rgba(15, 23, 42, .20);
+    }
+
+    html.light .importDropZone.isDragging {
+      background: rgba(78, 161, 255, .10);
+      border-color: rgba(47, 111, 216, .70);
+    }
+
     html.light .modalBody input[type="text"],
     html.light .modalBody textarea {
       background: #ffffff;
@@ -2123,6 +2133,96 @@
       line-height: 1.3;
     }
 
+    .importUploadModal {
+      width: min(760px, calc(100vw - 40px));
+      max-width: calc(100vw - 40px);
+    }
+
+    .importUploadBody {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .importDropZone {
+      min-height: 270px;
+      border: 2px dashed rgba(148, 186, 229, .30);
+      border-radius: 18px;
+      background: rgba(0, 0, 0, .14);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      text-align: center;
+      transition: border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+
+    .importDropZone.isDragging {
+      border-color: rgba(78, 161, 255, .78);
+      background: rgba(78, 161, 255, .10);
+      box-shadow: inset 0 0 0 1px rgba(78, 161, 255, .18), 0 0 0 5px rgba(78, 161, 255, .08);
+      transform: translateY(-1px);
+    }
+
+    .importDropContent {
+      display: grid;
+      justify-items: center;
+      gap: 14px;
+      max-width: 560px;
+    }
+
+    .importDropIcon {
+      width: 54px;
+      height: 54px;
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      background: rgba(78, 161, 255, .12);
+      border: 1px solid rgba(78, 161, 255, .24);
+    }
+
+    .importDropIcon svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .importDropTitle {
+      margin: 0;
+      color: var(--text);
+      font-size: 28px;
+      line-height: 1.12;
+      font-weight: 700;
+    }
+
+    .importDropSubtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.4;
+    }
+
+    .importUploadActions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .importUploadHint {
+      min-height: 18px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .importUploadHint.error {
+      color: #ff9a9a;
+    }
+
     .importConfigModal {
       width: min(900px, 100%);
       max-height: calc(100dvh - 20px);
@@ -2806,6 +2906,7 @@
     }
 
     @keyframes notesDictationPulse {
+
       0%,
       100% {
         transform: translateY(-1px) scale(1);
@@ -2879,6 +2980,7 @@
     }
 
     @media (max-width: 900px) {
+
       .importMappingHead,
       .importMappingRow {
         grid-template-columns: minmax(140px, 180px) 1fr;
@@ -2886,6 +2988,19 @@
     }
 
     @media (max-width: 680px) {
+      .importDropZone {
+        min-height: 240px;
+        padding: 18px;
+      }
+
+      .importDropTitle {
+        font-size: 22px;
+      }
+
+      .importDropSubtitle {
+        font-size: 13px;
+      }
+
       .importConfigBody .row.grid2 {
         grid-template-columns: 1fr;
       }
@@ -3446,139 +3561,140 @@
      */
   </style>
 </head>
+
 <body>
   <script type="module">
-  // Firebase v10+ (ESM)
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-  import { getDatabase, ref, onValue, set, onDisconnect, update } from
-    "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
+    // Firebase v10+ (ESM)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+    import { getDatabase, ref, onValue, set, onDisconnect, update } from
+      "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
 
-  // 1) Cole aqui as credenciais do seu projeto
-  const firebaseConfig = {
-    apiKey: "AIzaSyCbSEwEqqRW4M_5na2UKc-i3JOYgT40fDk",
-    authDomain: "artia-2679e.firebaseapp.com",
-    databaseURL: "https://artia-2679e-default-rtdb.firebaseio.com",
-    projectId: "artia-2679e",
-    storageBucket: "artia-2679e.firebasestorage.app",
-    messagingSenderId: "471803917424",
-    appId: "1:471803917424:web:734ce19b3227fa4d60b0b5",
-    measurementId: "G-BQ8D73SHV6"
-  };
+    // 1) Cole aqui as credenciais do seu projeto
+    const firebaseConfig = {
+      apiKey: "AIzaSyCbSEwEqqRW4M_5na2UKc-i3JOYgT40fDk",
+      authDomain: "artia-2679e.firebaseapp.com",
+      databaseURL: "https://artia-2679e-default-rtdb.firebaseio.com",
+      projectId: "artia-2679e",
+      storageBucket: "artia-2679e.firebasestorage.app",
+      messagingSenderId: "471803917424",
+      appId: "1:471803917424:web:734ce19b3227fa4d60b0b5",
+      measurementId: "G-BQ8D73SHV6"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-  function formatBrasiliaLastSeen(date = new Date()) {
-    const parts = new Intl.DateTimeFormat("pt-BR", {
-      timeZone: "America/Sao_Paulo",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false
-    }).formatToParts(date);
+    function formatBrasiliaLastSeen(date = new Date()) {
+      const parts = new Intl.DateTimeFormat("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      }).formatToParts(date);
 
-    const getPart = (type) => parts.find((part) => part.type === type)?.value || "";
-    return `${getPart("day")}/${getPart("month")}/${getPart("year")} ${getPart("hour")}:${getPart("minute")}:${getPart("second")} (Horario de Brasilia)`;
-  }
-
-  function getPresenceEmail() {
-    return String(localStorage.getItem("exportEmail") || "").trim();
-  }
-
-  const PRESENCE_CLIENT_ID_KEY = "presenceClientId";
-
-  function getOrCreatePresenceClientId() {
-    try {
-      const existing = String(localStorage.getItem(PRESENCE_CLIENT_ID_KEY) || "").trim();
-      if (existing) return existing;
-      const created = crypto.randomUUID();
-      localStorage.setItem(PRESENCE_CLIENT_ID_KEY, created);
-      return created;
-    } catch {
-      return crypto.randomUUID();
+      const getPart = (type) => parts.find((part) => part.type === type)?.value || "";
+      return `${getPart("day")}/${getPart("month")}/${getPart("year")} ${getPart("hour")}:${getPart("minute")}:${getPart("second")} (Horario de Brasilia)`;
     }
-  }
 
-  function buildPresencePayload(nextState = "online") {
-    const now = new Date();
-    return {
-      state: nextState,
-      lastSeen: formatBrasiliaLastSeen(now),
-      lastSeenMs: now.getTime(),
-      email: getPresenceEmail(),
-      clientId,
-      tabId: sessionId
-    };
-  }
+    function getPresenceEmail() {
+      return String(localStorage.getItem("exportEmail") || "").trim();
+    }
 
-  function buildClientPresencePayload() {
-    const now = new Date();
-    return {
-      clientId,
-      email: getPresenceEmail(),
-      lastSeen: formatBrasiliaLastSeen(now),
-      lastSeenMs: now.getTime(),
-      lastTabId: sessionId
-    };
-  }
+    const PRESENCE_CLIENT_ID_KEY = "presenceClientId";
 
-  // 2) Identificador por ABA (cada aba conta como 1 online)
-  const sessionId = crypto.randomUUID();
-  const clientId = getOrCreatePresenceClientId();
-  const sessionRef = ref(db, `presence/sessions/${sessionId}`);
-  const clientRef = ref(db, `presence/clients/${clientId}`);
-
-  // 3) Marca online e mantém heartbeat
-  async function goOnline() {
-    await set(sessionRef, buildPresencePayload("online"));
-    await update(clientRef, buildClientPresencePayload());
-    onDisconnect(sessionRef).update({ state: "offline" }); // quando a aba cair, preserva o registro
-  }
-
-  async function syncPresenceMetadata(nextState = "online") {
-    await update(sessionRef, buildPresencePayload(nextState));
-    await update(clientRef, buildClientPresencePayload());
-  }
-
-  window.syncPresenceMetadata = syncPresenceMetadata;
-
-  function scheduleOfflinePresenceUpdate() {
-    syncPresenceMetadata("offline").catch(() => { });
-  }
-
-  window.addEventListener("pagehide", scheduleOfflinePresenceUpdate);
-  window.addEventListener("beforeunload", scheduleOfflinePresenceUpdate);
-
-  // heartbeat (a cada 15s)
-  setInterval(() => syncPresenceMetadata().catch(() => { }), 15000);
-
-  // 4) Contagem (considera online quem atualizou em até 60s)
-  const presenceRef = ref(db, "presence");
-  onValue(presenceRef, (snap) => {
-    const rawPresence = snap.val() || {};
-    const sessionsNode = (rawPresence.sessions && typeof rawPresence.sessions === "object")
-      ? rawPresence.sessions
-      : rawPresence;
-    const now = Date.now();
-    let onlineSessions = 0;
-    for (const k in sessionsNode) {
-      if (k === "clients" || k === "sessions") continue;
-      const entry = sessionsNode[k];
-      const lastSeenMs = typeof entry?.lastSeenMs === "number"
-        ? entry.lastSeenMs
-        : (typeof entry?.lastSeen === "number" ? entry.lastSeen : 0);
-      if (entry?.state === "online" && (now - lastSeenMs <= 60000)) {
-        onlineSessions += 1;
+    function getOrCreatePresenceClientId() {
+      try {
+        const existing = String(localStorage.getItem(PRESENCE_CLIENT_ID_KEY) || "").trim();
+        if (existing) return existing;
+        const created = crypto.randomUUID();
+        localStorage.setItem(PRESENCE_CLIENT_ID_KEY, created);
+        return created;
+      } catch {
+        return crypto.randomUUID();
       }
     }
-    document.getElementById("onlineCount").textContent = String(onlineSessions);
-  });
 
-  goOnline();
-</script>
+    function buildPresencePayload(nextState = "online") {
+      const now = new Date();
+      return {
+        state: nextState,
+        lastSeen: formatBrasiliaLastSeen(now),
+        lastSeenMs: now.getTime(),
+        email: getPresenceEmail(),
+        clientId,
+        tabId: sessionId
+      };
+    }
+
+    function buildClientPresencePayload() {
+      const now = new Date();
+      return {
+        clientId,
+        email: getPresenceEmail(),
+        lastSeen: formatBrasiliaLastSeen(now),
+        lastSeenMs: now.getTime(),
+        lastTabId: sessionId
+      };
+    }
+
+    // 2) Identificador por ABA (cada aba conta como 1 online)
+    const sessionId = crypto.randomUUID();
+    const clientId = getOrCreatePresenceClientId();
+    const sessionRef = ref(db, `presence/sessions/${sessionId}`);
+    const clientRef = ref(db, `presence/clients/${clientId}`);
+
+    // 3) Marca online e mantém heartbeat
+    async function goOnline() {
+      await set(sessionRef, buildPresencePayload("online"));
+      await update(clientRef, buildClientPresencePayload());
+      onDisconnect(sessionRef).update({ state: "offline" }); // quando a aba cair, preserva o registro
+    }
+
+    async function syncPresenceMetadata(nextState = "online") {
+      await update(sessionRef, buildPresencePayload(nextState));
+      await update(clientRef, buildClientPresencePayload());
+    }
+
+    window.syncPresenceMetadata = syncPresenceMetadata;
+
+    function scheduleOfflinePresenceUpdate() {
+      syncPresenceMetadata("offline").catch(() => { });
+    }
+
+    window.addEventListener("pagehide", scheduleOfflinePresenceUpdate);
+    window.addEventListener("beforeunload", scheduleOfflinePresenceUpdate);
+
+    // heartbeat (a cada 15s)
+    setInterval(() => syncPresenceMetadata().catch(() => { }), 15000);
+
+    // 4) Contagem (considera online quem atualizou em até 60s)
+    const presenceRef = ref(db, "presence");
+    onValue(presenceRef, (snap) => {
+      const rawPresence = snap.val() || {};
+      const sessionsNode = (rawPresence.sessions && typeof rawPresence.sessions === "object")
+        ? rawPresence.sessions
+        : rawPresence;
+      const now = Date.now();
+      let onlineSessions = 0;
+      for (const k in sessionsNode) {
+        if (k === "clients" || k === "sessions") continue;
+        const entry = sessionsNode[k];
+        const lastSeenMs = typeof entry?.lastSeenMs === "number"
+          ? entry.lastSeenMs
+          : (typeof entry?.lastSeen === "number" ? entry.lastSeen : 0);
+        if (entry?.state === "online" && (now - lastSeenMs <= 60000)) {
+          onlineSessions += 1;
+        }
+      }
+      document.getElementById("onlineCount").textContent = String(onlineSessions);
+    });
+
+    goOnline();
+  </script>
   <header class="topbar">
     <h1 class="srOnly">Apontamento de Horas - Artia</h1>
     <div class="topbarRow topbarRow--top">
@@ -3594,18 +3710,19 @@
         </div>
 
         <div class="exportMenuWrap" id="exportMenuWrap">
-          <button class="btn btnSm" id="btnExportCsv" type="button"
-            title="Abrir opções de exportação CSV" aria-haspopup="true" aria-controls="exportCsvMenu"
-            aria-expanded="false"><span class="btnIcon"><svg viewBox="0 0 24 24"
-                aria-hidden="true">
+          <button class="btn btnSm" id="btnExportCsv" type="button" title="Abrir opções de exportação CSV"
+            aria-haspopup="true" aria-controls="exportCsvMenu" aria-expanded="false"><span class="btnIcon"><svg
+                viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   d="M12 3a1 1 0 0 1 1 1v9.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4.0 4a1 1 0 0 1-1.4 0l-4-4A1 1 0 1 1 8.7 11.3L11 13.59V4a1 1 0 0 1 1-1Zm-7 16a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1Z" />
-              </svg></span><span>Exportar CSV</span><span class="btnDropdownCaret" aria-hidden="true"><svg viewBox="0 0 12 12">
+              </svg></span><span>Exportar CSV</span><span class="btnDropdownCaret" aria-hidden="true"><svg
+                viewBox="0 0 12 12">
                 <path d="M1.4 3.6h9.2L6 8.7z"></path>
               </svg></span></button>
           <div class="exportMenu menuSurface hidden" id="exportCsvMenu" aria-label="Opções de exportação CSV">
             <button class="btn btnSm exportMenu__action" id="btnExportCsvAll" type="button">Exportar Tudo</button>
-            <button class="btn btnSm exportMenu__action" id="btnExportCsvFiltered" type="button">Exportar Tabela com Filtros</button>
+            <button class="btn btnSm exportMenu__action" id="btnExportCsvFiltered" type="button">Exportar Tabela com
+              Filtros</button>
           </div>
         </div>
 
@@ -3615,9 +3732,8 @@
             <span class="btnIcon">☀</span>
           </button>
           <div class="settingsWrap">
-            <button class="btn btnSm utilityBtn" id="btnSettings" type="button"
-              title="Configurações" aria-label="Abrir configurações" aria-controls="settingsMenu" aria-haspopup="true"
-              aria-expanded="false">
+            <button class="btn btnSm utilityBtn" id="btnSettings" type="button" title="Configurações"
+              aria-label="Abrir configurações" aria-controls="settingsMenu" aria-haspopup="true" aria-expanded="false">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="12" cy="12" r="3"></circle>
                 <path
@@ -3628,8 +3744,8 @@
             <div id="settingsMenu" class="settingsMenu hidden" aria-label="Menu de configurações">
               <button class="btn btnSm settingsMenu__action" id="btnHowToUse" type="button">
                 <span class="btnIcon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" class="iconStroke" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round">
+                  <svg viewBox="0 0 24 24" class="iconStroke" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="9"></circle>
                     <path d="M9.3 9a2.7 2.7 0 1 1 4.67 1.8c-.63.66-1.47 1.16-1.47 2.2"></path>
                     <path d="M12 17h.01"></path>
@@ -3640,8 +3756,8 @@
               <button class="btn btnSm settingsMenu__action" id="btnLoadBase" type="button"
                 title="Carregar a base de IDs Artia a partir de um XLSX">
                 <span class="btnIcon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
                     <path d="M4 9h16" />
                     <path d="M4 15h16" />
                     <path d="M10 3L8 21" />
@@ -3654,15 +3770,16 @@
                 title="Abrir resumo salarial mensal" onclick="window.location.href='./resumo-salario/'">
                 <span class="btnIcon" aria-hidden="true">
                   <svg viewBox="0 0 24 24">
-                    <path
-                      d="M4 3h16v18H4V3Zm2 2v14h12V5H6Zm2 3h8v2H8V8Zm0 4h8v2H8v-2Zm0 4h5v2H8v-2Z" />
+                    <path d="M4 3h16v18H4V3Zm2 2v14h12V5H6Zm2 3h8v2H8V8Zm0 4h8v2H8v-2Zm0 4h5v2H8v-2Z" />
                   </svg>
                 </span>
                 <span>Resumo Salário</span>
               </button>
-              <button class="btn btnSm settingsMenu__action" id="btnToggleBrokenTimes" type="button" aria-haspopup="dialog">Arredondar
+              <button class="btn btnSm settingsMenu__action" id="btnToggleBrokenTimes" type="button"
+                aria-haspopup="dialog">Arredondar
                 Horários</button>
-              <button class="btn btnSm danger settingsMenu__action" id="btnClearWeek" type="button">Limpar semana</button>
+              <button class="btn btnSm danger settingsMenu__action" id="btnClearWeek" type="button">Limpar
+                semana</button>
               <button class="btn btnSm danger settingsMenu__action" id="btnClearAll" type="button">Limpar tudo</button>
             </div>
           </div>
@@ -3672,21 +3789,19 @@
 
     <div class="topbarRow topbarRow--middle">
       <nav class="viewBtns" aria-label="Navegação de páginas">
-        <button class="btn btnSm active" id="btnViewCalendar" type="button" title="Mudar para a Visão Calendário (atalho: C)"
-          aria-controls="calendarView"><span
-            class="btnIcon"><svg viewBox="0 0 24 24" aria-hidden="true">
+        <button class="btn btnSm active" id="btnViewCalendar" type="button"
+          title="Mudar para a Visão Calendário (atalho: C)" aria-controls="calendarView"><span class="btnIcon"><svg
+              viewBox="0 0 24 24" aria-hidden="true">
               <path
                 d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1.5A2.5 2.5 0 0 1 22 6.5v14A2.5 2.5 0 0 1 19.5 23h-15A2.5 2.5 0 0 1 2 20.5v-14A2.5 2.5 0 0 1 4.5 4H6V3a1 1 0 0 1 1-1Zm12.5 7H4.5v11.5c0 .28.22.5.5.5h14.5a.5.5 0 0 0 .5-.5V9ZM6 6H4.5a.5.5 0 0 0-.5.5V7h16v-.5a.5.5 0 0 0-.5-.5H18v1a1 1 0 1 1-2 0V6H8v1a1 1 0 1 1-2 0V6Z" />
             </svg></span><span>Calendário</span></button>
         <button class="btn btnSm" id="btnViewTable" type="button" title="Mudar para a Visão Tabela (atalho: T)"
-          aria-controls="tableView"><span class="btnIcon"><svg
-              viewBox="0 0 24 24" aria-hidden="true">
+          aria-controls="tableView"><span class="btnIcon"><svg viewBox="0 0 24 24" aria-hidden="true">
               <path
                 d="M4 3h16a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm0 4v4h5V7H4Zm7 0v4h9V7h-9ZM4 13v6h5v-6H4Zm7 0v6h9v-6h-9Z" />
             </svg></span><span>Tabela</span></button>
         <button class="btn btnSm" id="btnViewGantt" type="button" title="Mudar para a Visão Gantt (atalho: G)"
-          aria-controls="ganttView"><span class="btnIcon"><svg
-              viewBox="0 0 24 24" aria-hidden="true">
+          aria-controls="ganttView"><span class="btnIcon"><svg viewBox="0 0 24 24" aria-hidden="true">
               <path
                 d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm1 3v5.17l3.59 2.08a1 1 0 0 1-1 1.74l-4.09-2.37A1 1 0 0 1 11 13V7a1 1 0 1 1 2 0Z" />
             </svg></span><span>Gantt</span></button>
@@ -3710,28 +3825,28 @@
             </svg></span><span>Salvar XLSX</span></button>
         <button class="btn btnSm" id="btnSetBackupTarget" type="button"
           title="Selecionar a pasta para salvar os backups"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="iconStroke">
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              class="iconStroke">
               <path d="M3 7h6l2 2h10v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
             </svg></span><span>Definir Local de Salvamento</span></button>
-        <button class="btn btnSm utilityBtn hidden" id="btnSyncArtiaApi" type="button"
-          title="Atualizar IDs via API" aria-label="Atualizar IDs via API"><span class="btnIcon"><svg viewBox="0 0 24 24"
-              fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <button class="btn btnSm utilityBtn hidden" id="btnSyncArtiaApi" type="button" title="Atualizar IDs via API"
+          aria-label="Atualizar IDs via API"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M7 18a4 4 0 1 1 .8-7.92A5 5 0 0 1 17.5 11a3.5 3.5 0 1 1 .5 7H7z" />
               <path d="M12 10v7" />
               <path d="m9.5 12.5 2.5-2.5 2.5 2.5" />
             </svg></span><span class="srOnly">Atualizar IDs via API</span></button>
         <input id="fileBaseInput" type="file" accept=".xlsx" class="hidden" aria-hidden="true" tabindex="-1" />
         <button class="btn btnSm" id="btnImportActivities" type="button"
-          title="Importar apontamentos de um arquivo XLSX"><span class="btnIcon"><svg viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          title="Importar apontamentos de um arquivo XLSX ou CSV"><span class="btnIcon"><svg viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              aria-hidden="true">
               <path d="M12 21V9" />
               <path d="M7 14l5-5 5 5" />
               <path d="M5 5h14" />
-            </svg></span><span>Importar Apontamentos (XLSX)</span></button>
-        <input id="fileActivitiesInput" type="file" accept=".xlsx" class="hidden" aria-hidden="true" tabindex="-1" />
+            </svg></span><span>Importar Apontamentos</span></button>
+        <input id="fileActivitiesInput" type="file" accept=".xlsx,.csv,text/csv" class="hidden" aria-hidden="true"
+          tabindex="-1" />
       </div>
     </div>
 
@@ -3743,7 +3858,8 @@
       </div>
 
       <div class="centerGroup">
-        <div class="range rangeSm" id="periodRangeGroup" aria-live="polite"><strong id="weekRangeText">--/--/---- → --/--/----</strong></div>
+        <div class="range rangeSm" id="periodRangeGroup" aria-live="polite"><strong id="weekRangeText">--/--/---- →
+            --/--/----</strong></div>
       </div>
 
       <div class="periodMeta">
@@ -3770,7 +3886,8 @@
         <div class="weekGrid" id="weekGrid"></div>
       </section>
 
-      <section id="directoryView" class="viewSection directoryView hidden" aria-label="Diretório de IDs Artia"></section>
+      <section id="directoryView" class="viewSection directoryView hidden" aria-label="Diretório de IDs Artia">
+      </section>
 
       <section id="tableView" class="viewSection hidden" aria-labelledby="tableViewTitle">
         <h2 class="srOnly" id="tableViewTitle">Tabela de apontamentos</h2>
@@ -3800,14 +3917,22 @@
             <thead>
               <tr>
                 <th class="tableSortable" data-tsort="data" scope="col">Data <span class="sortIndicator"></span></th>
-                <th class="tableSortable" data-tsort="projeto" scope="col">Projeto <span class="sortIndicator"></span></th>
-                <th class="tableSortable" data-tsort="inicio" scope="col">Hora Início <span class="sortIndicator"></span></th>
-                <th class="tableSortable" data-tsort="fim" scope="col">Hora de Término <span class="sortIndicator"></span></th>
-                <th class="tableSortable" data-tsort="esforco" scope="col">Esforço <span class="sortIndicator"></span></th>
-                <th class="tableSortable" data-tsort="esforcoDia" scope="col">Esforço Dia <span class="sortIndicator"></span></th>
-                <th class="tableSortable" data-tsort="atividade" scope="col">Atividade <span class="sortIndicator"></span></th>
-                <th class="tableSortable" data-tsort="notas" scope="col">Observação <span class="sortIndicator"></span></th>
-                <th class="tableSortable" data-tsort="artiaLancado" scope="col">Lançamento Artia <span class="sortIndicator"></span></th>
+                <th class="tableSortable" data-tsort="projeto" scope="col">Projeto <span class="sortIndicator"></span>
+                </th>
+                <th class="tableSortable" data-tsort="inicio" scope="col">Hora Início <span
+                    class="sortIndicator"></span></th>
+                <th class="tableSortable" data-tsort="fim" scope="col">Hora de Término <span
+                    class="sortIndicator"></span></th>
+                <th class="tableSortable" data-tsort="esforco" scope="col">Esforço <span class="sortIndicator"></span>
+                </th>
+                <th class="tableSortable" data-tsort="esforcoDia" scope="col">Esforço Dia <span
+                    class="sortIndicator"></span></th>
+                <th class="tableSortable" data-tsort="atividade" scope="col">Atividade <span
+                    class="sortIndicator"></span></th>
+                <th class="tableSortable" data-tsort="notas" scope="col">Observação <span class="sortIndicator"></span>
+                </th>
+                <th class="tableSortable" data-tsort="artiaLancado" scope="col">Lançamento Artia <span
+                    class="sortIndicator"></span></th>
                 <th class="tableSortable" data-tsort="id" scope="col">ID <span class="sortIndicator"></span></th>
               </tr>
             </thead>
@@ -3934,7 +4059,8 @@
               minutos.</li>
             <li>Informe o <strong>projeto</strong>, escolha ou digite a <strong>atividade</strong> e confira o
               <strong>ID Artia</strong>. Quando a base estiver carregada, o sistema tenta preencher o ID
-              automaticamente.</li>
+              automaticamente.
+            </li>
             <li>Marque <strong>Lançamento Artia</strong> quando o registro já tiver sido lançado no sistema externo.
             </li>
             <li>Use os botões de <strong>Local de trabalho</strong> para inserir o marcador no campo de observação.
@@ -3975,7 +4101,8 @@
           <p>Permite analisar volume de horas por período e por projeto.</p>
           <ul>
             <li>Defina o <strong>período</strong>, o <strong>projeto</strong> e o agrupamento por
-              <strong>Meses</strong> ou <strong>Semanas</strong>.</li>
+              <strong>Meses</strong> ou <strong>Semanas</strong>.
+            </li>
             <li>O gráfico <strong>Horas (ao Longo do Tempo)</strong> combina barras por período com a linha de horas
               acumuladas.</li>
             <li>O gráfico <strong>Projetos (Distribuição de Horas)</strong> mostra a participação de cada projeto e
@@ -4000,10 +4127,12 @@
           <ul>
             <li><strong>E-mail</strong>: define o e-mail incluído na exportação CSV.</li>
             <li><strong>Exportar CSV</strong>: gera um CSV com os apontamentos visíveis para uso externo.</li>
-            <li><strong>Importar Apontamentos (XLSX)</strong>: lê uma planilha e adiciona os registros ao sistema.</li>
+            <li><strong>Importar Apontamentos (XLSX/CSV)</strong>: lê uma planilha e adiciona os registros ao sistema.
+            </li>
             <li><strong>Definir Local de Salvamento</strong>: escolhe a pasta usada para backups XLSX.</li>
             <li><strong>Salvar XLSX</strong>: gera o backup manual dos apontamentos.</li>
-            <li><strong>Atualizar IDs via API</strong>: sincroniza a base direto da API do Artia, sem expor a chave no navegador.</li>
+            <li><strong>Atualizar IDs via API</strong>: sincroniza a base direto da API do Artia, sem expor a chave no
+              navegador.</li>
             <li><strong>Carregar IDs Artia (XLSX)</strong>: importa a base usada para preencher e consultar IDs por
               projeto e atividade.</li>
           </ul>
@@ -4016,16 +4145,66 @@
     </div>
   </div>
 
+  <div class="modalBackdrop" id="importUploadBackdrop" role="dialog" aria-modal="true" aria-hidden="true"
+    aria-labelledby="importUploadTitle" aria-describedby="importUploadHint">
+    <div class="modal importUploadModal" role="document">
+      <div class="modalHeader">
+        <div class="modalHeaderMeta">
+          <h2 id="importUploadTitle">Importar apontamentos para o site Exxata Apontamentos</h2>
+          <div class="when when--compact">Escolha a planilha para iniciar a importação.</div>
+        </div>
+        <div class="modalActions">
+          <button class="xBtn" id="importUploadClose" type="button" title="Fechar"
+            aria-label="Fechar importação">✕</button>
+        </div>
+      </div>
+      <div class="importUploadBody">
+        <div class="importDropZone" id="importDropZone">
+          <div class="importDropContent">
+            <span class="importDropIcon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <path d="M14 2v6h6" />
+                <path d="M12 18v-6" />
+                <path d="m9 15 3-3 3 3" />
+              </svg>
+            </span>
+            <p class="importDropTitle">Arraste e solte sua planilha</p>
+            <p class="importDropSubtitle">Arquivos .xlsx ou .csv de apontamentos</p>
+            <div class="importUploadActions">
+              <button class="btn primary" id="importUploadChoose" type="button">
+                <span class="btnIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <path d="M17 8l-5-5-5 5" />
+                    <path d="M12 3v12" />
+                  </svg></span>
+                <span>Selecionar arquivo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="importUploadHint" id="importUploadHint">Depois de escolher o arquivo, você revisa a aba e os
+          cabeçalhos antes de importar.</div>
+      </div>
+      <div class="modalFooter">
+        <button class="btn ghost" id="importUploadCancel" type="button">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modalBackdrop" id="importConfigBackdrop" role="dialog" aria-modal="true" aria-hidden="true"
     aria-labelledby="importConfigTitle" aria-describedby="importConfigHint">
     <div class="modal importConfigModal" role="document">
       <div class="modalHeader">
         <div class="modalHeaderMeta">
-          <h2 id="importConfigTitle">Importar apontamentos (XLSX)</h2>
+          <h2 id="importConfigTitle">Importar apontamentos (XLSX/CSV)</h2>
           <div class="when when--compact" id="importConfigFileName">Arquivo: -</div>
         </div>
         <div class="modalActions">
-          <button class="xBtn" id="importConfigClose" type="button" title="Fechar" aria-label="Fechar configuração de importação">✕</button>
+          <button class="xBtn" id="importConfigClose" type="button" title="Fechar"
+            aria-label="Fechar configuração de importação">✕</button>
         </div>
       </div>
       <div class="importConfigBody">
@@ -4058,7 +4237,8 @@
             </div>
             <div id="importHeaderMap"></div>
           </div>
-          <div class="hint">Informe o nome exato do cabeçalho da sua planilha e com qual informação ele se compatibiliza no site.</div>
+          <div class="hint">Informe o nome exato do cabeçalho da sua planilha e com qual informação ele se compatibiliza
+            no site.</div>
         </div>
 
         <div class="hint" id="importConfigHint">Selecione a aba e revise o mapeamento antes de importar.</div>
@@ -4076,15 +4256,18 @@
       <div class="modalHeader">
         <div class="modalHeaderMeta">
           <h2 id="roundingTitle">Arredondar Horários</h2>
-          <div class="when when--compact" id="roundingInfo">Escolha se os horários devem ser arredondados de 10 em 10 minutos
+          <div class="when when--compact" id="roundingInfo">Escolha se os horários devem ser arredondados de 10 em 10
+            minutos
             ou se podem ficar quebrados.</div>
         </div>
         <div class="modalActions">
-          <button class="xBtn" id="roundingClose" type="button" title="Fechar" aria-label="Fechar caixa de arredondamento">✕</button>
+          <button class="xBtn" id="roundingClose" type="button" title="Fechar"
+            aria-label="Fechar caixa de arredondamento">✕</button>
         </div>
       </div>
       <div class="roundingBody">
-        <p class="hint">Se a opção abaixo ficar desmarcada, o sistema arredonda os horários automaticamente em passos de 10
+        <p class="hint">Se a opção abaixo ficar desmarcada, o sistema arredonda os horários automaticamente em passos de
+          10
           minutos.</p>
         <label class="roundingChoice" for="roundingBrokenCheckbox">
           <input type="checkbox" id="roundingBrokenCheckbox" />
@@ -4139,7 +4322,8 @@
               placeholder="HH:MM ou 23:59" />
           </div>
         </div>
-        <div class="hint" id="timeHint">Os horários são em intervalos de 10 minutos. “23:59” representa o final do dia.</div>
+        <div class="hint" id="timeHint">Os horários são em intervalos de 10 minutos. “23:59” representa o final do dia.
+        </div>
 
         <div class="row">
           <label for="projectInput">Projeto (nº do projeto)*</label>
@@ -4307,7 +4491,7 @@
         return false;
       }
       // normaliza tipos
-      state.events = events.map(e => ({
+      const normalizedEvents = events.map(e => ({
         id: String(e.id),
         start: String(e.start),
         end: String(e.end),
@@ -4318,6 +4502,15 @@
         notes: String(e.notes ?? ""),
         artiaLaunched: Boolean(e.artiaLaunched)
       }));
+      const cleanup = dedupeEquivalentEvents(normalizedEvents);
+      state.events = cleanup.events;
+      if (cleanup.changed) {
+        try {
+          await saveEventsToDB();
+        } catch (err) {
+          console.warn("Não foi possível persistir a consolidação de eventos duplicados:", err);
+        }
+      }
       return false;
     }
 
@@ -7447,6 +7640,12 @@
     const helpBackdrop = document.getElementById("helpBackdrop");
     const helpClose = document.getElementById("helpClose");
     const helpCloseFooter = document.getElementById("helpCloseFooter");
+    const importUploadBackdrop = document.getElementById("importUploadBackdrop");
+    const importUploadClose = document.getElementById("importUploadClose");
+    const importUploadCancel = document.getElementById("importUploadCancel");
+    const importUploadChoose = document.getElementById("importUploadChoose");
+    const importDropZone = document.getElementById("importDropZone");
+    const importUploadHint = document.getElementById("importUploadHint");
     const importConfigBackdrop = document.getElementById("importConfigBackdrop");
     const importConfigClose = document.getElementById("importConfigClose");
     const importConfigCancel = document.getElementById("importConfigCancel");
@@ -7742,6 +7941,32 @@
       }
     }
 
+    function setImportUploadHint(text, isError = false) {
+      if (!importUploadHint) return;
+      importUploadHint.textContent = text || "Depois de escolher o arquivo, você revisa a aba e os cabeçalhos antes de importar.";
+      importUploadHint.classList.toggle("error", Boolean(isError));
+    }
+
+    function showImportUploadModal(show) {
+      if (!importUploadBackdrop) return;
+      if (show) {
+        setImportUploadHint("");
+        importDropZone?.classList.remove("isDragging");
+        importUploadBackdrop.classList.add("show");
+        importUploadBackdrop.setAttribute("aria-hidden", "false");
+        requestAnimationFrame(() => importUploadChoose?.focus());
+      } else {
+        importDropZone?.classList.remove("isDragging");
+        importUploadBackdrop.classList.remove("show");
+        importUploadBackdrop.setAttribute("aria-hidden", "true");
+      }
+    }
+
+    function closeImportUploadModal() {
+      showImportUploadModal(false);
+      if (fileActivitiesInput) fileActivitiesInput.value = "";
+    }
+
     function showImportConfigModal(show) {
       if (!importConfigBackdrop) return;
       if (show) {
@@ -7847,6 +8072,8 @@
       if (raw) keys.push(raw);
       const normalizedProjectCode = normKey(normalizeProjectCode(project));
       if (normalizedProjectCode && !keys.includes(normalizedProjectCode)) keys.push(normalizedProjectCode);
+      const normalizedProjectInput = normKey(normalizeImportedProjectValue(project));
+      if (normalizedProjectInput && !keys.includes(normalizedProjectInput)) keys.push(normalizedProjectInput);
       return keys;
     }
 
@@ -8080,6 +8307,148 @@
     }
     function genId() { return "ev_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16) }
 
+    function getEventMergeRange(ev) {
+      const dayIso = String(ev?.day || "").trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dayIso)) return null;
+
+      const startDate = new Date(ev?.start || "");
+      const endDate = new Date(ev?.end || "");
+      if (!Number.isFinite(startDate.getTime()) || !Number.isFinite(endDate.getTime())) return null;
+
+      const startM = clampMinutesRaw(minutesFromDayStart(startDate, dayIso));
+      const endM = clampMinutesRaw(minutesFromDayStart(endDate, dayIso));
+      if (endM <= startM) return null;
+      return { dayIso, startM, endM };
+    }
+
+    function getEventMergeKey(ev, range = getEventMergeRange(ev)) {
+      if (!range) return "";
+      const projectKey = normalizeProjectCode(ev?.project) || searchKey(ev?.project);
+      return [
+        range.dayIso,
+        range.startM,
+        range.endM,
+        projectKey,
+        searchKey(ev?.activityId),
+        searchKey(ev?.activityLabel)
+      ].join("|");
+    }
+
+    function mergeEventDetails(target, source) {
+      let changed = false;
+      const copyIfEmpty = (field) => {
+        if (String(target?.[field] || "").trim()) return;
+        const value = String(source?.[field] || "").trim();
+        if (!value) return;
+        target[field] = value;
+        changed = true;
+      };
+
+      if (!target.artiaLaunched && Boolean(source?.artiaLaunched)) {
+        target.artiaLaunched = true;
+        changed = true;
+      }
+      copyIfEmpty("project");
+      copyIfEmpty("activityId");
+      copyIfEmpty("activityLabel");
+      copyIfEmpty("notes");
+      return changed;
+    }
+
+    function dedupeEquivalentEvents(events) {
+      const out = [];
+      const keyToIndex = new Map();
+      let duplicates = 0;
+      let updated = 0;
+
+      for (const ev of Array.isArray(events) ? events : []) {
+        const range = getEventMergeRange(ev);
+        const key = getEventMergeKey(ev, range);
+
+        if (!range || !key) {
+          out.push(ev);
+          continue;
+        }
+
+        const existingIndex = keyToIndex.get(key);
+        if (existingIndex != null) {
+          duplicates++;
+          if (mergeEventDetails(out[existingIndex], ev)) updated++;
+          continue;
+        }
+
+        keyToIndex.set(key, out.length);
+        out.push(ev);
+      }
+
+      return { events: out, duplicates, updated, changed: duplicates > 0 || updated > 0 };
+    }
+
+    function eventRangesOverlap(a, b) {
+      return Boolean(a && b && a.dayIso === b.dayIso && a.startM < b.endM && a.endM > b.startM);
+    }
+
+    function mergeImportedEvents(imported, baseEvents = state.events) {
+      const cleanup = dedupeEquivalentEvents(baseEvents);
+      const events = cleanup.events;
+      const keyToIndex = new Map();
+      const rangesByDay = new Map();
+      let added = 0;
+      let duplicates = 0;
+      let overlaps = 0;
+      let invalid = 0;
+      let updated = cleanup.updated;
+
+      const register = (ev, index) => {
+        const range = getEventMergeRange(ev);
+        const key = getEventMergeKey(ev, range);
+        if (!range || !key) return;
+        if (!keyToIndex.has(key)) keyToIndex.set(key, index);
+        if (!rangesByDay.has(range.dayIso)) rangesByDay.set(range.dayIso, []);
+        rangesByDay.get(range.dayIso).push({ range, index });
+      };
+
+      events.forEach(register);
+
+      for (const ev of Array.isArray(imported) ? imported : []) {
+        const range = getEventMergeRange(ev);
+        const key = getEventMergeKey(ev, range);
+        if (!range || !key) {
+          invalid++;
+          continue;
+        }
+
+        const existingIndex = keyToIndex.get(key);
+        if (existingIndex != null) {
+          duplicates++;
+          if (mergeEventDetails(events[existingIndex], ev)) updated++;
+          continue;
+        }
+
+        const dayRanges = rangesByDay.get(range.dayIso) || [];
+        if (dayRanges.some(item => eventRangesOverlap(range, item.range))) {
+          overlaps++;
+          continue;
+        }
+
+        const index = events.length;
+        events.push(ev);
+        register(ev, index);
+        added++;
+      }
+
+      return {
+        events,
+        added,
+        duplicates,
+        overlaps,
+        invalid,
+        updated,
+        currentDuplicates: cleanup.duplicates,
+        total: Array.isArray(imported) ? imported.length : 0
+      };
+    }
+
     function lookupIdFor(project, activityName) {
       if (!state.idBaseIndex) return "";
       const projectKeys = getProjectLookupKeys(project);
@@ -8106,6 +8475,18 @@
         activityIdInputEl.value = "";
         setIdLookupStatus("warn", "ID não encontrado — campo limpo");
       }
+    }
+
+    function normalizeProjectInputField() {
+      if (!projectInputEl) return "";
+      const current = projectInputEl.value || "";
+      const normalized = normalizeImportedProjectValue(current);
+      if (normalized && normalized !== current.trim()) {
+        projectInputEl.value = normalized;
+      }
+      setEventModalProjectColor(projectInputEl.value);
+      fillActivityNames(projectInputEl.value, activityNameInputEl.value);
+      return projectInputEl.value;
     }
 
     function openCreateModalFromSelection() {
@@ -8196,7 +8577,7 @@
       state.selection = sel;
       if (durationMinutes(sel.start, sel.end) <= 0) { setModalInfo("Não é permitido evento com duração zero."); return; }
 
-      const project = (projectInputEl.value || "").trim();
+      const project = normalizeProjectInputField().trim();
       const activityLabel = (activityNameInputEl.value || "").trim();
       const activityId = (activityIdInputEl.value || "").trim();
       const artiaLaunched = !!artiaLaunchedInputEl.checked;
@@ -8255,6 +8636,14 @@
       fillActivityNames(projectInputEl.value, activityNameInputEl.value);
       clearTimeout(projectInputEl._t);
       projectInputEl._t = setTimeout(maybeAutoFillId, 120);
+    });
+    projectInputEl.addEventListener("change", () => {
+      normalizeProjectInputField();
+      maybeAutoFillId();
+    });
+    projectInputEl.addEventListener("blur", () => {
+      normalizeProjectInputField();
+      maybeAutoFillId();
     });
     activityNameInputEl.addEventListener("input", () => {
       openActivitySuggestionsMenu({ mode: "search" });
@@ -8335,6 +8724,7 @@
       const clip = getClipboardFields();
       if (!clip) { updatePasteButtonState(); return; }
       projectInputEl.value = clip.project || "";
+      normalizeProjectInputField();
       fillActivityNames(projectInputEl.value, clip.activityLabel || "");
       if (clip.activityLabel) activityNameInputEl.value = clip.activityLabel;
       activityIdInputEl.value = clip.activityId || "";
@@ -8386,6 +8776,44 @@
     if (helpClose) helpClose.addEventListener("click", () => showHelpModal(false));
     if (helpCloseFooter) helpCloseFooter.addEventListener("click", () => showHelpModal(false));
     window.addEventListener("keydown", (e) => { if (e.key === "Escape" && helpBackdrop?.classList.contains("show")) showHelpModal(false); });
+    if (importUploadBackdrop) {
+      importUploadBackdrop.addEventListener("click", (e) => {
+        if (e.target === importUploadBackdrop) closeImportUploadModal();
+      });
+    }
+    if (importUploadClose) importUploadClose.addEventListener("click", closeImportUploadModal);
+    if (importUploadCancel) importUploadCancel.addEventListener("click", closeImportUploadModal);
+    if (importUploadChoose) importUploadChoose.addEventListener("click", () => fileActivitiesInput?.click());
+    if (importDropZone) {
+      ["dragenter", "dragover"].forEach(type => {
+        importDropZone.addEventListener(type, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          importDropZone.classList.add("isDragging");
+          setImportUploadHint("Solte a planilha para continuar.");
+        });
+      });
+      ["dragleave", "dragend"].forEach(type => {
+        importDropZone.addEventListener(type, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          importDropZone.classList.remove("isDragging");
+          setImportUploadHint("");
+        });
+      });
+      importDropZone.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        importDropZone.classList.remove("isDragging");
+        const file = Array.from(e.dataTransfer?.files || []).find(isSupportedImportFile);
+        if (!file) {
+          setImportUploadHint("Solte um arquivo .xlsx ou .csv válido.", true);
+          return;
+        }
+        await prepareActivityImportFile(file);
+      });
+    }
+    window.addEventListener("keydown", (e) => { if (e.key === "Escape" && importUploadBackdrop?.classList.contains("show")) closeImportUploadModal(); });
     if (importConfigBackdrop) {
       importConfigBackdrop.addEventListener("click", (e) => {
         if (e.target === importConfigBackdrop) closeImportConfigAndReset();
@@ -8728,7 +9156,7 @@
 
     window.addEventListener("keydown", (e) => {
       if (e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (modalBackdrop.classList.contains("show") || helpBackdrop?.classList.contains("show") || importConfigBackdrop?.classList.contains("show") || roundingBackdrop?.classList.contains("show")) return;
+      if (modalBackdrop.classList.contains("show") || helpBackdrop?.classList.contains("show") || importUploadBackdrop?.classList.contains("show") || importConfigBackdrop?.classList.contains("show") || roundingBackdrop?.classList.contains("show")) return;
       if (isTypingContext(e.target)) return;
 
       const shortcut = VIEW_SHORTCUTS[String(e.key || "").toLowerCase()];
@@ -9053,7 +9481,7 @@
 
 
     /* =========================================================
-       Importar eventos (XLSX) com escolha de aba e mapeamento
+       Importar eventos (XLSX/CSV) com escolha de aba e mapeamento
        ========================================================= */
     const btnImportActivities = document.getElementById("btnImportActivities");
     const fileActivitiesInput = document.getElementById("fileActivitiesInput");
@@ -9081,6 +9509,7 @@
       fileName: "",
       zip: null,
       sharedStrings: [],
+      styleFormats: [],
       sheets: [],
       rowsCache: new Map()
     };
@@ -9094,6 +9523,7 @@
       importConfigState.fileName = "";
       importConfigState.zip = null;
       importConfigState.sharedStrings = [];
+      importConfigState.styleFormats = [];
       importConfigState.sheets = [];
       importConfigState.rowsCache = new Map();
       if (importConfigFileName) importConfigFileName.textContent = "Arquivo: -";
@@ -9130,6 +9560,17 @@
       if (!p) return "";
       if (p.startsWith("xl/")) return p;
       return "xl/" + p;
+    }
+
+    function indexToColLetters(index) {
+      let n = Number(index) + 1;
+      let out = "";
+      while (n > 0) {
+        const rem = (n - 1) % 26;
+        out = String.fromCharCode(65 + rem) + out;
+        n = Math.floor((n - 1) / 26);
+      }
+      return out;
     }
 
     function getImportSheetNameByPath(path) {
@@ -9185,7 +9626,7 @@
       if (importConfigState.rowsCache.has(sheetPath)) return importConfigState.rowsCache.get(sheetPath);
       const sheetXml = await zipReadText(importConfigState.zip, sheetPath);
       if (!sheetXml) throw new Error(`Não consegui ler o conteúdo da aba "${getImportSheetNameByPath(sheetPath) || sheetPath}".`);
-      const rows = parseSheetRowsAny(sheetXml, importConfigState.sharedStrings);
+      const rows = parseSheetRowsAny(sheetXml, importConfigState.sharedStrings, importConfigState.styleFormats);
       importConfigState.rowsCache.set(sheetPath, rows);
       return rows;
     }
@@ -9391,74 +9832,233 @@
         }
 
         const replaceAll = (importModeSelect?.value || "merge") === "replace";
+        let importSummary;
         if (replaceAll) {
-          state.events = imported;
+          importSummary = mergeImportedEvents(imported, []);
+          state.events = importSummary.events;
         } else {
-          const sig = (e) => `${e.day}|${e.start}|${e.end}|${e.project}|${e.activityId}|${e.artiaLaunched ? 1 : 0}|${e.notes}`;
-          const existing = new Set(state.events.map(sig));
-          for (const ev of imported) {
-            const s = sig(ev);
-            if (!existing.has(s)) {
-              existing.add(s);
-              state.events.push(ev);
-            }
-          }
+          importSummary = mergeImportedEvents(imported, state.events);
+          state.events = importSummary.events;
         }
 
-        saveEvents();
+        await saveEvents();
         renderAll();
         const sheetName = getImportSheetNameByPath(sheetPath) || sheetPath;
         closeImportConfigAndReset();
-        alert(`Importação concluída.\n\nAba importada: ${sheetName}\nEventos importados: ${imported.length}`);
+        const summaryLines = [
+          `Aba importada: ${sheetName}`,
+          `Linhas válidas lidas: ${importSummary.total}`,
+          replaceAll ? `Eventos salvos: ${state.events.length}` : `Novos eventos adicionados: ${importSummary.added}`
+        ];
+        if (importSummary.duplicates) summaryLines.push(`Duplicatas ignoradas: ${importSummary.duplicates}`);
+        if (importSummary.overlaps) summaryLines.push(`Sobreposições ignoradas: ${importSummary.overlaps}`);
+        if (importSummary.currentDuplicates) summaryLines.push(`Duplicatas atuais consolidadas: ${importSummary.currentDuplicates}`);
+        if (importSummary.updated) summaryLines.push(`Eventos existentes atualizados: ${importSummary.updated}`);
+        if (importSummary.invalid) summaryLines.push(`Linhas inválidas ignoradas: ${importSummary.invalid}`);
+        alert(`Importação concluída.\n\n${summaryLines.join("\n")}`);
       } catch (err) {
         console.error(err);
         alert("Falha ao importar apontamentos.\n\nErro: " + (err?.message || err));
       }
     }
 
-    if (btnImportActivities && fileActivitiesInput) {
-      btnImportActivities.addEventListener("click", () => fileActivitiesInput.click());
+    function getImportFileKind(file) {
+      const name = String(file?.name || "").trim().toLowerCase();
+      if (!file) return "";
+      if (name.endsWith(".xlsx")) return "xlsx";
+      if (name.endsWith(".csv")) return "csv";
+      if (String(file.type || "").toLowerCase().includes("csv")) return "csv";
+      return "";
+    }
 
-      fileActivitiesInput.addEventListener("change", async () => {
-        const file = fileActivitiesInput.files && fileActivitiesInput.files[0];
-        if (!file) return;
+    function isSupportedImportFile(file) {
+      return Boolean(getImportFileKind(file));
+    }
 
-        try {
-          const buf = await file.arrayBuffer();
+    function decodeDelimitedText(buffer) {
+      const bytes = new Uint8Array(buffer || new ArrayBuffer(0));
+      if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+        return new TextDecoder("utf-8").decode(bytes.subarray(3));
+      }
+      if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
+        return new TextDecoder("utf-16le").decode(bytes.subarray(2));
+      }
+      if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+        return new TextDecoder("utf-16be").decode(bytes.subarray(2));
+      }
+
+      const utf8 = new TextDecoder("utf-8").decode(bytes);
+      if (!utf8.includes("\uFFFD")) return utf8;
+      try {
+        return new TextDecoder("windows-1252").decode(bytes);
+      } catch {
+        return utf8;
+      }
+    }
+
+    function countDelimiterOutsideQuotes(line, delimiter) {
+      let count = 0;
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (!inQuotes && ch === delimiter) {
+          count++;
+        }
+      }
+      return count;
+    }
+
+    function detectCsvDelimiter(text) {
+      const sampleLines = String(text || "")
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(Boolean)
+        .slice(0, 20);
+      const candidates = [";", ",", "\t"];
+      let best = ";";
+      let bestScore = -1;
+      for (const delimiter of candidates) {
+        const score = sampleLines.reduce((sum, line) => sum + countDelimiterOutsideQuotes(line, delimiter), 0);
+        if (score > bestScore) {
+          best = delimiter;
+          bestScore = score;
+        }
+      }
+      return bestScore > 0 ? best : ";";
+    }
+
+    function parseDelimitedRows(text, delimiter = ";") {
+      const rows = [];
+      let row = [];
+      let cell = "";
+      let inQuotes = false;
+      const src = String(text || "").replace(/^\uFEFF/, "");
+
+      for (let i = 0; i < src.length; i++) {
+        const ch = src[i];
+        if (ch === '"') {
+          if (inQuotes && src[i + 1] === '"') {
+            cell += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+          continue;
+        }
+
+        if (!inQuotes && ch === delimiter) {
+          row.push(cell);
+          cell = "";
+          continue;
+        }
+
+        if (!inQuotes && (ch === "\n" || ch === "\r")) {
+          if (ch === "\r" && src[i + 1] === "\n") i++;
+          row.push(cell);
+          if (row.some(value => String(value || "").trim())) rows.push(row);
+          row = [];
+          cell = "";
+          continue;
+        }
+
+        cell += ch;
+      }
+
+      row.push(cell);
+      if (row.some(value => String(value || "").trim())) rows.push(row);
+      return rows;
+    }
+
+    function csvRowsToImportRows(rows) {
+      return (Array.isArray(rows) ? rows : []).map(row => {
+        const obj = {};
+        for (let i = 0; i < row.length; i++) {
+          obj[indexToColLetters(i)] = String(row[i] ?? "").trim();
+        }
+        return obj;
+      }).filter(obj => Object.values(obj).some(value => String(value || "").trim()));
+    }
+
+    function parseCsvImportRows(text) {
+      const delimiter = detectCsvDelimiter(text);
+      return csvRowsToImportRows(parseDelimitedRows(text, delimiter));
+    }
+
+    async function prepareActivityImportFile(file) {
+      if (!file) return;
+      const fileKind = getImportFileKind(file);
+      if (!fileKind) {
+        setImportUploadHint("Selecione um arquivo .xlsx ou .csv válido.", true);
+        return;
+      }
+
+      try {
+        setImportUploadHint(`Lendo ${file.name || "planilha"}...`);
+        const buf = await file.arrayBuffer();
+
+        resetImportConfigState();
+        importConfigState.fileName = file.name || "";
+
+        if (fileKind === "csv") {
+          const rows = parseCsvImportRows(decodeDelimitedText(buf));
+          if (!rows.length) throw new Error("Não encontrei linhas válidas dentro do CSV.");
+          const csvSheet = { name: "CSV", path: "__csv__" };
+          importConfigState.sheets = [csvSheet];
+          importConfigState.rowsCache.set(csvSheet.path, rows);
+        } else {
           const zip = await readZipEntries(buf);
           const sharedXml = await zipReadText(zip, "xl/sharedStrings.xml");
           const shared = sharedXml ? parseSharedStrings(sharedXml) : [];
+          const stylesXml = await zipReadText(zip, "xl/styles.xml");
+          const styleFormats = stylesXml ? parseWorkbookStyles(stylesXml) : [];
           const sheets = await listWorkbookSheets(zip);
 
           if (!sheets.length) throw new Error("Não encontrei abas válidas dentro do XLSX.");
 
-          resetImportConfigState();
-          importConfigState.fileName = file.name || "";
           importConfigState.zip = zip;
           importConfigState.sharedStrings = shared;
+          importConfigState.styleFormats = styleFormats;
           importConfigState.sheets = sheets;
-
-          if (importConfigFileName) importConfigFileName.textContent = `Arquivo: ${file.name || "-"}`;
-          if (importModeSelect) importModeSelect.value = "merge";
-          if (importSheetSelect) {
-            importSheetSelect.innerHTML = "";
-            for (const sheet of sheets) {
-              const opt = document.createElement("option");
-              opt.value = sheet.path;
-              opt.textContent = sheet.name;
-              importSheetSelect.appendChild(opt);
-            }
-          }
-
-          const preferred = sheets.find(s => normKey(s.name) === "atividades") || sheets[0];
-          if (importSheetSelect) importSheetSelect.value = preferred.path;
-          await refreshImportConfigForSelectedSheet({ preserveHeaderRow: false });
-          showImportConfigModal(true);
-        } catch (err) {
-          console.error(err);
-          alert("Falha ao preparar importação XLSX.\n\nErro: " + (err?.message || err));
-          closeImportConfigAndReset();
         }
+
+        if (importConfigFileName) importConfigFileName.textContent = `Arquivo: ${file.name || "-"}`;
+        if (importModeSelect) importModeSelect.value = "merge";
+        if (importSheetSelect) {
+          importSheetSelect.innerHTML = "";
+          for (const sheet of importConfigState.sheets) {
+            const opt = document.createElement("option");
+            opt.value = sheet.path;
+            opt.textContent = sheet.name;
+            importSheetSelect.appendChild(opt);
+          }
+        }
+
+        const preferred = importConfigState.sheets.find(s => normKey(s.name) === "atividades") || importConfigState.sheets[0];
+        if (importSheetSelect) importSheetSelect.value = preferred.path;
+        await refreshImportConfigForSelectedSheet({ preserveHeaderRow: false });
+        showImportUploadModal(false);
+        showImportConfigModal(true);
+      } catch (err) {
+        console.error(err);
+        setImportUploadHint("Falha ao preparar importação.", true);
+        alert("Falha ao preparar importação.\n\nErro: " + (err?.message || err));
+        closeImportConfigAndReset();
+        showImportUploadModal(true);
+      }
+    }
+
+    if (btnImportActivities && fileActivitiesInput) {
+      btnImportActivities.addEventListener("click", () => showImportUploadModal(true));
+
+      fileActivitiesInput.addEventListener("change", async () => {
+        const file = fileActivitiesInput.files && fileActivitiesInput.files[0];
+        await prepareActivityImportFile(file);
       });
     }
 
@@ -9576,7 +10176,74 @@
       return "";
     }
 
-    function parseSheetRowsAny(sheetXml, sharedStrings) {
+    function parseWorkbookStyles(stylesXml) {
+      if (!stylesXml) return [];
+      const doc = new DOMParser().parseFromString(stylesXml, "application/xml");
+      const numFmtById = new Map();
+      const numFmtNodes = Array.from(doc.getElementsByTagName("numFmt"));
+      for (const node of numFmtNodes) {
+        const id = String(node.getAttribute("numFmtId") || "").trim();
+        const code = String(node.getAttribute("formatCode") || "").trim();
+        if (id && code) numFmtById.set(id, code);
+      }
+
+      const cellXfs = doc.getElementsByTagName("cellXfs")[0];
+      const xfNodes = cellXfs ? Array.from(cellXfs.getElementsByTagName("xf")) : [];
+      return xfNodes.map(xf => {
+        const numFmtId = String(xf.getAttribute("numFmtId") || "0").trim();
+        return numFmtById.get(numFmtId) || "";
+      });
+    }
+
+    function getZeroPadWidthFromFormatCode(formatCode) {
+      let section = String(formatCode || "").split(";")[0] || "";
+      section = section
+        .replace(/"[^"]*"/g, "")
+        .replace(/\[[^\]]+\]/g, "")
+        .replace(/\\./g, "")
+        .replace(/_.?/g, "")
+        .replace(/\*.?/g, "")
+        .replace(/\s+/g, "");
+      return /^0+$/.test(section) ? section.length : 0;
+    }
+
+    function applyZeroPadFormat(value, styleIndex, styleFormats = []) {
+      const raw = String(value ?? "").trim();
+      if (!raw) return raw;
+      const fmt = styleFormats[Number(styleIndex)];
+      const width = getZeroPadWidthFromFormatCode(fmt);
+      if (!width) return raw;
+
+      const normalized = raw.replace(",", ".");
+      if (!/^-?\d+(?:\.0+)?$/.test(normalized)) return raw;
+      const n = Number(normalized);
+      if (!Number.isInteger(n)) return raw;
+      const sign = n < 0 ? "-" : "";
+      return sign + String(Math.abs(n)).padStart(width, "0");
+    }
+
+    function normalizeImportedProjectValue(value) {
+      const raw = String(value ?? "").trim().replace(/\u00A0/g, " ");
+      if (!raw) return "";
+      const compact = raw.replace(/\s+/g, "");
+      const numericLike = compact.replace(",", ".");
+      if (/^\d+(?:\.0+)?$/.test(numericLike)) {
+        const n = Number(numericLike);
+        if (Number.isInteger(n) && n >= 0 && n <= 9999) {
+          return String(n).padStart(4, "0");
+        }
+      }
+
+      const projectCode = normalizeProjectCode(raw);
+      if (/^\d{1,4}$/.test(projectCode)) return projectCode.padStart(4, "0");
+      if (projectCode) return projectCode;
+
+      const shortNumeric = raw.match(/^(?:projeto\s+)?(\d{1,4})(?![.,]\d)(?:\s*[-–—:]\s*|$)/i);
+      if (shortNumeric) return shortNumeric[1].padStart(4, "0");
+      return raw;
+    }
+
+    function parseSheetRowsAny(sheetXml, sharedStrings, styleFormats = []) {
       const doc = new DOMParser().parseFromString(sheetXml, "application/xml");
       const rows = doc.getElementsByTagName("row");
       const out = [];
@@ -9600,7 +10267,7 @@
             value = s;
           } else {
             const v = c.getElementsByTagName("v")[0]?.textContent ?? "";
-            value = v;
+            value = applyZeroPadFormat(v, c.getAttribute("s"), styleFormats);
           }
 
           obj[col] = String(value ?? "").trim();
@@ -9683,7 +10350,7 @@
           end = new Date(start.getTime() + CONFIG.stepMinutes * 60 * 1000);
         }
         let activityId = String(rawId || "").trim();
-        const project = String(rawProj || "").trim();
+        const project = normalizeImportedProjectValue(rawProj);
         const activityLabel = String(rawAtv || "").trim();
 
         if (!activityId && state.idBaseIndex && project) {
@@ -9922,6 +10589,103 @@
         });
         await saveEvents();
 
+        const savedEventsForMergeTest = state.events.map(ev => ({ ...ev }));
+        const mergeDay = "2026-11-03";
+        const mergeDayDate = parseISOToLocalDate(mergeDay);
+        const makeMergeEvent = (id, startM, endM, overrides = {}) => {
+          const start = setTimeOnDate(mergeDayDate, Math.floor(startM / 60), startM % 60);
+          const end = setTimeOnDate(mergeDayDate, Math.floor(endM / 60), endM % 60);
+          return {
+            id,
+            start: start.toISOString(),
+            end: end.toISOString(),
+            day: mergeDay,
+            project: "1341",
+            activityId: "31415231",
+            activityLabel: "5.2 - Capítulo de Custos",
+            artiaLaunched: false,
+            notes: "[Escritorio] Elaboração do estudo de responsabilidade",
+            ...overrides
+          };
+        };
+        const mergeSummary = mergeImportedEvents(
+          [
+            makeMergeEvent("incoming_duplicate", 1050, 1160, { artiaLaunched: true }),
+            makeMergeEvent("incoming_overlap", 1060, 1120, { activityId: "OUTRA", activityLabel: "Outra atividade" }),
+            makeMergeEvent("incoming_new", 850, 1020)
+          ],
+          [makeMergeEvent("existing_duplicate", 1050, 1160)]
+        );
+        assert(mergeSummary.events.length === 2, "Merge de importação não manteve apenas um duplicado e um novo evento.");
+        assert(mergeSummary.added === 1, "Merge de importação não adicionou o evento novo esperado.");
+        assert(mergeSummary.duplicates === 1, "Merge de importação não ignorou duplicata equivalente.");
+        assert(mergeSummary.overlaps === 1, "Merge de importação não bloqueou sobreposição de horário.");
+        assert(mergeSummary.events[0].artiaLaunched === true, "Merge de importação não preservou Lançamento Artia marcado na duplicata.");
+        notes.push("import-merge-ok");
+        state.events = savedEventsForMergeTest;
+        await saveEvents();
+
+        showImportUploadModal(true);
+        await waitForSelfTest(40);
+        assert(importUploadBackdrop?.classList.contains("show"), "Popup de upload XLSX não abriu.");
+        assert(Boolean(importDropZone), "Área de arrastar e soltar XLSX não foi renderizada.");
+        closeImportUploadModal();
+        await waitForSelfTest(40);
+        assert(!importUploadBackdrop?.classList.contains("show"), "Popup de upload XLSX não fechou.");
+        notes.push("import-upload-ok");
+
+        const projectStyleXml = `<?xml version="1.0" encoding="UTF-8"?>
+          <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+            <numFmts count="1"><numFmt numFmtId="164" formatCode="0000"/></numFmts>
+            <cellXfs count="2">
+              <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
+              <xf numFmtId="164" fontId="0" fillId="0" borderId="0" applyNumberFormat="1"/>
+            </cellXfs>
+          </styleSheet>`;
+        const projectSheetXml = `<?xml version="1.0" encoding="UTF-8"?>
+          <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+            <sheetData>
+              <row r="1"><c r="A1" t="inlineStr"><is><t>Projeto</t></is></c></row>
+              <row r="2"><c r="A2" s="1"><v>0</v></c></row>
+              <row r="3"><c r="A3"><v>920</v></c></row>
+              <row r="4"><c r="A4"><v>21.1</v></c></row>
+            </sheetData>
+          </worksheet>`;
+        const projectStyles = parseWorkbookStyles(projectStyleXml);
+        const projectRows = parseSheetRowsAny(projectSheetXml, [], projectStyles);
+        assert(projectRows[1]?.A === "0000", "Importação XLSX não preservou formato visual 0000.");
+        assert(normalizeImportedProjectValue(projectRows[2]?.A) === "0920", "Importação XLSX não completou projeto 920 como 0920.");
+        assert(normalizeImportedProjectValue(projectRows[3]?.A) === "21.1", "Importação XLSX alterou projeto decimal 21.1.");
+        projectInputEl.value = "922";
+        normalizeProjectInputField();
+        assert(projectInputEl.value === "0922", "Campo Projeto não normalizou 922 como 0922.");
+        projectInputEl.value = "0";
+        normalizeProjectInputField();
+        assert(projectInputEl.value === "0000", "Campo Projeto não normalizou 0 como 0000.");
+        projectInputEl.value = "21.1";
+        normalizeProjectInputField();
+        assert(projectInputEl.value === "21.1", "Campo Projeto alterou projeto decimal 21.1.");
+        projectInputEl.value = "Projeto 922";
+        normalizeProjectInputField();
+        assert(projectInputEl.value === "0922", "Campo Projeto não normalizou 'Projeto 922' como 0922.");
+        notes.push("project-normalize-ok");
+
+        const csvRows = parseCsvImportRows([
+          "Data;Projeto;Hora Início;Hora de Término;Atividade;Observação;Lançamento Artia;ID",
+          "30/01/2026;920;10:00;11:30;4.2 - Estudo de Cronograma;\"texto; com ponto e vírgula\";Sim;123",
+          "30/01/2026;21.1;11:30;12:00;5.2 - Capítulo de Custos;Ok;Não;"
+        ].join("\n"));
+        const csvHeaderMap = findHeaderMapping(csvRows);
+        assert(csvHeaderMap.headerRowIndex === 0, "Importação CSV não detectou cabeçalho.");
+        const csvImported = buildEventsFromRows(csvRows, csvHeaderMap.headerRowIndex, csvHeaderMap.colMap);
+        assert(csvImported.length === 2, "Importação CSV não gerou eventos válidos.");
+        assert(csvImported[0].project === "0920", "Importação CSV não normalizou projeto 920 como 0920.");
+        assert(csvImported[0].notes === "texto; com ponto e vírgula", "Importação CSV não preservou campo com aspas e delimitador.");
+        assert(csvImported[1].project === "21.1", "Importação CSV alterou projeto 21.1.");
+        const csvCommaRows = parseCsvImportRows("Data,Projeto,Hora Início,Hora de Término\n30/01/2026,0,14:00,15:00");
+        assert(csvCommaRows[1]?.B === "0", "Importação CSV com vírgula não separou colunas.");
+        notes.push("csv-import-ok");
+
         const topbarEl = document.querySelector("header.topbar");
         syncHeaderHeight();
         const initialHeaderHeight = Math.ceil(topbarEl.getBoundingClientRect().height);
@@ -9987,6 +10751,7 @@
         assert(fallbackTarget.mode === "file", "O fluxo de backup não fez fallback para seleção direta do arquivo ao falhar na pasta.");
         notes.push(`fallback-mode:${fallbackTarget.mode}`);
 
+        setTableDateRange("2026-02-23", "2026-02-24", false);
         state.view = "table";
         renderAll();
         await waitForSelfTest(80);
