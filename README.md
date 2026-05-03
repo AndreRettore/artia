@@ -72,6 +72,242 @@ Fluxo resumido:
   - evento (criar/editar) (`#modalBackdrop`)
   - importação XLSX/CSV (`#importConfigBackdrop`)
 
+### 4.3 Guia didático do `index.html`
+
+O `index.html` é grande porque ele concentra, no mesmo arquivo, três coisas que em projetos maiores normalmente ficam separadas:
+
+- **HTML**: a estrutura visual da tela, botões, tabelas, modais e campos
+- **CSS**: as cores, tamanhos, espaçamentos, responsividade e aparência
+- **JavaScript**: as regras do sistema, cliques, salvamento, importação, exportação e renderização das visões
+
+As linhas abaixo são aproximadas. Se alguém adicionar ou remover conteúdo antes de uma seção, os números mudam, mas a ordem geral continua a mesma.
+
+```text
+index.html
+|-- <head>                                      # linhas 1-32
+|   |-- título, metadados, favicon e descrição do site
+|
+|-- <style>                                     # linhas 33-3564
+|   |-- :root                                  # variáveis de tema, cores e tamanhos
+|   |-- tema claro                             # ajustes quando <html class="light">
+|   |-- topbar/header                          # barra superior, botões e menus
+|   |-- calendário                             # grade semanal, horários, eventos e seleção
+|   |-- tabela                                 # layout da visão Tabela
+|   |-- gantt                                  # layout da visão Gantt
+|   |-- gráficos                               # cards e área dos canvas Chart.js
+|   |-- diretório                              # consulta da base de IDs
+|   |-- modais                                 # ajuda, evento, importação e arredondamento
+|   |-- responsivo                             # ajustes para telas menores
+|
+|-- <body>                                      # a partir da linha 3565
+|   |-- script Firebase/presença online        # linhas 3566-3696
+|   |   |-- conecta no Firebase
+|   |   |-- registra sessão online
+|   |   |-- atualiza o contador "online"
+|   |
+|   |-- <header class="topbar">                # linhas 3698-3874
+|   |   |-- logo/nome "Exxata Apontamentos"
+|   |   |-- campo de e-mail para exportação CSV
+|   |   |-- menu Exportar CSV
+|   |   |-- botão de tema claro/escuro
+|   |   |-- menu de configurações
+|   |   |-- botões de visão: Calendário, Tabela, Gantt, Gráficos, Diretório
+|   |   |-- botões de backup, sincronização e importação
+|   |   |-- navegação de semana: anterior, hoje, próxima
+|   |   |-- status da base de IDs e último salvamento
+|   |
+|   |-- badge de usuários online               # linhas 3876-3878
+|   |
+|   |-- <main class="app appMain">             # linhas 3880-4008
+|   |   |-- #calendarView                       # grade semanal principal
+|   |   |-- #directoryView                      # diretório de IDs Artia
+|   |   |-- #tableView                          # tabela de apontamentos
+|   |   |-- #ganttView                          # resumo semanal por projeto
+|   |   |-- #chartsView                         # gráficos por período/projeto
+|   |
+|   |-- modais HTML                            # linhas 4010-4403
+|   |   |-- #helpBackdrop                       # modal "Como usar o site"
+|   |   |-- #importUploadBackdrop               # primeira tela da importação
+|   |   |-- #importConfigBackdrop               # escolha de aba/cabeçalhos da planilha
+|   |   |-- #roundingBackdrop                   # configuração de horários quebrados
+|   |   |-- #modalBackdrop                      # modal de criar/editar apontamento
+|   |
+|   |-- Chart.js via CDN                        # linha 4406
+|   |
+|   |-- <script> principal                      # linhas 4407-10962
+|       |-- constantes e configurações gerais
+|       |-- IndexedDB e backup XLSX
+|       |-- funções de data, horário e texto
+|       |-- estado principal (`state`)
+|       |-- renderização do calendário
+|       |-- renderização da Tabela, Gantt, Gráficos e Diretório
+|       |-- seleção por arraste na grade
+|       |-- modal de evento
+|       |-- exportação CSV
+|       |-- navegação entre visões e semanas
+|       |-- importação da base de IDs Artia
+|       |-- importação de apontamentos XLSX/CSV
+|       |-- autoteste (`?selftest=1`)
+|       |-- inicialização (`init()`)
+```
+
+#### 4.3.1 Como ler o arquivo sem se perder
+
+Uma forma simples de entender o arquivo é seguir esta ordem:
+
+1. **Comece pelo HTML visível**, nas linhas do `<header>`, `<main>` e dos modais.
+   Ali ficam os elementos que aparecem na tela. Procure por `id="..."`, porque esses IDs são usados depois pelo JavaScript.
+
+2. **Depois veja o `state`**, perto da linha 5365.
+   Ele é a "memória atual" do sistema: semana aberta, eventos, visão ativa, evento em edição e base de IDs carregada.
+
+3. **Depois leia o `renderAll()`**, perto da linha 7451.
+   Essa função decide qual visão aparece na tela e chama as funções de desenho corretas.
+
+4. **Por fim, leia os eventos de clique**, principalmente a partir da linha 8628 e depois da linha 9085.
+   Esses trechos conectam botões e campos da tela com as funções do sistema.
+
+#### 4.3.2 Mapa do JavaScript principal
+
+```text
+<script> principal
+|-- Configurações e URLs da API                 # linhas 4408-4435
+|   |-- chaves de localStorage
+|   |-- URL da API Vercel de IDs Artia
+|   |-- arquivos candidatos para base local
+|
+|-- IndexedDB + Backup XLSX                     # linhas 4436-5117
+|   |-- openDB(), kvGet(), kvSet()
+|   |-- loadEventsFromDB(), saveEventsToDB()
+|   |-- geração de XLSX sem biblioteca externa
+|   |-- seleção do destino de backup
+|
+|-- Utilitários gerais                          # linhas 5118-5299
+|   |-- datas, horários e durações
+|   |-- formatação pt-BR
+|   |-- limpeza de texto e escape de HTML
+|   |-- normalização de código de projeto
+|   |-- montagem do índice de IDs Artia
+|
+|-- Dados iniciais e estado                     # linhas 5301-5476
+|   |-- ACTIVITY_NAMES
+|   |-- EXAMPLE_EVENTS
+|   |-- state
+|   |-- salvar/carregar eventos
+|   |-- carregar/salvar base de IDs
+|
+|-- Elementos da tela                           # linhas 5471-5546
+|   |-- document.getElementById(...)
+|   |-- guarda referências para botões, filtros e views
+|
+|-- Calendário                                  # linhas 5548-6343
+|   |-- renderHeader()
+|   |-- renderGrid()
+|   |-- renderEvents()
+|   |-- linha do horário atual
+|   |-- mover/redimensionar eventos
+|
+|-- Tabela                                      # linhas 6344-6509
+|   |-- renderTable()
+|   |-- filtros por período, projeto, atividade e lançamento
+|   |-- ordenação por coluna
+|
+|-- Gantt                                       # linhas 6510-6718
+|   |-- renderGantt()
+|   |-- soma horas por projeto e por dia da semana
+|
+|-- Gráficos                                    # linhas 6719-7310
+|   |-- Chart.js
+|   |-- filtros por período/projeto
+|   |-- horas por projeto e horas ao longo do tempo
+|
+|-- Diretório de IDs                            # linhas 7318-7450
+|   |-- renderDirectory()
+|   |-- lista projetos e atividades da base Artia
+|
+|-- Renderização geral                          # linhas 7451-7536
+|   |-- renderAll()
+|   |-- mostra/esconde views conforme state.view
+|
+|-- Arraste em área vazia                       # linhas 7537-7639
+|   |-- cria seleção no calendário
+|   |-- abre modal de novo apontamento
+|
+|-- Modais e apontamentos                       # linhas 7640-8843
+|   |-- abrir/fechar modal
+|   |-- preencher campos
+|   |-- buscar ID automaticamente
+|   |-- salvar, editar e apagar evento
+|   |-- ditado de observação
+|
+|-- Exportação CSV e navegação                  # linhas 8844-9250
+|   |-- exportar tudo
+|   |-- exportar tabela filtrada
+|   |-- trocar semana
+|   |-- trocar visão
+|   |-- alternar tema
+|
+|-- Base de IDs Artia                           # linhas 9262-9482
+|   |-- importar XLSX da base
+|   |-- sincronizar IDs via API
+|   |-- salvar índice local
+|
+|-- Importar apontamentos XLSX/CSV              # linhas 9483-10552
+|   |-- ler planilha
+|   |-- escolher aba
+|   |-- mapear cabeçalhos
+|   |-- transformar linhas em eventos
+|   |-- mesclar ou substituir eventos existentes
+|
+|-- Autoteste                                   # linhas 10553-10838
+|   |-- roda quando a URL tem ?selftest=1
+|   |-- valida renderização e regras principais
+|
+|-- Inicialização                               # linhas 10839-10875
+|   |-- init()
+|   |-- monta horários
+|   |-- carrega eventos salvos
+|   |-- registra handlers
+|   |-- renderiza a tela
+|   |-- sincroniza base de IDs em segundo plano
+|
+|-- Local de trabalho no modal                  # linhas 10894-10962
+|   |-- botões Escritorio, Casa e Cliente
+|   |-- prefixo automático na observação
+```
+
+#### 4.3.3 Onde mexer para tarefas comuns
+
+- **Mudar texto de um botão ou label**: procure o texto no HTML, normalmente entre as linhas 3698 e 4403.
+- **Mudar cor, tamanho ou espaçamento**: procure a classe no `<style>`, entre as linhas 33 e 3564.
+- **Mudar o comportamento de um botão**: procure o `id` do botão e depois procure `addEventListener` com esse mesmo ID.
+- **Mudar campos do modal de apontamento**: comece em `#modalBackdrop` no HTML e depois veja as funções perto de `openCreateModalFromSelection()`, `openEditModal()` e `onSave()`.
+- **Mudar regras de horário**: veja `CONFIG`, `parseTypedTimeToMinutes()`, `formatTimeFromMinutes()` e as funções de sobreposição.
+- **Mudar filtros da Tabela**: veja `renderTable()`, `getFilteredTableEvents()` e `ensureTableFilterOptions()`.
+- **Mudar gráficos**: veja `computeChartData()` e `updateCharts()`.
+- **Mudar importação de planilhas**: veja `IMPORT_FIELD_DEFS`, `findHeaderMapping()`, `buildEventsFromRows()` e `prepareActivityImportFile()`.
+- **Mudar salvamento local**: veja `openDB()`, `loadEventsFromDB()` e `saveEventsToDB()`.
+- **Mudar o que acontece ao abrir o site**: veja `init()`.
+
+#### 4.3.4 Palavras-chave úteis para buscar
+
+Use `Ctrl + F` no editor ou `rg` no terminal:
+
+```bash
+rg -n "function renderAll|async function init|let state|btnViewCalendar|modalBackdrop|renderTable|renderGantt|updateCharts" index.html
+```
+
+Atalho mental:
+
+- `render...` geralmente desenha algo na tela
+- `open...` geralmente abre modal ou arquivo
+- `close...` geralmente fecha modal
+- `load...` geralmente carrega dados
+- `save...` geralmente salva dados
+- `parse...` geralmente transforma texto/planilha em dados
+- `build...` geralmente monta uma estrutura nova
+- `ensure...` geralmente garante que algo exista ou esteja atualizado
+
 ## 5. Modelo de dados
 
 ### 5.1 Estado principal em memória
