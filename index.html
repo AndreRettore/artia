@@ -10226,9 +10226,8 @@
       const raw = String(value ?? "").trim().replace(/\u00A0/g, " ");
       if (!raw) return "";
       const compact = raw.replace(/\s+/g, "");
-      const numericLike = compact.replace(",", ".");
-      if (/^\d+(?:\.0+)?$/.test(numericLike)) {
-        const n = Number(numericLike);
+      if (/^\d+$/.test(compact)) {
+        const n = Number(compact);
         if (Number.isInteger(n) && n >= 0 && n <= 9999) {
           return String(n).padStart(4, "0");
         }
@@ -10649,6 +10648,7 @@
               <row r="2"><c r="A2" s="1"><v>0</v></c></row>
               <row r="3"><c r="A3"><v>920</v></c></row>
               <row r="4"><c r="A4"><v>21.1</v></c></row>
+              <row r="5"><c r="A5"><v>21.0</v></c></row>
             </sheetData>
           </worksheet>`;
         const projectStyles = parseWorkbookStyles(projectStyleXml);
@@ -10656,6 +10656,7 @@
         assert(projectRows[1]?.A === "0000", "Importação XLSX não preservou formato visual 0000.");
         assert(normalizeImportedProjectValue(projectRows[2]?.A) === "0920", "Importação XLSX não completou projeto 920 como 0920.");
         assert(normalizeImportedProjectValue(projectRows[3]?.A) === "21.1", "Importação XLSX alterou projeto decimal 21.1.");
+        assert(normalizeImportedProjectValue(projectRows[4]?.A) === "21.0", "Importacao XLSX alterou projeto decimal 21.0.");
         projectInputEl.value = "922";
         normalizeProjectInputField();
         assert(projectInputEl.value === "0922", "Campo Projeto não normalizou 922 como 0922.");
@@ -10665,6 +10666,9 @@
         projectInputEl.value = "21.1";
         normalizeProjectInputField();
         assert(projectInputEl.value === "21.1", "Campo Projeto alterou projeto decimal 21.1.");
+        projectInputEl.value = "21.0";
+        normalizeProjectInputField();
+        assert(projectInputEl.value === "21.0", "Campo Projeto alterou projeto decimal 21.0.");
         projectInputEl.value = "Projeto 922";
         normalizeProjectInputField();
         assert(projectInputEl.value === "0922", "Campo Projeto não normalizou 'Projeto 922' como 0922.");
