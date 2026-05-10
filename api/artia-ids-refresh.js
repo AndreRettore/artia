@@ -84,7 +84,7 @@ module.exports = async function handler(req, res) {
     return res.status(403).json({ error: "Origem nao permitida para este endpoint." });
   }
 
-  if (!isAuthorized(req)) {
+  if (req.method !== "POST" && !isAuthorized(req)) {
     return res.status(401).json({ error: "Refresh nao autorizado." });
   }
 

@@ -9535,6 +9535,69 @@
       }
     }
 
+    function getArtiaRefreshUrl() {
+      if (!ARTIA_PROXY_URL) return "";
+      const isAbsolute = /^[a-z][a-z0-9+.-]*:\/\//i.test(ARTIA_PROXY_URL);
+
+      try {
+        const url = new URL(ARTIA_PROXY_URL, window.location.origin);
+        const nextPath = url.pathname.replace(/\/api\/artia-ids\/?$/, "/api/artia-ids-refresh");
+        if (nextPath === url.pathname && !url.pathname.endsWith("/api/artia-ids-refresh")) return "";
+        url.pathname = nextPath;
+        return isAbsolute ? url.href : `${url.pathname}${url.search}${url.hash}`;
+      } catch {
+        const replaced = ARTIA_PROXY_URL.replace(/\/api\/artia-ids(\/?)([?#]|$)/, "/api/artia-ids-refresh$2");
+        return replaced === ARTIA_PROXY_URL ? "" : replaced;
+      }
+    }
+
+    async function forceRefreshArtiaIdBaseFromApi() {
+      const refreshUrl = getArtiaRefreshUrl();
+      if (!refreshUrl) {
+        throw new Error("Não consegui montar a URL de refresh da base de IDs.");
+      }
+
+      if (baseStatusTextEl) baseStatusTextEl.textContent = "Base IDs: atualizando no Artia...";
+
+      const separator = refreshUrl.includes("?") ? "&" : "?";
+      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timeoutId = controller
+        ? setTimeout(() => controller.abort(new Error("Tempo limite ao atualizar IDs no Artia.")), ARTIA_API_FETCH_TIMEOUT_MS)
+        : null;
+
+      try {
+        const response = await fetch(`${refreshUrl}${separator}ts=${Date.now()}`, {
+          method: "POST",
+          cache: "no-store",
+          signal: controller?.signal
+        });
+        const rawText = await response.text();
+        let payload = null;
+
+        if (rawText) {
+          try {
+            payload = JSON.parse(rawText);
+          } catch {
+            if (!response.ok) throw new Error(rawText);
+            throw new Error("A API de refresh não respondeu em JSON.");
+          }
+        }
+
+        if (!response.ok) {
+          throw new Error(payload?.error || payload?.message || `Falha HTTP ${response.status}`);
+        }
+
+        return payload || {};
+      } catch (error) {
+        if (error?.name === "AbortError") {
+          throw new Error("Tempo limite ao atualizar IDs no Artia.");
+        }
+        throw error;
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+      }
+    }
+
     async function refreshArtiaIdBaseInBackground({ force = false } = {}) {
       if (!ARTIA_PROXY_URL || artiaIdBaseRefreshInFlight) return false;
       if (document.hidden || navigator.onLine === false) return false;
@@ -9587,7 +9650,24 @@
 
     if (btnSyncArtiaApi) {
       btnSyncArtiaApi.addEventListener("click", async () => {
-        await tryLoadArtiaIdBaseFromApi();
+        const wasDisabled = btnSyncArtiaApi.disabled;
+        btnSyncArtiaApi.disabled = true;
+
+        try {
+          const refreshPayload = await forceRefreshArtiaIdBaseFromApi();
+          const loaded = await tryLoadArtiaIdBaseFromApi({ silentIfUnavailable: true });
+          if (!loaded) throw new Error("O snapshot foi atualizado, mas a base pública não pôde ser recarregada.");
+
+          const sourceUsed = String(refreshPayload?.meta?.sourceUsed || refreshPayload?.meta?.sourceType || "").toLowerCase();
+          if (sourceUsed === "bundled") {
+            alert("A base foi recarregada do snapshot interno do site. Para trazer projetos recém-criados no Artia, a API precisa estar configurada com ARTIA_IDS_SOURCE_MODE=db ou upstream.");
+          }
+        } catch (error) {
+          console.error(error);
+          alert("Falha ao atualizar IDs diretamente no Artia.\n\nErro: " + (error?.message || error));
+        } finally {
+          btnSyncArtiaApi.disabled = wasDisabled;
+        }
       });
     }
 
