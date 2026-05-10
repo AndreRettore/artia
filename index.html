@@ -2240,8 +2240,9 @@
     .importMappingWrap {
       border: 1px solid var(--line);
       border-radius: 12px;
-      overflow: hidden;
+      overflow: visible;
       background: rgba(0, 0, 0, .12);
+      position: relative;
     }
 
     .importMappingHead,
@@ -2264,6 +2265,11 @@
 
     .importMappingRow {
       border-bottom: 1px solid var(--line);
+      position: relative;
+    }
+
+    .importMappingRow:focus-within {
+      z-index: 40;
     }
 
     .importMappingRow:last-child {
@@ -2300,6 +2306,40 @@
     .importHeaderInput.invalid {
       border-color: rgba(255, 110, 110, .75);
       box-shadow: 0 0 0 4px rgba(255, 110, 110, .12);
+    }
+
+    .importHeaderCombo {
+      min-width: 0;
+      position: relative;
+    }
+
+    .importHeaderCombo .importHeaderInput {
+      padding-right: 42px;
+    }
+
+    .importHeaderSuggestionsMenu {
+      max-height: min(220px, 42dvh);
+      z-index: 90;
+    }
+
+    .importHeaderSuggestionOption {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .importHeaderSuggestionLabel {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .importHeaderSuggestionMeta {
+      flex: 0 0 auto;
+      color: var(--muted);
+      font-size: 11px;
     }
 
     .xBtn {
@@ -5453,7 +5493,13 @@
       try {
         const idx = await kvGet(LS_IDBASE_KEY);
         const meta = await kvGet(LS_IDBASE_META_KEY);
-        if (idx && typeof idx === "object" && Object.keys(idx).length) { state.idBaseIndex = idx; state.idBaseMeta = meta; setBaseStatus(true, meta); return true; }
+        if (idx && typeof idx === "object" && Object.keys(idx).length) {
+          state.idBaseIndex = idx;
+          state.idBaseMeta = meta;
+          setBaseStatus(true, meta);
+          await repairMirroredActivityIdsFromBase();
+          return true;
+        }
       } catch { }
       state.idBaseIndex = null; state.idBaseMeta = null; setBaseStatus(false, null); return false;
     }
@@ -5461,6 +5507,7 @@
       await kvSet(LS_IDBASE_KEY, indexObj);
       await kvSet(LS_IDBASE_META_KEY, metaObj);
       state.idBaseIndex = indexObj; state.idBaseMeta = metaObj; setBaseStatus(true, metaObj);
+      await repairMirroredActivityIdsFromBase();
     }
     async function clearAll() { state.events = []; await saveEvents(); renderAll(); }
     function clearWeek() {
@@ -8460,6 +8507,38 @@
       }
       return "";
     }
+
+    async function repairMirroredActivityIdsFromBase({ render = true } = {}) {
+      if (!state.idBaseIndex || !Array.isArray(state.events) || !state.events.length) {
+        return { fixed: 0, cleared: 0 };
+      }
+
+      let fixed = 0;
+      let cleared = 0;
+      for (const ev of state.events) {
+        const idKey = normKey(ev?.activityId);
+        const activityKey = normKey(ev?.activityLabel);
+        if (!idKey || !activityKey || idKey !== activityKey) continue;
+
+        const found = lookupIdFor(ev.project, ev.activityLabel);
+        if (found) {
+          ev.activityId = found;
+          fixed++;
+        } else {
+          ev.activityId = "";
+          cleared++;
+        }
+      }
+
+      if (fixed || cleared) {
+        await saveEvents();
+        if (render) renderAll();
+        console.info(`IDs de atividade reparados: ${fixed} preenchidos, ${cleared} limpos.`);
+      }
+
+      return { fixed, cleared };
+    }
+
     function maybeAutoFillId() {
       const project = (projectInputEl.value || "").trim();
       const activityName = (activityNameInputEl.value || "").trim();
@@ -8915,7 +8994,7 @@
         "Esforço Dia",
         "Atividade",
         "Observação",
-        "Artia",
+        "Lançamento Artia",
         "ID da Atividade",
         "E-mail"
       ]);
@@ -9520,6 +9599,7 @@
     }
 
     function resetImportConfigState() {
+      closeImportHeaderSuggestions();
       importConfigState.fileName = "";
       importConfigState.zip = null;
       importConfigState.sharedStrings = [];
@@ -9652,6 +9732,229 @@
       }
     }
 
+    let activeImportHeaderCombo = null;
+
+    function buildImportHeaderSuggestionOptions(headerEntries) {
+      const seen = new Set();
+      const options = [];
+      for (const [col, val] of headerEntries) {
+        const label = String(val || "").trim();
+        if (!label) continue;
+        const key = normKey(label);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        options.push({ col, label });
+      }
+      return options;
+    }
+
+    function getImportHeaderComboParts(combo) {
+      if (!combo) return {};
+      return {
+        input: combo.querySelector(".importHeaderInput"),
+        button: combo.querySelector(".importHeaderComboBtn"),
+        menu: combo.querySelector(".importHeaderSuggestionsMenu")
+      };
+    }
+
+    function isImportHeaderSuggestionsOpen(combo = activeImportHeaderCombo) {
+      const { menu } = getImportHeaderComboParts(combo);
+      return !!menu && !menu.classList.contains("hidden");
+    }
+
+    function closeImportHeaderSuggestions(combo = activeImportHeaderCombo) {
+      const { button, input, menu } = getImportHeaderComboParts(combo);
+      if (!menu) return;
+      menu.classList.add("hidden");
+      menu.classList.remove("isKeyboardNav");
+      button?.setAttribute("aria-expanded", "false");
+      input?.setAttribute("aria-expanded", "false");
+      combo._importHeaderCurrentOptions = [];
+      combo._importHeaderActiveIndex = -1;
+      if (activeImportHeaderCombo === combo) activeImportHeaderCombo = null;
+    }
+
+    function setImportHeaderActiveIndex(combo, index, { scroll = true } = {}) {
+      const { menu } = getImportHeaderComboParts(combo);
+      const options = combo?._importHeaderCurrentOptions || [];
+      if (!menu || !options.length) {
+        combo._importHeaderActiveIndex = -1;
+        return;
+      }
+
+      combo._importHeaderActiveIndex = ((index % options.length) + options.length) % options.length;
+      const optionEls = Array.from(menu.querySelectorAll(".importHeaderSuggestionOption"));
+      optionEls.forEach((option, optionIndex) => {
+        const active = optionIndex === combo._importHeaderActiveIndex;
+        option.classList.toggle("isActive", active);
+        option.setAttribute("aria-selected", active ? "true" : "false");
+        if (active && scroll) option.scrollIntoView({ block: "nearest" });
+      });
+    }
+
+    function selectImportHeaderSuggestion(combo, option, { keepFocus = true } = {}) {
+      const { input } = getImportHeaderComboParts(combo);
+      if (!input || !option) return false;
+      input.value = option.label;
+      input.classList.remove("invalid");
+      closeImportHeaderSuggestions(combo);
+      if (keepFocus) input.focus();
+      return true;
+    }
+
+    function selectActiveImportHeaderSuggestion(combo, options = {}) {
+      const currentOptions = combo?._importHeaderCurrentOptions || [];
+      const option = currentOptions[combo?._importHeaderActiveIndex];
+      if (!option) return false;
+      return selectImportHeaderSuggestion(combo, option, options);
+    }
+
+    function renderImportHeaderSuggestions(combo, { mode = combo?._importHeaderMode || "all" } = {}) {
+      const { input, menu } = getImportHeaderComboParts(combo);
+      if (!combo || !input || !menu) return;
+
+      const previousActive = (combo._importHeaderCurrentOptions || [])[combo._importHeaderActiveIndex]?.label || "";
+      const allOptions = combo._importHeaderOptions || [];
+      const query = searchKey(input.value);
+      const options = mode === "search" && query
+        ? allOptions.filter(option => searchKey(option.label).includes(query) || searchKey(option.col).includes(query))
+        : allOptions;
+      const currentKey = normKey(input.value);
+
+      combo._importHeaderMode = mode;
+      combo._importHeaderCurrentOptions = options;
+      menu.innerHTML = "";
+
+      if (!options.length) {
+        combo._importHeaderActiveIndex = -1;
+        const empty = document.createElement("div");
+        empty.className = "activitySuggestionEmpty";
+        empty.textContent = mode === "search"
+          ? "Nenhum cabeçalho encontrado para a busca."
+          : "Nenhum cabeçalho encontrado na linha selecionada.";
+        menu.appendChild(empty);
+        return;
+      }
+
+      const selectedIndex = currentKey
+        ? options.findIndex(option => normKey(option.label) === currentKey || normKey(option.col) === currentKey)
+        : -1;
+      const previousIndex = currentKey && previousActive
+        ? options.findIndex(option => option.label === previousActive)
+        : -1;
+      combo._importHeaderActiveIndex = currentKey && previousIndex >= 0
+        ? previousIndex
+        : (currentKey && selectedIndex >= 0 ? selectedIndex : 0);
+
+      const fragment = document.createDocumentFragment();
+      for (const [index, option] of options.entries()) {
+        const optionEl = document.createElement("button");
+        optionEl.type = "button";
+        optionEl.className = "activitySuggestionOption importHeaderSuggestionOption";
+        optionEl.dataset.index = String(index);
+        optionEl.setAttribute("role", "option");
+
+        const label = document.createElement("span");
+        label.className = "importHeaderSuggestionLabel";
+        label.textContent = option.label;
+
+        const meta = document.createElement("span");
+        meta.className = "importHeaderSuggestionMeta";
+        meta.textContent = option.col;
+
+        optionEl.appendChild(label);
+        optionEl.appendChild(meta);
+
+        const selected = currentKey && (normKey(option.label) === currentKey || normKey(option.col) === currentKey);
+        if (selected) optionEl.classList.add("isSelected");
+        if (index === combo._importHeaderActiveIndex) optionEl.classList.add("isActive");
+        optionEl.setAttribute("aria-selected", index === combo._importHeaderActiveIndex ? "true" : "false");
+        optionEl.addEventListener("mousedown", (e) => e.preventDefault());
+        optionEl.addEventListener("pointermove", () => {
+          menu.classList.remove("isKeyboardNav");
+          setImportHeaderActiveIndex(combo, index, { scroll: false });
+        });
+        optionEl.addEventListener("click", () => selectImportHeaderSuggestion(combo, option));
+        fragment.appendChild(optionEl);
+      }
+
+      menu.appendChild(fragment);
+      setImportHeaderActiveIndex(combo, combo._importHeaderActiveIndex, { scroll: false });
+    }
+
+    function openImportHeaderSuggestions(combo, { mode = "all" } = {}) {
+      if (!combo) return;
+      if (activeImportHeaderCombo && activeImportHeaderCombo !== combo) {
+        closeImportHeaderSuggestions(activeImportHeaderCombo);
+      }
+      activeImportHeaderCombo = combo;
+
+      const { button, input, menu } = getImportHeaderComboParts(combo);
+      renderImportHeaderSuggestions(combo, { mode });
+      menu?.classList.remove("hidden");
+      menu?.classList.remove("isKeyboardNav");
+      button?.setAttribute("aria-expanded", "true");
+      input?.setAttribute("aria-expanded", "true");
+      setImportHeaderActiveIndex(combo, combo._importHeaderActiveIndex);
+      if (!input?.value.trim() && menu) menu.scrollTop = 0;
+    }
+
+    function setupImportHeaderCombo(combo) {
+      const { input, button } = getImportHeaderComboParts(combo);
+      if (!combo || !input) return;
+
+      input.addEventListener("input", () => {
+        input.classList.remove("invalid");
+        openImportHeaderSuggestions(combo, { mode: "search" });
+      });
+      input.addEventListener("focus", () => {
+        openImportHeaderSuggestions(combo, { mode: "all" });
+        if (input.value) requestAnimationFrame(() => input.select());
+      });
+
+      button?.addEventListener("mousedown", (e) => e.preventDefault());
+      button?.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isImportHeaderSuggestionsOpen(combo) && combo._importHeaderMode === "all") {
+          closeImportHeaderSuggestions(combo);
+        } else {
+          openImportHeaderSuggestions(combo, { mode: "all" });
+        }
+        input.focus();
+      });
+
+      combo.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!isImportHeaderSuggestionsOpen(combo)) {
+            openImportHeaderSuggestions(combo, { mode: input.value.trim() ? "search" : "all" });
+          }
+          const { menu } = getImportHeaderComboParts(combo);
+          menu?.classList.add("isKeyboardNav");
+          const currentIndex = Number.isInteger(combo._importHeaderActiveIndex) ? combo._importHeaderActiveIndex : -1;
+          setImportHeaderActiveIndex(combo, currentIndex + (e.key === "ArrowDown" ? 1 : -1));
+        } else if (e.key === "Enter" && isImportHeaderSuggestionsOpen(combo)) {
+          if (selectActiveImportHeaderSuggestion(combo)) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        } else if (e.key === "Tab" && isImportHeaderSuggestionsOpen(combo)) {
+          selectActiveImportHeaderSuggestion(combo, { keepFocus: false });
+        } else if (e.key === "Escape" && isImportHeaderSuggestionsOpen(combo)) {
+          e.preventDefault();
+          e.stopPropagation();
+          closeImportHeaderSuggestions(combo);
+        }
+      });
+    }
+
+    document.addEventListener("click", (e) => {
+      if (!activeImportHeaderCombo || activeImportHeaderCombo.contains(e.target)) return;
+      closeImportHeaderSuggestions(activeImportHeaderCombo);
+    });
+
     function guessHeaderNameForField(fieldKey, headerEntries) {
       const aliases = (IMPORT_HEADER_ALIASES[fieldKey] || []).map(normKey);
       if (!aliases.length) return "";
@@ -9661,15 +9964,43 @@
         if (aliases.includes(n)) return String(val || "").trim();
       }
       for (const [, val] of headerEntries) {
-        const n = normKey(val);
-        if (aliases.some(alias => n.includes(alias) || alias.includes(n))) return String(val || "").trim();
+        if (aliases.some(alias => isImportHeaderPartialAliasMatch(fieldKey, val, alias))) return String(val || "").trim();
       }
       return "";
     }
 
+    function importHeaderWords(value) {
+      return searchKey(value).split(/[^a-z0-9]+/).filter(Boolean);
+    }
+
+    function isImportActivityIdHeader(headerName) {
+      const words = importHeaderWords(headerName);
+      if (!words.length) return false;
+      const activityWords = ["atividade", "tarefa", "artia", "apontamento"];
+      const hasActivityContext = activityWords.some(word => words.includes(word));
+      const hasCodeWord = words.includes("codigo") || words.includes("cod");
+      if (words.includes("id")) return words.length === 1 || hasActivityContext;
+      return hasCodeWord && hasActivityContext;
+    }
+
+    function isImportActivityTextHeader(headerName) {
+      const n = normKey(headerName);
+      return ["atividade", "nome da atividade", "descrição da atividade", "descricao da atividade"].includes(n);
+    }
+
+    function isImportHeaderPartialAliasMatch(fieldKey, headerName, alias) {
+      const headerNorm = normKey(headerName);
+      const aliasNorm = normKey(alias);
+      if (!headerNorm || !aliasNorm || aliasNorm.length < 4) return false;
+      if (fieldKey === "id" && !isImportActivityIdHeader(headerName)) return false;
+      if (fieldKey === "atividade" && isImportActivityIdHeader(headerName)) return false;
+      return headerNorm.includes(aliasNorm);
+    }
+
     function renderImportHeaderMap(headerEntries) {
       if (!importHeaderMap) return;
-      ensureImportHeaderDatalist(headerEntries);
+      closeImportHeaderSuggestions();
+      const headerOptions = buildImportHeaderSuggestionOptions(headerEntries);
       importHeaderMap.innerHTML = "";
 
       for (const field of IMPORT_FIELD_DEFS) {
@@ -9690,12 +10021,43 @@
         input.className = "importHeaderInput";
         input.dataset.field = field.key;
         input.placeholder = `Ex.: ${field.label}`;
-        input.setAttribute("list", "importHeaderCandidates");
+        input.autocomplete = "off";
+        input.setAttribute("role", "combobox");
+        input.setAttribute("aria-autocomplete", "list");
+        input.setAttribute("aria-expanded", "false");
         input.value = guessHeaderNameForField(field.key, headerEntries);
-        input.addEventListener("input", () => input.classList.remove("invalid"));
+
+        const combo = document.createElement("div");
+        combo.className = "activityCombo importHeaderCombo";
+        combo._importHeaderOptions = headerOptions;
+        combo._importHeaderCurrentOptions = [];
+        combo._importHeaderActiveIndex = -1;
+        combo._importHeaderMode = "all";
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "activityComboBtn importHeaderComboBtn";
+        button.title = `Mostrar cabeçalhos para ${field.label}`;
+        button.setAttribute("aria-label", `Mostrar cabeçalhos para ${field.label}`);
+        button.setAttribute("aria-expanded", "false");
+
+        const menuId = `importHeaderSuggestionsMenu-${field.key}`;
+        const menu = document.createElement("div");
+        menu.id = menuId;
+        menu.className = "activitySuggestionsMenu importHeaderSuggestionsMenu hidden";
+        menu.setAttribute("role", "listbox");
+        menu.setAttribute("aria-label", `Cabeçalhos disponíveis para ${field.label}`);
+
+        input.setAttribute("aria-controls", menuId);
+        button.setAttribute("aria-controls", menuId);
+
+        combo.appendChild(input);
+        combo.appendChild(button);
+        combo.appendChild(menu);
+        setupImportHeaderCombo(combo);
 
         row.appendChild(left);
-        row.appendChild(input);
+        row.appendChild(combo);
         importHeaderMap.appendChild(row);
       }
     }
@@ -9786,6 +10148,15 @@
           const wantedNorm = normKey(wantedLabel);
           const hit = headerEntries.find(([, val]) => normKey(val) === wantedNorm);
           if (hit) matchedCol = hit[0];
+        }
+
+        if (matchedCol && field.key === "id") {
+          const matchedHeader = String(headerRow[matchedCol] || "").trim();
+          if (matchedCol === colMap.atividade || isImportActivityTextHeader(matchedHeader)) {
+            if (input) input.classList.add("invalid");
+            unresolved.push(`${field.label} -> "${wantedLabel}" (este é o cabeçalho de Atividade, não de ID)`);
+            continue;
+          }
         }
 
         if (!matchedCol) {
@@ -10321,7 +10692,7 @@
         const rawAtv = getByCol(r, colMap.atividade);
         const rawObs = getByCol(r, colMap.observacao);
         const rawArtiaLancado = getByCol(r, colMap.artiaLancado);
-        const rawId = getByCol(r, colMap.id);
+        const rawId = (colMap.id && colMap.id !== colMap.atividade) ? getByCol(r, colMap.id) : "";
 
         // pula linhas vazias
         if (!rawDate && !rawProj && !rawIni && !rawFim && !rawAtv && !rawObs && !rawArtiaLancado && !rawId) continue;
@@ -10674,6 +11045,18 @@
         assert(projectInputEl.value === "0922", "Campo Projeto não normalizou 'Projeto 922' como 0922.");
         notes.push("project-normalize-ok");
 
+        const importHeaderEntries = [
+          ["A", "Data"],
+          ["B", "Projeto"],
+          ["C", "Hora Início"],
+          ["D", "Hora de Término"],
+          ["E", "Atividade"]
+        ];
+        assert(guessHeaderNameForField("id", importHeaderEntries) === "", "ID da Atividade não deve ser compatibilizado com Atividade.");
+        assert(guessHeaderNameForField("atividade", [["A", "ID da Atividade"]]) === "", "Atividade não deve ser compatibilizada com ID da Atividade.");
+        assert(guessHeaderNameForField("id", [["A", "ID da Atividade"]]) === "ID da Atividade", "ID da Atividade não foi reconhecido como ID.");
+        notes.push("import-id-header-guard-ok");
+
         const csvRows = parseCsvImportRows([
           "Data;Projeto;Hora Início;Hora de Término;Atividade;Observação;Lançamento Artia;ID",
           "30/01/2026;920;10:00;11:30;4.2 - Estudo de Cronograma;\"texto; com ponto e vírgula\";Sim;123",
@@ -10681,11 +11064,14 @@
         ].join("\n"));
         const csvHeaderMap = findHeaderMapping(csvRows);
         assert(csvHeaderMap.headerRowIndex === 0, "Importação CSV não detectou cabeçalho.");
+        assert(csvHeaderMap.colMap.artiaLancado === "G", "Importação CSV não compatibilizou automaticamente Lançamento Artia.");
         const csvImported = buildEventsFromRows(csvRows, csvHeaderMap.headerRowIndex, csvHeaderMap.colMap);
         assert(csvImported.length === 2, "Importação CSV não gerou eventos válidos.");
         assert(csvImported[0].project === "0920", "Importação CSV não normalizou projeto 920 como 0920.");
         assert(csvImported[0].notes === "texto; com ponto e vírgula", "Importação CSV não preservou campo com aspas e delimitador.");
         assert(csvImported[1].project === "21.1", "Importação CSV alterou projeto 21.1.");
+        const wrongIdMapImported = buildEventsFromRows(csvRows, csvHeaderMap.headerRowIndex, { ...csvHeaderMap.colMap, id: csvHeaderMap.colMap.atividade });
+        assert(wrongIdMapImported[0].activityId !== wrongIdMapImported[0].activityLabel, "Importação aceitou Atividade como ID da Atividade.");
         const csvCommaRows = parseCsvImportRows("Data,Projeto,Hora Início,Hora de Término\n30/01/2026,0,14:00,15:00");
         assert(csvCommaRows[1]?.B === "0", "Importação CSV com vírgula não separou colunas.");
         notes.push("csv-import-ok");
