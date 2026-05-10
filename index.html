@@ -4457,6 +4457,8 @@
     const IS_VERCEL_HOST = window.location.hostname.endsWith(".vercel.app");
     const DEFAULT_VERCEL_PROXY_URL = IS_VERCEL_HOST ? `${window.location.origin}/api/artia-ids` : "";
     const ARTIA_API_FETCH_TIMEOUT_MS = 45000;
+    const ARTIA_ID_BASE_AUTO_REFRESH_MS = 15 * 60 * 1000;
+    const ARTIA_ID_BASE_VISIBLE_REFRESH_MS = 5 * 60 * 1000;
     const ARTIA_PROXY_URL = (
       (typeof window.ARTIA_PROXY_URL === "string" ? window.ARTIA_PROXY_URL : "") ||
       (IS_LOCAL_HOST ? "/api/artia-ids" : "") ||
@@ -5497,7 +5499,7 @@
           state.idBaseIndex = idx;
           state.idBaseMeta = meta;
           setBaseStatus(true, meta);
-          await repairMirroredActivityIdsFromBase();
+          await syncEventActivityIdsFromBase();
           return true;
         }
       } catch { }
@@ -5507,7 +5509,7 @@
       await kvSet(LS_IDBASE_KEY, indexObj);
       await kvSet(LS_IDBASE_META_KEY, metaObj);
       state.idBaseIndex = indexObj; state.idBaseMeta = metaObj; setBaseStatus(true, metaObj);
-      await repairMirroredActivityIdsFromBase();
+      await syncEventActivityIdsFromBase();
     }
     async function clearAll() { state.events = []; await saveEvents(); renderAll(); }
     function clearWeek() {
@@ -8508,35 +8510,52 @@
       return "";
     }
 
-    async function repairMirroredActivityIdsFromBase({ render = true } = {}) {
+    function lookupIdForEventActivity(project, activityName) {
+      const activityLabel = String(activityName || "").trim();
+      const found = lookupIdFor(project, activityLabel);
+      if (found) return found;
+
+      const projectCode = normalizeProjectCode(project);
+      const cleaned = projectCode
+        ? activityLabel.replace(new RegExp(`\\b${projectCode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i"), "")
+        : activityLabel;
+      const cleanedLabel = cleaned.replace(/^[-–—\s]+/, "").trim();
+      return cleanedLabel ? lookupIdFor(project, cleanedLabel) : "";
+    }
+
+    async function syncEventActivityIdsFromBase({ render = true } = {}) {
       if (!state.idBaseIndex || !Array.isArray(state.events) || !state.events.length) {
-        return { fixed: 0, cleared: 0 };
+        return { filled: 0, repaired: 0, cleared: 0 };
       }
 
-      let fixed = 0;
+      let filled = 0;
+      let repaired = 0;
       let cleared = 0;
       for (const ev of state.events) {
         const idKey = normKey(ev?.activityId);
         const activityKey = normKey(ev?.activityLabel);
-        if (!idKey || !activityKey || idKey !== activityKey) continue;
+        if (!activityKey) continue;
+        if (idKey && idKey !== activityKey) continue;
 
-        const found = lookupIdFor(ev.project, ev.activityLabel);
+        const found = lookupIdForEventActivity(ev.project, ev.activityLabel);
         if (found) {
           ev.activityId = found;
-          fixed++;
+          if (idKey) repaired++;
+          else filled++;
         } else {
+          if (!idKey) continue;
           ev.activityId = "";
           cleared++;
         }
       }
 
-      if (fixed || cleared) {
+      if (filled || repaired || cleared) {
         await saveEvents();
         if (render) renderAll();
-        console.info(`IDs de atividade reparados: ${fixed} preenchidos, ${cleared} limpos.`);
+        console.info(`IDs de atividade sincronizados: ${filled} preenchidos, ${repaired} reparados, ${cleared} limpos.`);
       }
 
-      return { fixed, cleared };
+      return { filled, repaired, cleared };
     }
 
     function maybeAutoFillId() {
@@ -9344,6 +9363,9 @@
     const btnLoadBase = document.getElementById("btnLoadBase");
     const btnSyncArtiaApi = document.getElementById("btnSyncArtiaApi");
     const fileBaseInput = document.getElementById("fileBaseInput");
+    let artiaIdBaseAutoRefreshTimer = null;
+    let artiaIdBaseRefreshInFlight = false;
+    let lastArtiaIdBaseRefreshAt = 0;
     if (btnSyncArtiaApi && ARTIA_PROXY_URL) btnSyncArtiaApi.classList.remove("hidden");
     btnLoadBase.addEventListener("click", () => {
       settingsMenu?.classList.add("hidden");
@@ -9493,6 +9515,7 @@
             loadingLabel: "Base IDs: sincronizada com a API protegida.",
             sourceLabel: ARTIA_PROXY_SOURCE_LABEL
           });
+          lastArtiaIdBaseRefreshAt = Date.now();
           return true;
         } finally {
           if (timeoutId) clearTimeout(timeoutId);
@@ -9510,6 +9533,33 @@
         }
         return false;
       }
+    }
+
+    async function refreshArtiaIdBaseInBackground({ force = false } = {}) {
+      if (!ARTIA_PROXY_URL || artiaIdBaseRefreshInFlight) return false;
+      if (document.hidden || navigator.onLine === false) return false;
+      if (!force && Date.now() - lastArtiaIdBaseRefreshAt < ARTIA_ID_BASE_VISIBLE_REFRESH_MS) return false;
+
+      artiaIdBaseRefreshInFlight = true;
+      try {
+        return await tryLoadArtiaIdBaseFromApi({ silentIfUnavailable: true });
+      } finally {
+        artiaIdBaseRefreshInFlight = false;
+      }
+    }
+
+    function scheduleArtiaIdBaseAutoRefresh() {
+      if (!ARTIA_PROXY_URL || artiaIdBaseAutoRefreshTimer) return;
+      artiaIdBaseAutoRefreshTimer = setInterval(() => {
+        void refreshArtiaIdBaseInBackground({ force: true });
+      }, ARTIA_ID_BASE_AUTO_REFRESH_MS);
+
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) void refreshArtiaIdBaseInBackground();
+      });
+      window.addEventListener("online", () => {
+        void refreshArtiaIdBaseInBackground();
+      });
     }
 
     async function tryLoadBundledIdBaseOnFirstRun() {
@@ -10724,17 +10774,7 @@
         const activityLabel = String(rawAtv || "").trim();
 
         if (!activityId && state.idBaseIndex && project) {
-          activityId = lookupIdFor(project, activityLabel);
-          if (!activityId) {
-            const projectCode = normalizeProjectCode(project);
-            const actNameClean = projectCode
-              ? activityLabel.replace(new RegExp(`\\b${projectCode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i"), "")
-              : activityLabel;
-            const cleaned = actNameClean.replace(/^[-–—\s]+/, "").trim();
-            if (cleaned) {
-              activityId = lookupIdFor(project, cleaned);
-            }
-          }
+          activityId = lookupIdForEventActivity(project, activityLabel);
         }
 
         imported.push({
@@ -10994,6 +11034,31 @@
         notes.push("import-merge-ok");
         state.events = savedEventsForMergeTest;
         await saveEvents();
+
+        const savedIndexForIdSyncTest = state.idBaseIndex;
+        const savedMetaForIdSyncTest = state.idBaseMeta;
+        state.idBaseIndex = {
+          [`${normKey("1430")}||${normKey("1.1 - Organização de Documentos")}`]: "ID-1430-11",
+          [`${normKey("1430")}||${normKey("1.1 - Organização de Documentos")}||name`]: "1.1 - Organização de Documentos"
+        };
+        state.events = [
+          { id: "missing_id", day: "2026-05-05", start: "2026-05-05T08:50:00.000Z", end: "2026-05-05T09:00:00.000Z", project: "1430", activityId: "", activityLabel: "1.1 - Organização de Documentos", notes: "" },
+          { id: "mirrored_id", day: "2026-05-05", start: "2026-05-05T09:10:00.000Z", end: "2026-05-05T09:20:00.000Z", project: "1430", activityId: "1.1 - Organização de Documentos", activityLabel: "1.1 - Organização de Documentos", notes: "" },
+          { id: "manual_id", day: "2026-05-05", start: "2026-05-05T09:30:00.000Z", end: "2026-05-05T09:40:00.000Z", project: "1430", activityId: "MANUAL", activityLabel: "1.1 - Organização de Documentos", notes: "" },
+          { id: "unmatched_id", day: "2026-05-05", start: "2026-05-05T09:50:00.000Z", end: "2026-05-05T10:00:00.000Z", project: "1431", activityId: "", activityLabel: "1.1 - Organização de Documentos", notes: "" }
+        ];
+        const idSyncSummary = await syncEventActivityIdsFromBase({ render: false });
+        assert(idSyncSummary.filled === 1, "Sincronização da base não preencheu ID faltante.");
+        assert(idSyncSummary.repaired === 1, "Sincronização da base não reparou ID espelhado com a atividade.");
+        assert(state.events[0].activityId === "ID-1430-11", "Evento sem ID não recebeu o ID da base.");
+        assert(state.events[1].activityId === "ID-1430-11", "Evento com ID espelhado não recebeu o ID da base.");
+        assert(state.events[2].activityId === "MANUAL", "Sincronização sobrescreveu ID manual existente.");
+        assert(state.events[3].activityId === "", "Sincronização preencheu ID para projeto sem correspondência.");
+        state.idBaseIndex = savedIndexForIdSyncTest;
+        state.idBaseMeta = savedMetaForIdSyncTest;
+        state.events = savedEventsForMergeTest;
+        await saveEvents();
+        notes.push("id-sync-ok");
 
         showImportUploadModal(true);
         await waitForSelfTest(40);
@@ -11260,6 +11325,7 @@
       })().catch((error) => {
         console.error("Falha ao inicializar a base de IDs em segundo plano:", error);
       });
+      scheduleArtiaIdBaseAutoRefresh();
     }
 
     init().then(runSelfTestIfRequested).catch(err => {
