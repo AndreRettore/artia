@@ -5317,6 +5317,14 @@
       }
       return "";
     }
+    function compareArtiaIds(a, b) {
+      const left = String(a ?? "").trim();
+      const right = String(b ?? "").trim();
+      const leftIsNumeric = /^\d+$/.test(left);
+      const rightIsNumeric = /^\d+$/.test(right);
+      if (leftIsNumeric && rightIsNumeric) return Number(left) - Number(right);
+      return left.localeCompare(right, "pt-BR", { numeric: true, sensitivity: "base" });
+    }
     function buildIdBaseIndexFromApiRows(rows) {
       const index = {};
       for (const row of Array.isArray(rows) ? rows : []) {
@@ -5328,7 +5336,7 @@
         if (!project || !activity || !id) continue;
         if (isLikelyProjectNameActivity(activity, project, projectLabel)) continue;
         const key = `${normKey(project)}||${normKey(activity)}`;
-        if (!index[key]) {
+        if (!index[key] || compareArtiaIds(id, index[key]) > 0) {
           index[key] = id;
           index[`${key}||name`] = activity;
         }
