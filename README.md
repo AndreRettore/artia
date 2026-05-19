@@ -619,13 +619,17 @@ Opcionais:
 - `ARTIA_DB_QUERY_MODE`
   - `custom`
   - `time_entries`
-  - vazio para usar a query padrão
+  - `activities_v2` para explicitar a consulta ampla padrao por `parent_project`
+  - `active` para usar apenas tabelas ativas `activities` + `projects`
+  - vazio para usar a query padrao ampla
 - `ARTIA_DB_QUERY`
 - `ARTIA_DB_CONNECT_TIMEOUT_MS`
 - `ARTIA_DB_QUERY_TIMEOUT_MS`
 - `ARTIA_DB_SSL`
 - `ARTIA_ORGANIZATION_ID`
 - `ARTIA_DB_ACTIVITIES_TABLE`
+- `ARTIA_DB_PROJECTS_TABLE`
+- `ARTIA_DB_ACTIVITIES_V2_TABLE`
 - `ARTIA_DB_TIME_ENTRIES_TABLE`
 
 ### 14.5 Para refresh via API upstream
@@ -637,6 +641,7 @@ Opcionais:
 - `ARTIA_DATA_PATH`
 - `ARTIA_PROJECT_FIELD`
 - `ARTIA_PROJECT_LABEL_FIELD`
+- `ARTIA_WORK_GROUP_FIELD`
 - `ARTIA_ACTIVITY_FIELD`
 - `ARTIA_ID_FIELD`
 - `ARTIA_UPSTREAM_TIMEOUT_MS`

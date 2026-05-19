@@ -21,10 +21,65 @@ function requireEnv(name) {
 function normalizeRow(row) {
   const project = String(row.project ?? "").trim();
   const projectLabel = String(row.projectLabel ?? "").trim() || project;
+  const workGroup = String(row.workGroup ?? row.group ?? row.communityName ?? row.community_name ?? "").trim();
   const activity = String(row.activity ?? "").trim();
   const id = String(row.id ?? "").trim();
   if (!project || !activity || !id) return null;
-  return { project, projectLabel, activity, id };
+  return { project, projectLabel, workGroup, activity, id };
+}
+
+function normalizeKeyPart(value) {
+  return String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function compareIds(a, b) {
+  const left = String(a ?? "").trim();
+  const right = String(b ?? "").trim();
+  const leftIsNumeric = /^\d+$/.test(left);
+  const rightIsNumeric = /^\d+$/.test(right);
+
+  if (leftIsNumeric && rightIsNumeric) {
+    return Number(left) - Number(right);
+  }
+
+  return left.localeCompare(right, "pt-BR", { numeric: true, sensitivity: "base" });
+}
+
+function normalizeRows(rows) {
+  const byActivity = new Map();
+  let validRows = 0;
+
+  for (const row of rows) {
+    const normalized = normalizeRow(row);
+    if (!normalized) continue;
+    validRows += 1;
+
+    const key = `${normalizeKeyPart(normalized.project)}||${normalizeKeyPart(normalized.activity)}`;
+    const existing = byActivity.get(key);
+    if (!existing || compareIds(normalized.id, existing.row.id) > 0) {
+      byActivity.set(key, {
+        row: normalized,
+        rawCount: (existing?.rawCount || 0) + 1
+      });
+    } else {
+      existing.rawCount += 1;
+    }
+  }
+
+  const entries = Array.from(byActivity.values());
+  return {
+    rows: entries
+      .map((entry) => entry.row)
+      .sort((a, b) =>
+        a.project.localeCompare(b.project, "pt-BR", { numeric: true }) ||
+        a.activity.localeCompare(b.activity, "pt-BR", { sensitivity: "base" }) ||
+        a.id.localeCompare(b.id, "pt-BR", { numeric: true })
+      ),
+    stats: {
+      duplicateActivityGroups: entries.filter((entry) => entry.rawCount > 1).length,
+      dedupedRows: Math.max(0, validRows - entries.length)
+    }
+  };
 }
 
 function getOrganizationId() {
@@ -41,6 +96,24 @@ function getOrganizationId() {
 
 function getDefaultQuery() {
   const orgId = getOrganizationId();
+  const activitiesTable = readEnv("ARTIA_DB_ACTIVITIES_V2_TABLE", readEnv("ARTIA_DB_ACTIVITIES_TABLE", `organization_${orgId}_activities_v2`));
+
+  return `
+    SELECT
+      CAST(id AS CHAR) AS id,
+      COALESCE(NULLIF(TRIM(SUBSTRING_INDEX(parent_project, ' - ', 1)), ''), CAST(folder_last_project_id AS CHAR)) AS project,
+      TRIM(parent_project) AS projectLabel,
+      TRIM(community_name) AS workGroup,
+      TRIM(title) AS activity
+    FROM ${activitiesTable}
+    WHERE TRIM(COALESCE(title, '')) <> ''
+      AND TRIM(COALESCE(parent_project, '')) <> ''
+    ORDER BY id
+  `;
+}
+
+function getActiveQuery() {
+  const orgId = getOrganizationId();
   const activitiesTable = readEnv("ARTIA_DB_ACTIVITIES_TABLE", `organization_${orgId}_activities`);
   const projectsTable = readEnv("ARTIA_DB_PROJECTS_TABLE", `organization_${orgId}_projects`);
 
@@ -48,6 +121,7 @@ function getDefaultQuery() {
     SELECT
       COALESCE(NULLIF(TRIM(p.project_number), ''), CAST(p.id AS CHAR)) AS project,
       COALESCE(NULLIF(TRIM(p.name), ''), COALESCE(NULLIF(TRIM(p.project_number), ''), CAST(p.id AS CHAR))) AS projectLabel,
+      'Projetos' AS workGroup,
       a.title AS activity,
       CAST(a.id AS CHAR) AS id
     FROM ${activitiesTable} a
@@ -70,33 +144,20 @@ async function buildSnapshotFromDb() {
   });
 
   try {
-    const sql = readEnv("ARTIA_DB_QUERY") || getDefaultQuery();
+    const queryMode = readEnv("ARTIA_DB_QUERY_MODE").toLowerCase();
+    const sql = readEnv("ARTIA_DB_QUERY") || (queryMode === "active" ? getActiveQuery() : getDefaultQuery());
     const timeout = Number(readEnv("ARTIA_DB_QUERY_TIMEOUT_MS", "900000")) || 900000;
     const [rows] = await connection.query({ sql, timeout });
-    const normalized = rows
-      .map(normalizeRow)
-      .filter(Boolean)
-      .sort((a, b) =>
-        a.project.localeCompare(b.project, "pt-BR", { numeric: true }) ||
-        a.activity.localeCompare(b.activity, "pt-BR", { sensitivity: "base" })
-      );
-
-    const dedup = [];
-    const seen = new Set();
-    for (const row of normalized) {
-      const key = `${row.project}||${row.activity}||${row.id}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      dedup.push(row);
-    }
+    const normalized = normalizeRows(rows);
 
     return {
-      rows: dedup,
+      rows: normalized.rows,
       meta: {
-        count: dedup.length,
+        count: normalized.rows.length,
         builtAt: new Date().toISOString(),
         sourceName: "Artia DB snapshot",
-        sourceType: "mysql-snapshot"
+        sourceType: "mysql-snapshot",
+        ...normalized.stats
       }
     };
   } finally {

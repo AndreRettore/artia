@@ -3187,12 +3187,96 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-wrap: wrap;
       flex-shrink: 0;
     }
 
     .directorySearchInput {
       flex: 1;
+      min-width: 220px;
       max-width: 300px;
+    }
+
+    .directoryGroupCombo {
+      position: relative;
+      flex: 0 1 380px;
+      min-width: 240px;
+      max-width: 420px;
+    }
+
+    .directoryGroupButton {
+      width: 100%;
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 12px;
+      border: 1px solid var(--line2);
+      border-radius: 10px;
+      background: var(--panel);
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .directoryGroupButton:hover,
+    .directoryGroupButton:focus-visible,
+    .directoryGroupButton[aria-expanded="true"] {
+      border-color: rgba(78, 161, 255, .55);
+      box-shadow: 0 0 0 3px rgba(78, 161, 255, .12);
+      outline: none;
+    }
+
+    .directoryGroupButtonText {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .directoryGroupButton::after {
+      content: "";
+      flex: 0 0 auto;
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 6px solid currentColor;
+      opacity: .82;
+    }
+
+    .directoryGroupMenu {
+      min-width: 100%;
+      width: min(560px, calc(100vw - 72px));
+      max-height: min(340px, 52dvh);
+    }
+
+    .directoryGroupOption {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .directoryGroupOption__name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .directoryGroupOption__count {
+      flex: 0 0 auto;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .directoryGroupOption.isSelected .directoryGroupOption__count,
+    .directoryGroupOption.isActive .directoryGroupOption__count {
+      color: rgba(255, 255, 255, .8);
     }
 
     .directoryColumns {
@@ -3238,6 +3322,29 @@
       flex-direction: column;
       gap: 5px;
       overflow-y: auto;
+    }
+
+    .directoryGroup {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .directoryGroupTitle {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 2px 5px;
+      background: var(--panel2);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .4px;
+      text-transform: uppercase;
     }
 
     .directoryCard {
@@ -5317,20 +5424,33 @@
       }
       return "";
     }
+    function normalizeDirectoryGroup(value) {
+      return firstNonEmptyValue(value, "Sem grupo");
+    }
+    function compareArtiaIds(a, b) {
+      const left = String(a ?? "").trim();
+      const right = String(b ?? "").trim();
+      const leftIsNumeric = /^\d+$/.test(left);
+      const rightIsNumeric = /^\d+$/.test(right);
+      if (leftIsNumeric && rightIsNumeric) return Number(left) - Number(right);
+      return left.localeCompare(right, "pt-BR", { numeric: true, sensitivity: "base" });
+    }
     function buildIdBaseIndexFromApiRows(rows) {
       const index = {};
       for (const row of Array.isArray(rows) ? rows : []) {
         const projectRaw = firstNonEmptyValue(row?.project, row?.projectId, row?.projectCode, row?.projectLabel);
         const project = normalizeProjectCode(projectRaw);
         const projectLabel = firstNonEmptyValue(row?.projectLabel, row?.projectName, projectRaw);
+        const workGroup = normalizeDirectoryGroup(firstNonEmptyValue(row?.workGroup, row?.group, row?.communityName, row?.community_name));
         const activity = firstNonEmptyValue(row?.activity, row?.activityLabel, row?.name);
         const id = firstNonEmptyValue(row?.id, row?.activityId, row?.artiaId);
         if (!project || !activity || !id) continue;
         if (isLikelyProjectNameActivity(activity, project, projectLabel)) continue;
         const key = `${normKey(project)}||${normKey(activity)}`;
-        if (!index[key]) {
+        if (!index[key] || compareArtiaIds(id, index[key]) > 0) {
           index[key] = id;
           index[`${key}||name`] = activity;
+          index[`${key}||group`] = workGroup;
         }
       }
       return index;
@@ -7366,6 +7486,10 @@
 
     function renderDirectory() {
       if (!directoryViewEl) return;
+      if (typeof directoryViewEl._directoryCleanup === "function") {
+        directoryViewEl._directoryCleanup();
+        directoryViewEl._directoryCleanup = null;
+      }
       directoryViewEl.innerHTML = "";
       if (!state.idBaseIndex) {
         directoryViewEl.innerHTML = '<div class="directoryEmptyState">Nenhuma base de IDs carregada.</div>';
@@ -7374,42 +7498,90 @@
       // Build projects map, filtering out duplicate/project-name-as-activity entries
       const projects = {};
       for (const [key, val] of Object.entries(state.idBaseIndex)) {
-        if (key.endsWith("||name")) continue;
+        if (key.endsWith("||name") || key.endsWith("||group")) continue;
         const parts = key.split("||");
         if (parts.length < 2) continue;
         const projStr = parts[0].trim();
-        const projMatch = projStr.match(/\d+/);
-        if (!projMatch) continue;
-        const proj = projMatch[0];
+        const proj = normalizeProjectCode(projStr);
+        if (!proj) continue;
         const actName = (state.idBaseIndex[`${key}||name`] || parts.slice(1).join("||")).trim();
         const id = val;
+        const groupName = normalizeDirectoryGroup(state.idBaseIndex[`${key}||group`]);
         // Usa o mesmo helper da importação para descartar pseudo-atividades (nome/número do projeto)
         if (isLikelyProjectNameActivity(actName, proj, "")) continue;
-        if (!projects[proj]) projects[proj] = [];
-        projects[proj].push({ name: actName, id });
+        if (!projects[proj]) projects[proj] = { group: groupName, activities: [] };
+        if (projects[proj].group === "Sem grupo" && groupName !== "Sem grupo") projects[proj].group = groupName;
+        projects[proj].activities.push({ name: actName, id });
       }
       // Deduplica por projeto (garante pares únicos nome+id)
       for (const p of Object.keys(projects)) {
         const seen = new Set();
-        projects[p] = projects[p].filter(a => { const k = normKey(a.name); if (seen.has(k)) return false; seen.add(k); return true; });
+        projects[p].activities = projects[p].activities.filter(a => { const k = normKey(a.name); if (seen.has(k)) return false; seen.add(k); return true; });
+      }
+      const groupLabelCounts = {};
+      for (const p of Object.keys(projects)) {
+        const group = projects[p].group;
+        const groupKey = normKey(group);
+        if (!groupLabelCounts[groupKey]) groupLabelCounts[groupKey] = {};
+        groupLabelCounts[groupKey][group] = (groupLabelCounts[groupKey][group] || 0) + projects[p].activities.length;
+      }
+      const canonicalGroupLabels = {};
+      for (const [groupKey, labels] of Object.entries(groupLabelCounts)) {
+        canonicalGroupLabels[groupKey] = Object.entries(labels)
+          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR", { numeric: true, sensitivity: "base" }))[0][0];
+      }
+      for (const p of Object.keys(projects)) {
+        projects[p].group = canonicalGroupLabels[normKey(projects[p].group)] || projects[p].group;
       }
 
       const allProjectKeys = Object.keys(projects);
+      const groupNames = [...new Set(allProjectKeys.map(p => projects[p].group))];
+      const groupProjectCounts = groupNames.reduce((acc, group) => {
+        acc[group] = allProjectKeys.filter(p => projects[p].group === group).length;
+        return acc;
+      }, {});
+      groupNames.sort((a, b) => {
+        const countDiff = (groupProjectCounts[b] || 0) - (groupProjectCounts[a] || 0);
+        return countDiff || a.localeCompare(b, "pt-BR", { numeric: true, sensitivity: "base" });
+      });
 
       // Persistent sort/search state
       let dirSortAsc = directoryViewEl._sortAsc !== false;
       let dirSearch = directoryViewEl._search || "";
+      const defaultGroup = groupNames.find(group => normKey(group) === "projetos") || groupNames[0] || "";
+      let dirGroup = groupNames.includes(directoryViewEl._group) ? directoryViewEl._group : defaultGroup;
+      directoryViewEl._group = dirGroup;
 
       function rebuildProjectList() {
         const query = dirSearch.toLowerCase().trim();
-        let filtered = allProjectKeys.filter(p => !query || p.includes(query) || (projects[p].some(a => a.name.toLowerCase().includes(query))));
-        filtered.sort((a, b) => { const d = parseInt(a) - parseInt(b); return dirSortAsc ? d : -d; });
+        let filtered = allProjectKeys.filter(p => projects[p].group === dirGroup && (!query || p.toLowerCase().includes(query) || (projects[p].activities.some(a => a.name.toLowerCase().includes(query)))));
+        filtered.sort((a, b) => {
+          const d = a.localeCompare(b, "pt-BR", { numeric: true, sensitivity: "base" });
+          return dirSortAsc ? d : -d;
+        });
         return filtered;
       }
 
       // Toolbar
       const toolbar = document.createElement("div");
       toolbar.className = "directoryToolbar";
+      const groupCombo = document.createElement("div");
+      groupCombo.className = "directoryGroupCombo";
+      const groupButton = document.createElement("button");
+      groupButton.type = "button";
+      groupButton.className = "directoryGroupButton";
+      groupButton.setAttribute("aria-haspopup", "listbox");
+      groupButton.setAttribute("aria-expanded", "false");
+      groupButton.title = "Grupo de trabalho";
+      const groupButtonText = document.createElement("span");
+      groupButtonText.className = "directoryGroupButtonText";
+      groupButton.appendChild(groupButtonText);
+      const groupMenu = document.createElement("div");
+      groupMenu.className = "activitySuggestionsMenu directoryGroupMenu hidden";
+      groupMenu.setAttribute("role", "listbox");
+      groupMenu.setAttribute("aria-label", "Grupos de trabalho");
+      groupCombo.appendChild(groupButton);
+      groupCombo.appendChild(groupMenu);
       const searchBox = document.createElement("input");
       searchBox.type = "search";
       searchBox.placeholder = "🔍 Buscar número do projeto...";
@@ -7418,6 +7590,7 @@
       const sortBtn = document.createElement("button");
       sortBtn.className = "btn btnSm";
       sortBtn.innerHTML = dirSortAsc ? "↑ Crescente" : "↓ Decrescente";
+      toolbar.appendChild(groupCombo);
       toolbar.appendChild(searchBox);
       toolbar.appendChild(sortBtn);
 
@@ -7447,13 +7620,68 @@
 
       let activeProjectItem = null;
 
+      function directoryGroupLabel(group) {
+        return `${group} (${groupProjectCounts[group] || 0})`;
+      }
+
+      function updateDirectoryGroupButton() {
+        groupButtonText.textContent = directoryGroupLabel(dirGroup);
+      }
+
+      function closeDirectoryGroupMenu() {
+        groupMenu.classList.add("hidden");
+        groupMenu.classList.remove("isKeyboardNav");
+        groupButton.setAttribute("aria-expanded", "false");
+      }
+
+      function selectDirectoryGroup(group, { keepFocus = true } = {}) {
+        if (!groupNames.includes(group)) return;
+        dirGroup = group;
+        directoryViewEl._group = dirGroup;
+        activeProjectItem = null;
+        updateDirectoryGroupButton();
+        closeDirectoryGroupMenu();
+        populateProjectList();
+        if (keepFocus) groupButton.focus();
+      }
+
+      function renderDirectoryGroupMenu() {
+        groupMenu.innerHTML = "";
+        const fragment = document.createDocumentFragment();
+        for (const group of groupNames) {
+          const option = document.createElement("button");
+          option.type = "button";
+          option.className = "activitySuggestionOption directoryGroupOption";
+          if (group === dirGroup) option.classList.add("isSelected", "isActive");
+          option.setAttribute("role", "option");
+          option.setAttribute("aria-selected", group === dirGroup ? "true" : "false");
+          option.innerHTML = `<span class="directoryGroupOption__name">${escapeHtml(group)}</span><span class="directoryGroupOption__count">${groupProjectCounts[group]}</span>`;
+          option.addEventListener("mousedown", (e) => e.preventDefault());
+          option.addEventListener("pointermove", () => {
+            groupMenu.classList.remove("isKeyboardNav");
+            groupMenu.querySelectorAll(".directoryGroupOption").forEach(el => el.classList.remove("isActive"));
+            option.classList.add("isActive");
+          });
+          option.addEventListener("click", () => selectDirectoryGroup(group));
+          fragment.appendChild(option);
+        }
+        groupMenu.appendChild(fragment);
+      }
+
+      function openDirectoryGroupMenu() {
+        renderDirectoryGroupMenu();
+        groupMenu.classList.remove("hidden");
+        groupMenu.classList.remove("isKeyboardNav");
+        groupButton.setAttribute("aria-expanded", "true");
+      }
+
       function selectProject(p, pItemEl) {
         if (activeProjectItem) activeProjectItem.classList.remove("is-active");
         activeProjectItem = pItemEl;
         pItemEl.classList.add("is-active");
-        headR.textContent = "Projeto " + p + " — " + projects[p].length + " atividade(s)";
+        headR.textContent = projects[p].group + " / Projeto " + p + " — " + projects[p].activities.length + " atividade(s)";
         listR.innerHTML = "";
-        [...projects[p]].sort((a, b) => a.name.localeCompare(b.name)).forEach(act => {
+        [...projects[p].activities].sort((a, b) => a.name.localeCompare(b.name)).forEach(act => {
           const item = document.createElement("div");
           item.className = "directoryCard directoryCard--activity";
           item.innerHTML = `<div class="directoryCard__title">${escapeHtml(act.name)}</div><div class="directoryCard__meta">ID: ${escapeHtml(act.id)}</div>`;
@@ -7463,12 +7691,18 @@
 
       function populateProjectList() {
         listL.innerHTML = "";
+        listR.innerHTML = "";
+        headR.textContent = "Selecione um projeto";
         const sorted = rebuildProjectList();
         let first = null;
+        if (!sorted.length) {
+          listL.innerHTML = '<div class="directoryEmptyState">Nenhum projeto encontrado neste grupo.</div>';
+          return;
+        }
         for (const p of sorted) {
           const itemP = document.createElement("div");
           itemP.className = "directoryCard directoryCard--project";
-          itemP.innerHTML = `<span>Projeto ${escapeHtml(p)}</span><span class="directoryCard__count">${projects[p].length}</span>`;
+          itemP.innerHTML = `<span>Projeto ${escapeHtml(p)}</span><span class="directoryCard__count">${projects[p].activities.length}</span>`;
           itemP.addEventListener("click", () => selectProject(p, itemP));
           listL.appendChild(itemP);
           if (!first) first = { p, itemP };
@@ -7476,6 +7710,45 @@
         if (first && !activeProjectItem) selectProject(first.p, first.itemP);
       }
 
+      updateDirectoryGroupButton();
+      groupButton.addEventListener("click", () => {
+        if (groupMenu.classList.contains("hidden")) openDirectoryGroupMenu();
+        else closeDirectoryGroupMenu();
+      });
+      groupButton.addEventListener("keydown", (e) => {
+        if (["Enter", " ", "ArrowDown"].includes(e.key)) {
+          e.preventDefault();
+          openDirectoryGroupMenu();
+          groupMenu.classList.add("isKeyboardNav");
+          const activeOption = groupMenu.querySelector(".directoryGroupOption.isSelected") || groupMenu.querySelector(".directoryGroupOption");
+          activeOption?.focus();
+        } else if (e.key === "Escape") {
+          closeDirectoryGroupMenu();
+        }
+      });
+      groupMenu.addEventListener("keydown", (e) => {
+        const options = Array.from(groupMenu.querySelectorAll(".directoryGroupOption"));
+        const currentIndex = Math.max(0, options.indexOf(document.activeElement));
+        if (e.key === "Escape") {
+          e.preventDefault();
+          closeDirectoryGroupMenu();
+          groupButton.focus();
+        } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault();
+          groupMenu.classList.add("isKeyboardNav");
+          const nextIndex = e.key === "ArrowDown"
+            ? (currentIndex + 1) % options.length
+            : (currentIndex - 1 + options.length) % options.length;
+          options[nextIndex]?.focus();
+        }
+      });
+      const handleDirectoryOutsidePointer = (e) => {
+        if (!groupCombo.contains(e.target)) closeDirectoryGroupMenu();
+      };
+      document.addEventListener("pointerdown", handleDirectoryOutsidePointer, true);
+      directoryViewEl._directoryCleanup = () => {
+        document.removeEventListener("pointerdown", handleDirectoryOutsidePointer, true);
+      };
       sortBtn.addEventListener("click", () => {
         dirSortAsc = !dirSortAsc;
         directoryViewEl._sortAsc = dirSortAsc;

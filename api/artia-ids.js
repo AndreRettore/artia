@@ -77,6 +77,8 @@ function limitRows(rows, limit) {
 function toPublicRows(rows) {
   return (Array.isArray(rows) ? rows : []).map((row) => ({
     project: String(row?.project ?? "").trim(),
+    projectLabel: String(row?.projectLabel ?? "").trim(),
+    workGroup: String(row?.workGroup ?? "").trim(),
     activity: String(row?.activity ?? "").trim(),
     id: String(row?.id ?? "").trim()
   }));
