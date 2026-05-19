@@ -8407,7 +8407,7 @@
       const seen = new Set();
 
       for (const [key] of Object.entries(state.idBaseIndex)) {
-        if (key.endsWith("||name")) continue;
+        if (key.endsWith("||name") || key.endsWith("||group")) continue;
         const parts = key.split("||");
         if (parts.length < 2) continue;
         if (!projectKeys.includes(parts[0].trim())) continue;
