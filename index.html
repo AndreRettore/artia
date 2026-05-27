@@ -435,6 +435,11 @@
       border-color: var(--line);
     }
 
+    html.light .helpVideo {
+      background: rgba(15, 23, 42, .035);
+      border-color: var(--line);
+    }
+
     /* Charts view styles */
     #chartsView {
       /* A altura e rolagem são semelhantes à grade, a visibilidade será controlada via classe .hidden */
@@ -3086,8 +3091,35 @@
     .helpModalBody {
       padding: 18px 18px 22px;
       overflow: auto;
-      display: grid;
+      display: flex;
+      flex-direction: column;
       gap: 18px;
+      min-height: 0;
+    }
+
+    .helpVideo {
+      flex: 0 0 auto;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #000;
+    }
+
+    .helpVideo::before {
+      content: "";
+      display: block;
+      padding-top: 56.25%;
+    }
+
+    .helpVideoFrame {
+      position: absolute;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #000;
     }
 
     .helpIntro {
@@ -3098,6 +3130,7 @@
     }
 
     .helpSection {
+      flex: 0 0 auto;
       display: grid;
       gap: 8px;
       padding: 14px 16px;
@@ -4169,6 +4202,13 @@
       </div>
 
       <div class="helpModalBody">
+        <div class="helpVideo" aria-label="Vídeo tutorial de uso do site">
+          <iframe id="helpVideoFrame" class="helpVideoFrame" title="Tutorial de uso do Exxata Apontamentos"
+            data-src="https://www.youtube.com/embed/Uj4eUtlQ2vA?autoplay=1&mute=1&start=2&cc_load_policy=1&cc_lang_pref=pt&hl=pt-BR&playsinline=1&rel=0&modestbranding=1"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+        </div>
+
         <section class="helpSection" aria-labelledby="helpNavTitle">
           <h3 id="helpNavTitle">Navegação geral</h3>
           <p>Use os botões do topo para alternar entre as visões do sistema. Os atalhos são: <strong>C</strong> para
@@ -7962,6 +8002,7 @@
     const helpBackdrop = document.getElementById("helpBackdrop");
     const helpClose = document.getElementById("helpClose");
     const helpCloseFooter = document.getElementById("helpCloseFooter");
+    const helpVideoFrame = document.getElementById("helpVideoFrame");
     const importUploadBackdrop = document.getElementById("importUploadBackdrop");
     const importUploadClose = document.getElementById("importUploadClose");
     const importUploadCancel = document.getElementById("importUploadCancel");
@@ -8254,10 +8295,14 @@
     function showHelpModal(show) {
       if (!helpBackdrop) return;
       if (show) {
+        if (helpVideoFrame && !helpVideoFrame.getAttribute("src")) {
+          helpVideoFrame.src = helpVideoFrame.dataset.src || "";
+        }
         helpBackdrop.classList.add("show");
         helpBackdrop.setAttribute("aria-hidden", "false");
         requestAnimationFrame(() => helpClose?.focus());
       } else {
+        if (helpVideoFrame) helpVideoFrame.src = "";
         helpBackdrop.classList.remove("show");
         helpBackdrop.setAttribute("aria-hidden", "true");
       }
