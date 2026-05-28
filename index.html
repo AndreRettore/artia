@@ -684,7 +684,8 @@
       opacity: 1;
     }
 
-    #lastSavedInfo[data-mode="needs-target"] {
+    #lastSavedInfo[data-mode="needs-target"],
+    #lastSavedInfo[data-mode="pending"] {
       color: rgba(255, 214, 122, .98);
       opacity: 1;
       font-weight: 600;
@@ -706,7 +707,8 @@
       color: #8a5a00;
     }
 
-    html.light #lastSavedInfo[data-mode="needs-target"] {
+    html.light #lastSavedInfo[data-mode="needs-target"],
+    html.light #lastSavedInfo[data-mode="pending"] {
       color: #9a5f00;
     }
 
@@ -4704,6 +4706,7 @@
     }
 
     async function saveEventsToDB() {
+      markBackupDirty();
       const db = await openDB();
       await new Promise((resolve, reject) => {
         const tx = db.transaction("events", "readwrite");
@@ -4718,13 +4721,16 @@
         tx.oncomplete = () => resolve(true);
         tx.onerror = () => reject(tx.error);
       });
-      markBackupDirty();
     }
 
     // ===== Backup XLSX (sobrescrever) =====
     const AUTO_BACKUP_PROMPT_THRESHOLD = 4;
     const AUTO_BACKUP_TARGET_MESSAGE = "⚠️ Defina um local de salvamento para ativar o backup automático.";
     const AUTO_BACKUP_TARGET_ALERT = "⚠️ Defina um local de salvamento para ativar o backup automático.\n\nOs apontamentos continuam salvos no navegador, mas o backup XLSX automático só funciona depois que um local é definido.";
+    const BACKUP_PENDING_DOWNLOAD_MESSAGE = "Backup pendente: clique em Salvar XLSX para baixar a planilha.";
+    const BACKUP_PERSISTENT_PERMISSION_HINT = "Quando o Chrome/Edge pedir permissão, marque \"Permitir em todos os acessos\" para manter o backup automático ativo.";
+    const BACKUP_PENDING_TARGET_MESSAGE = "Backup pendente: aguardando salvamento automático em";
+    const BACKUP_PENDING_UNAVAILABLE_MESSAGE = "Backup pendente: defina novamente o local ou clique em Salvar XLSX.";
     const BACKUP_TARGET_META_KEY = "backupTargetMeta";
     const BACKUP_STATUS_NONE = "not-configured";
     const BACKUP_STATUS_READY = "ready";
@@ -4732,12 +4738,25 @@
     const BACKUP_STATUS_UNAVAILABLE = "unavailable";
     let backupDirty = false;
     let backupTimer = null;
+    let backupInProgress = false;
+    let backupQueued = false;
+
+    function scheduleBackupExport(delay = 2500, reason = "autosave") {
+      if (backupTimer) clearTimeout(backupTimer);
+      backupTimer = setTimeout(() => {
+        backupTimer = null;
+        exportBackupXLSX({ reason }).catch(() => { });
+      }, delay);
+    }
 
     function markBackupDirty() {
       backupDirty = true;
       // debounce: evita gerar XLSX a cada clique
-      if (backupTimer) clearTimeout(backupTimer);
-      backupTimer = setTimeout(() => { exportBackupXLSX({ reason: "autosave" }).catch(() => { }); }, 2500);
+      if (backupInProgress) {
+        backupQueued = true;
+        return;
+      }
+      scheduleBackupExport();
     }
 
     // --- Funções auxiliares para o backup XLSX ---
@@ -4778,13 +4797,45 @@
       return { rowsEvents, meta };
     }
 
+    function hashBackupPayload(payload) {
+      let h1 = 0xdeadbeef;
+      let h2 = 0x41c6ce57;
+      for (let i = 0; i < payload.length; i++) {
+        const ch = payload.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+      }
+      h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+      h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+      const hash = 4294967296 * (2097151 & h2) + (h1 >>> 0);
+      return String(hash);
+    }
+
+    function buildBackupFingerprint(rowsEvents = buildBackupRows().rowsEvents) {
+      const payload = JSON.stringify(rowsEvents);
+      return `v1:${rowsEvents.length}:${payload.length}:${hashBackupPayload(payload)}`;
+    }
+
+    function buildBackupSnapshot() {
+      const rows = buildBackupRows();
+      return {
+        rows,
+        fingerprint: buildBackupFingerprint(rows.rowsEvents),
+        bytes: buildBackupXlsxBytes(rows)
+      };
+    }
+
+    function sanitizeXmlText(value) {
+      return String(value ?? "").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+    }
+
     /* =========================================================
        XLSX Writer (100% offline, sem libs)
        - Gera um .xlsx real (ZIP + XML) com 2 abas: Eventos e Meta
        ========================================================= */
 
     function _xmlEscape(s) {
-      return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+      return sanitizeXmlText(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
     }
     function _colName(n) {
       // 1 -> A, 26 -> Z, 27 -> AA
@@ -4938,11 +4989,11 @@
       return out;
     }
 
-    function buildBackupXlsxBytes() {
-      const { rowsEvents, meta } = buildBackupRows();
+    function buildBackupXlsxBytes(backupRows = buildBackupRows()) {
+      const { rowsEvents, meta } = backupRows;
 
       const headersE = ["Data", "Projeto", "Hora Início", "Hora de Término", "Esforço", "Atividade", "Observação", "Lançamento Artia", "ID"];
-      const headersM = ["Gerado em", "Atividades", "Arquivo Base"];
+      const headersM = ["Gerado em", "Eventos", "Arquivo Base"];
 
       // Gera XML das abas
       const sheet1 = _sheetXmlFromTable("atividades", headersE, rowsEvents);
@@ -5016,7 +5067,10 @@
         fileName,
         label,
         lastError: String(meta?.lastError ?? fallback.lastError ?? "").trim(),
-        updatedAt: String(meta?.updatedAt ?? fallback.updatedAt ?? "")
+        updatedAt: String(meta?.updatedAt ?? fallback.updatedAt ?? ""),
+        lastBackupFingerprint: String(meta?.lastBackupFingerprint ?? fallback.lastBackupFingerprint ?? ""),
+        lastBackupAt: String(meta?.lastBackupAt ?? fallback.lastBackupAt ?? ""),
+        lastBackupMechanism: String(meta?.lastBackupMechanism ?? fallback.lastBackupMechanism ?? "")
       };
     }
 
@@ -5024,6 +5078,20 @@
       const safeFolder = String(folderName || "").trim();
       const safeFile = String(fileName || "backup_artia.xlsx").trim() || "backup_artia.xlsx";
       return safeFolder ? `${safeFolder}/${safeFile}` : safeFile;
+    }
+
+    function getBackupTargetDisplayName(target = {}) {
+      return String(target.folderName || target.meta?.folderName || target.fileName || target.meta?.fileName || "local salvo").trim();
+    }
+
+    function buildBackupPermissionMessage(target = {}) {
+      return `Local salvo: ${getBackupTargetDisplayName(target)}. Ao editar/salvar ou clicar em Salvar XLSX, escolha "Permitir em todos os acessos".`;
+    }
+
+    function isBackupPermissionError(error) {
+      const name = String(error?.name || "");
+      const message = String(error?.message || error || "").toLowerCase();
+      return name === "NotAllowedError" || name === "AbortError" || name === "SecurityError" || message.includes("permission") || message.includes("permiss") || message.includes("activation");
     }
 
     async function persistBackupTargetMeta(status, details = {}) {
@@ -5061,21 +5129,22 @@
       return permission;
     }
 
-    async function writeBackupViaHandle(fileHandle, { requestPermission = true } = {}) {
+    async function writeBackupViaHandle(fileHandle, { requestPermission = true, snapshot = null } = {}) {
       const permission = await getBackupHandlePermission(fileHandle, { requestIfNeeded: requestPermission });
       if (permission !== "granted") {
         throw new Error("Permissão negada para gravar o backup.");
       }
-      const bytes = buildBackupXlsxBytes();
-      const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const prepared = snapshot || buildBackupSnapshot();
+      const blob = new Blob([prepared.bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       const writable = await fileHandle.createWritable();
       await writable.write(blob);
       await writable.close();
+      return prepared;
     }
 
-    function downloadBackupFallback() {
-      const bytes = buildBackupXlsxBytes();
-      const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    function downloadBackupFallback(snapshot = null) {
+      const prepared = snapshot || buildBackupSnapshot();
+      const blob = new Blob([prepared.bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -5084,6 +5153,7 @@
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 0);
+      return prepared;
     }
 
     async function getStoredBackupTarget() {
@@ -5114,8 +5184,50 @@
       return !!(dirHandle?.getFileHandle || fileHandle);
     }
 
-    async function revalidateStoredBackupTarget({ requestPermission = false } = {}) {
+    function buildCurrentBackupFingerprint() {
+      return buildBackupFingerprint(buildBackupRows().rowsEvents);
+    }
+
+    async function syncBackupDirtyFromStoredMeta() {
       const target = await getStoredBackupTarget();
+      const currentFingerprint = buildCurrentBackupFingerprint();
+      const lastFingerprint = target.meta.lastBackupFingerprint || "";
+      backupDirty = currentFingerprint !== lastFingerprint;
+      if (!lastFingerprint && state.events.length === 0) backupDirty = false;
+      return backupDirty;
+    }
+
+    async function persistBackupExportSuccess(fingerprint, mechanism, { status = null, details = {} } = {}) {
+      const currentMeta = normalizeBackupMeta(await kvGet(BACKUP_TARGET_META_KEY));
+      const nextStatus = status || currentMeta.status || BACKUP_STATUS_NONE;
+      const successDetails = {
+        ...details,
+        lastBackupFingerprint: fingerprint,
+        lastBackupAt: new Date().toISOString(),
+        lastBackupMechanism: mechanism
+      };
+      if (mechanism === "handle" || nextStatus === BACKUP_STATUS_NONE) {
+        successDetails.lastError = "";
+      }
+      await persistBackupTargetMeta(nextStatus, successDetails);
+      backupDirty = buildCurrentBackupFingerprint() !== fingerprint;
+      return !backupDirty;
+    }
+
+    async function persistBackupPermissionRequired(target, details = {}) {
+      const folderName = String(details.folderName ?? target.folderName ?? target.meta?.folderName ?? "").trim();
+      const fileName = String(details.fileName ?? target.fileHandle?.name ?? target.fileName ?? target.meta?.fileName ?? "backup_artia.xlsx").trim() || "backup_artia.xlsx";
+      const metaTarget = { ...target, folderName, fileName, meta: { ...target.meta, folderName, fileName } };
+      const meta = await persistBackupTargetMeta(BACKUP_STATUS_PERMISSION_REQUIRED, {
+        folderName,
+        fileName,
+        label: formatBackupTargetLabel(folderName, fileName),
+        lastError: details.lastError || buildBackupPermissionMessage(metaTarget)
+      });
+      return meta;
+    }
+
+    async function resolveStoredBackupTarget(target, { requestPermission = false } = {}) {
       const hasStoredTarget = !!(target.dirHandle || target.fileHandle);
       if (!hasStoredTarget) {
         const meta = await persistBackupTargetMeta(BACKUP_STATUS_NONE, {
@@ -5132,19 +5244,31 @@
       const fallbackFileName = target.fileName || "backup_artia.xlsx";
 
       try {
-        if (target.dirHandle?.getFileHandle) {
-          handle = await target.dirHandle.getFileHandle("backup_artia.xlsx", { create: true });
-          await kvSet("backupFileHandle", handle);
+        if (target.dirHandle) {
+          if (!target.dirHandle.getFileHandle) {
+            if (!handle) throw new Error("O destino de pasta salvo não pôde ser reativado. Defina novamente o local.");
+          } else {
+            const directoryPermission = await getBackupHandlePermission(target.dirHandle, { requestIfNeeded: requestPermission });
+            if (directoryPermission !== "granted") {
+              const meta = await persistBackupPermissionRequired(target, {
+                fileName: fallbackFileName,
+                lastError: buildBackupPermissionMessage(target)
+              });
+              return { ok: false, reason: "permission", permission: directoryPermission, target: { ...target, fileHandle: handle, meta } };
+            }
+
+            handle = await target.dirHandle.getFileHandle("backup_artia.xlsx", { create: true });
+            await kvSet("backupFileHandle", handle);
+          }
         }
         if (!handle) throw new Error("O destino configurado não pôde ser localizado.");
 
         const permission = await getBackupHandlePermission(handle, { requestIfNeeded: requestPermission });
         if (permission !== "granted") {
-          const meta = await persistBackupTargetMeta(BACKUP_STATUS_PERMISSION_REQUIRED, {
+          const meta = await persistBackupPermissionRequired(target, {
             folderName,
             fileName: handle?.name || fallbackFileName,
-            label: formatBackupTargetLabel(folderName, handle?.name || fallbackFileName),
-            lastError: "O navegador precisa confirmar novamente a permissão de escrita."
+            lastError: buildBackupPermissionMessage({ ...target, fileName: handle?.name || fallbackFileName })
           });
           return { ok: false, reason: "permission", permission, target: { ...target, fileHandle: handle, meta } };
         }
@@ -5157,6 +5281,15 @@
         });
         return { ok: true, target: { ...target, fileHandle: handle, meta } };
       } catch (error) {
+        if (isBackupPermissionError(error)) {
+          const meta = await persistBackupPermissionRequired(target, {
+            folderName,
+            fileName: handle?.name || fallbackFileName,
+            lastError: buildBackupPermissionMessage({ ...target, fileName: handle?.name || fallbackFileName })
+          });
+          return { ok: false, reason: "permission", permission: "denied", error, target: { ...target, fileHandle: handle, meta } };
+        }
+
         const fileName = handle?.name || fallbackFileName;
         const meta = await persistBackupTargetMeta(BACKUP_STATUS_UNAVAILABLE, {
           folderName,
@@ -5168,6 +5301,16 @@
       }
     }
 
+    async function revalidateStoredBackupTarget({ requestPermission = false } = {}) {
+      const target = await getStoredBackupTarget();
+      return resolveStoredBackupTarget(target, { requestPermission });
+    }
+
+    async function requestStoredBackupTargetPermission() {
+      const target = await getStoredBackupTarget();
+      return resolveStoredBackupTarget(target, { requestPermission: true });
+    }
+
     async function refreshBackupReminderUI() {
       const el = document.getElementById("lastSavedInfo");
       if (!el) return;
@@ -5177,12 +5320,21 @@
       const label = formatBackupTargetLabel(target.folderName, target.fileName);
 
       if (target.meta.status === BACKUP_STATUS_PERMISSION_REQUIRED && hasTarget) {
-        setSaveInfoMessage("Confirme novamente o local de salvamento para reativar o backup automático.", "permission-required", target.meta.lastError);
+        setSaveInfoMessage(buildBackupPermissionMessage(target), "permission-required", target.meta.lastError || label);
         return;
       }
 
       if (target.meta.status === BACKUP_STATUS_UNAVAILABLE && hasTarget) {
-        setSaveInfoMessage("Não foi possível acessar o local de salvamento. Defina novamente um local.", "target-unavailable", target.meta.lastError);
+        setSaveInfoMessage(BACKUP_PENDING_UNAVAILABLE_MESSAGE, "target-unavailable", target.meta.lastError);
+        return;
+      }
+
+      if (backupDirty) {
+        if (!hasTarget) {
+          setSaveInfoMessage(BACKUP_PENDING_DOWNLOAD_MESSAGE, "needs-target");
+          return;
+        }
+        setSaveInfoMessage(`${BACKUP_PENDING_TARGET_MESSAGE} ${label}`, "pending", label);
         return;
       }
 
@@ -5214,12 +5366,20 @@
         setSaveInfoMessage(`Backup automático ativo em ${label}`, "target-ready", label);
         return;
       }
+      if (mechanism === "pending") {
+        if (!target.dirHandle && !target.fileHandle) {
+          setSaveInfoMessage(BACKUP_PENDING_DOWNLOAD_MESSAGE, "needs-target");
+          return;
+        }
+        setSaveInfoMessage(`${BACKUP_PENDING_TARGET_MESSAGE} ${label}`, "pending", label);
+        return;
+      }
       if (mechanism === "permission-required") {
-        setSaveInfoMessage("Confirme novamente o local de salvamento para reativar o backup automático.", "permission-required", target.meta.lastError);
+        setSaveInfoMessage(buildBackupPermissionMessage(target), "permission-required", target.meta.lastError || label);
         return;
       }
       if (mechanism === "target-unavailable") {
-        setSaveInfoMessage("Não foi possível acessar o local de salvamento. Defina novamente um local.", "target-unavailable", target.meta.lastError);
+        setSaveInfoMessage(BACKUP_PENDING_UNAVAILABLE_MESSAGE, "target-unavailable", target.meta.lastError);
         return;
       }
 
@@ -5260,50 +5420,134 @@
       tableWrapEl.style.maxHeight = `${available}px`;
     }
 
-    async function exportBackupXLSX({ reason = "manual" } = {}) {
-      if (!backupDirty && reason !== "manual") return;
-      backupDirty = false;
-      const isAutomatic = reason !== "manual";
+    async function exportBackupXLSX({ reason = "manual", requestPermission = reason === "manual", allowDownloadFallback = reason === "manual" } = {}) {
+      const isManual = reason === "manual";
+      if (!backupDirty && !isManual) return false;
+
+      if (backupInProgress) {
+        backupQueued = true;
+        if (isManual) setModalInfo("Backup já em andamento. Vou tentar novamente em instantes.");
+        return false;
+      }
+
+      backupInProgress = true;
+      backupQueued = false;
+      let exported = false;
 
       try {
-        const validation = await revalidateStoredBackupTarget({ requestPermission: !isAutomatic });
+        const validation = requestPermission
+          ? await requestStoredBackupTargetPermission()
+          : await revalidateStoredBackupTarget({ requestPermission: false });
         if (validation.ok && validation.target.fileHandle) {
-          await writeBackupViaHandle(validation.target.fileHandle, { requestPermission: false });
-          if (reason === "manual") setModalInfo("Backup XLSX atualizado (sobrescrito) ✅", true);
+          const snapshot = await writeBackupViaHandle(validation.target.fileHandle, { requestPermission: false });
+          await persistBackupExportSuccess(snapshot.fingerprint, "handle", {
+            status: BACKUP_STATUS_READY,
+            details: {
+              folderName: validation.target.folderName,
+              fileName: validation.target.fileHandle.name || validation.target.fileName || "backup_artia.xlsx",
+              label: formatBackupTargetLabel(validation.target.folderName, validation.target.fileHandle.name || validation.target.fileName || "backup_artia.xlsx")
+            }
+          });
+          if (isManual) setModalInfo("Backup XLSX atualizado (sobrescrito) ✅", true);
           await updateSaveInfoUI("handle");
           flashSaveButton();
+          exported = true;
           return true;
         }
 
-        if (isAutomatic) {
+        if (!allowDownloadFallback) {
           if (validation.reason === "permission") await updateSaveInfoUI("permission-required");
           else if (validation.reason === "unavailable") await updateSaveInfoUI("target-unavailable");
           else await refreshBackupReminderUI();
           return false;
         }
 
-        downloadBackupFallback();
-        if (reason === "manual") setModalInfo("Backup XLSX exportado. Dica: use “Definir destino do Backup” para sobrescrever sempre ✅", true);
+        if (validation.reason === "permission") {
+          const snapshot = downloadBackupFallback();
+          await persistBackupExportSuccess(snapshot.fingerprint, "download", { status: BACKUP_STATUS_PERMISSION_REQUIRED });
+          if (isManual) setModalInfo("Permissão não liberada; gerei o backup por download. O local salvo continua aguardando permissão do Chrome.", true);
+          await updateSaveInfoUI("permission-required");
+          flashSaveButton();
+          exported = true;
+          return true;
+        }
+
+        const snapshot = downloadBackupFallback();
+        await persistBackupExportSuccess(snapshot.fingerprint, "download", { status: validation.target?.meta?.status || BACKUP_STATUS_NONE });
+        if (isManual) setModalInfo("Backup XLSX exportado por download ✅", true);
         await updateSaveInfoUI("download");
         flashSaveButton();
+        exported = true;
         return true;
       } catch (err) {
         console.warn(err);
-        if (isAutomatic) {
-          await persistBackupTargetMeta(BACKUP_STATUS_UNAVAILABLE, { lastError: err?.message || String(err) });
-          await updateSaveInfoUI("target-unavailable");
+        if (!allowDownloadFallback) {
+          if (isBackupPermissionError(err)) {
+            const target = await getStoredBackupTarget();
+            await persistBackupPermissionRequired(target, { lastError: buildBackupPermissionMessage(target) });
+            await updateSaveInfoUI("permission-required");
+          } else {
+            await persistBackupTargetMeta(BACKUP_STATUS_UNAVAILABLE, { lastError: err?.message || String(err) });
+            await updateSaveInfoUI("target-unavailable");
+          }
           return false;
         }
-        // fallback
         try {
-          downloadBackupFallback();
-          if (reason === "manual") setModalInfo("Backup XLSX exportado (modo download). Para sobrescrever sempre, use “Definir destino do Backup”.", true);
-          await updateSaveInfoUI("download");
+          if (isBackupPermissionError(err)) {
+            await persistBackupPermissionRequired(await getStoredBackupTarget());
+          } else {
+            await persistBackupTargetMeta(BACKUP_STATUS_UNAVAILABLE, { lastError: err?.message || String(err) });
+          }
+          const snapshot = downloadBackupFallback();
+          const target = await getStoredBackupTarget();
+          const nextStatus = isBackupPermissionError(err) ? BACKUP_STATUS_PERMISSION_REQUIRED : (target.meta.status || BACKUP_STATUS_UNAVAILABLE);
+          await persistBackupExportSuccess(snapshot.fingerprint, "download", { status: nextStatus });
+          if (isManual) {
+            setModalInfo(isBackupPermissionError(err)
+              ? "Permissão não liberada; gerei o backup por download. O local salvo continua aguardando permissão do Chrome."
+              : "Não consegui sobrescrever o destino, então gerei um download do backup XLSX.", true);
+          }
+          await updateSaveInfoUI(isBackupPermissionError(err) ? "permission-required" : "download");
           flashSaveButton();
-        } catch { }
-        return false;
+          exported = true;
+          return true;
+        } catch (fallbackError) {
+          console.warn(fallbackError);
+          if (isManual) setModalInfo("Não foi possível gerar o backup XLSX. Tente novamente ou defina outro local.");
+          return false;
+        }
+      } finally {
+        backupInProgress = false;
+        if (backupQueued && exported && backupDirty) {
+          backupQueued = false;
+          scheduleBackupExport(300);
+        } else {
+          backupQueued = false;
+        }
       }
     }
+
+    async function requestPendingBackupPermissionFromUserAction() {
+      if (SELF_TEST_MODE || !backupDirty) return false;
+
+      const target = await getStoredBackupTarget();
+      if (!target.dirHandle && !target.fileHandle) return false;
+
+      const permissionHandle = target.dirHandle?.queryPermission || target.dirHandle?.requestPermission
+        ? target.dirHandle
+        : target.fileHandle;
+      const currentPermission = await getBackupHandlePermission(permissionHandle, { requestIfNeeded: false });
+      if (currentPermission === "granted" && target.meta.status !== BACKUP_STATUS_PERMISSION_REQUIRED) {
+        return false;
+      }
+
+      return exportBackupXLSX({
+        reason: "user-edit-permission",
+        requestPermission: true,
+        allowDownloadFallback: false
+      });
+    }
+
     const CONFIG = { startHour: 0, endHour: 24, stepMinutes: 10 };
     const DAY_NAMES = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
     const DEFAULT_UI_PREFS = Object.freeze({ allowBrokenTimes: false });
@@ -5579,9 +5823,12 @@
       // Mantém nome para compatibilidade com o resto do código
       return await loadEventsFromDB();
     }
-    async function saveEvents() {
+    async function saveEvents({ requestBackupPermission = false } = {}) {
       await saveEventsToDB();
       await refreshBackupReminderUI();
+      if (requestBackupPermission) {
+        await requestPendingBackupPermissionFromUserAction();
+      }
     }
 
     function readStoredDateRange(key) {
@@ -5671,10 +5918,16 @@
       state.idBaseIndex = indexObj; state.idBaseMeta = metaObj; setBaseStatus(true, metaObj);
       await syncEventActivityIdsFromBase();
     }
-    async function clearAll() { state.events = []; await saveEvents(); renderAll(); }
-    function clearWeek() {
+    async function clearAll() { state.events = []; await saveEvents({ requestBackupPermission: true }); renderAll(); }
+    async function clearWeek() {
       const ws = toDateOnlyISO(state.weekStart), we = toDateOnlyISO(addDays(state.weekStart, 6));
-      state.events = state.events.filter(ev => !(ev.day >= ws && ev.day <= we)); saveEvents(); renderAll();
+      state.events = state.events.filter(ev => !(ev.day >= ws && ev.day <= we));
+      try {
+        await saveEvents({ requestBackupPermission: true });
+      } catch (error) {
+        console.warn("Não foi possível salvar a limpeza da semana:", error);
+      }
+      renderAll();
     }
 
     const baseStatusEl = document.getElementById("baseStatus");
@@ -6411,7 +6664,7 @@
       updateEventDragFromPointer(e.clientX, e.clientY);
     }
 
-    function onEventDragEnd() {
+    async function onEventDragEnd() {
       if (state.view !== "calendar") { cancelEventDragState(); return; }
       if (!eventDrag.pending) return;
 
@@ -6425,6 +6678,9 @@
         cancelEventDragState();
         return;
       }
+
+      eventDrag.justFinished = true;
+      setTimeout(() => { eventDrag.justFinished = false; }, 120);
 
       const newStartM = eventDrag.lastStartM;
       const newEndM = eventDrag.lastEndM;
@@ -6465,7 +6721,11 @@
             end = setTimeOnDate(day, Math.floor(newEndM / 60), newEndM % 60);
           }
           state.events[idx] = { ...state.events[idx], day: targetDayIso, start: start.toISOString(), end: end.toISOString() };
-          saveEvents();
+          try {
+            await saveEvents({ requestBackupPermission: true });
+          } catch (error) {
+            console.warn("Não foi possível salvar a alteração do evento:", error);
+          }
         }
       } else {
         // Revert physical DOM if we moved it
@@ -6481,9 +6741,6 @@
       el.classList.remove("dragging");
       state.selectedEventId = evId;
       cancelEventDragState();
-
-      eventDrag.justFinished = true;
-      setTimeout(() => { eventDrag.justFinished = false; }, 120);
 
       renderAll();
     }
@@ -6536,8 +6793,8 @@
         });
 
         el.addEventListener("click", (e) => {
-          if (eventDrag.justFinished) return;
           e.stopPropagation();
+          if (eventDrag.justFinished) return;
           if (state.selectedEventId === ev.id) {
             openEditModal(ev.id);
             return;
@@ -6708,7 +6965,7 @@
       const idx = state.events.findIndex(ev => ev.id === eventId);
       if (idx < 0) return;
       state.events[idx] = { ...state.events[idx], artiaLaunched: Boolean(nextValue) };
-      await saveEvents();
+      await saveEvents({ requestBackupPermission: true });
       renderAll();
     }
 
@@ -9015,7 +9272,7 @@
         state.events.push({ id: genId(), start: sel.start.toISOString(), end: sel.end.toISOString(), day: dayIso, project, activityId, activityLabel, artiaLaunched, notes });
       }
 
-      await saveEvents();
+      await saveEvents({ requestBackupPermission: true });
       showModal(false);
       state.selection = null;
       state.editingEventId = null;
@@ -9030,11 +9287,15 @@
       }
     }
 
-    function onDelete() {
+    async function onDelete() {
       if (!state.editingEventId) return;
       state.selectedEventId = null;
       state.events = state.events.filter(e => e.id !== state.editingEventId);
-      saveEvents();
+      try {
+        await saveEvents({ requestBackupPermission: true });
+      } catch (error) {
+        console.warn("Não foi possível salvar a exclusão do evento:", error);
+      }
       showModal(false);
       state.selection = null;
       state.editingEventId = null;
@@ -9501,9 +9762,9 @@
     btnPrev.addEventListener("click", () => goWeek(-1));
     btnNext.addEventListener("click", () => goWeek(1));
     btnToday.addEventListener("click", () => goToday());
-    btnClearWeek.addEventListener("click", () => { if (confirm("Limpar eventos apenas da semana atual?")) clearWeek(); });
-    btnClearAll.addEventListener("click", () => {
-      if (confirm("Limpar TODOS os eventos (todas as semanas)?")) clearAll();
+    btnClearWeek.addEventListener("click", async () => { if (confirm("Limpar eventos apenas da semana atual?")) await clearWeek(); });
+    btnClearAll.addEventListener("click", async () => {
+      if (confirm("Limpar TODOS os eventos (todas as semanas)?")) await clearAll();
       document.getElementById("settingsMenu").classList.add("hidden");
       btnSettings?.setAttribute("aria-expanded", "false");
     });
@@ -10660,7 +10921,7 @@
           state.events = importSummary.events;
         }
 
-        await saveEvents();
+        await saveEvents({ requestBackupPermission: true });
         renderAll();
         const sheetName = getImportSheetNameByPath(sheetPath) || sheetPath;
         closeImportConfigAndReset();
@@ -10939,13 +11200,35 @@
     if (btnSetBackupTarget) {
       btnSetBackupTarget.addEventListener("click", async () => {
         try {
+          const storedTarget = await getStoredBackupTarget();
+          if ((storedTarget.dirHandle || storedTarget.fileHandle) && storedTarget.meta.status === BACKUP_STATUS_PERMISSION_REQUIRED) {
+            const reactivated = await resolveStoredBackupTarget(storedTarget, { requestPermission: true });
+            if (reactivated.ok) {
+              await updateSaveInfoUI("pending");
+              const exported = await exportBackupXLSX({ reason: "manual" });
+              if (exported) {
+                alert(`Local de salvamento reativado e backup salvo em ${reactivated.target.meta.label || reactivated.target.fileName}.\n\n${BACKUP_PERSISTENT_PERMISSION_HINT}`);
+              } else {
+                alert(`Local de salvamento reativado, mas ainda não consegui salvar o backup agora. Clique em Salvar XLSX.\n\n${BACKUP_PERSISTENT_PERMISSION_HINT}`);
+              }
+              return;
+            }
+            await updateSaveInfoUI("permission-required");
+          }
+
           const target = await configureBackupTarget();
-          await updateSaveInfoUI("target-ready");
-          await exportBackupXLSX({ reason: "manual" });
-          if (target.mode === "directory") {
-            alert(`Pasta de salvamento definida. O backup será sobrescrito automaticamente em ${target.folderName}/${target.fileName}.`);
+          await updateSaveInfoUI("pending");
+          const exported = await exportBackupXLSX({ reason: "manual" });
+          const currentTarget = await getStoredBackupTarget();
+          const directSaveOk = exported && currentTarget.meta.status === BACKUP_STATUS_READY && currentTarget.meta.lastBackupMechanism === "handle";
+          if (directSaveOk && target.mode === "directory") {
+            alert(`Pasta de salvamento definida. O backup será sobrescrito automaticamente em ${target.folderName}/${target.fileName}.\n\n${BACKUP_PERSISTENT_PERMISSION_HINT}`);
+          } else if (directSaveOk) {
+            alert(`Arquivo de backup definido. Em pastas protegidas do macOS, o site passa a salvar diretamente no arquivo selecionado.\n\n${BACKUP_PERSISTENT_PERMISSION_HINT}`);
+          } else if (exported) {
+            alert("O backup foi gerado por download, mas não consegui confirmar a gravação automática no local escolhido. Defina o local novamente se quiser sobrescrever sempre.");
           } else {
-            alert("Arquivo de backup definido. Em pastas protegidas do macOS, o site passa a salvar diretamente no arquivo selecionado.");
+            alert("O local foi selecionado, mas não consegui salvar o backup agora. Clique em Salvar XLSX ou defina outro local.");
           }
         } catch (err) {
           if (err && err.name === "AbortError") return;
@@ -11712,7 +11995,9 @@
       syncTableDateRangeStorage();
       renderAll();
       await revalidateStoredBackupTarget({ requestPermission: false });
+      await syncBackupDirtyFromStoredMeta();
       await refreshBackupReminderUI();
+      if (backupDirty) scheduleBackupExport(800);
 
       void (async () => {
         const hasStoredIdBase = await loadIdBaseFromStorage();
