@@ -4727,8 +4727,8 @@
     const AUTO_BACKUP_PROMPT_THRESHOLD = 4;
     const AUTO_BACKUP_TARGET_MESSAGE = "⚠️ Defina um local de salvamento para ativar o backup automático.";
     const AUTO_BACKUP_TARGET_ALERT = "⚠️ Defina um local de salvamento para ativar o backup automático.\n\nOs apontamentos continuam salvos no navegador, mas o backup XLSX automático só funciona depois que um local é definido.";
-    const BACKUP_PENDING_DOWNLOAD_MESSAGE = "Backup pendente: clique em Salvar XLSX para baixar a planilha.";
-    const BACKUP_PERSISTENT_PERMISSION_HINT = "Quando o Chrome/Edge pedir permissão, marque \"Permitir em todos os acessos\" para manter o backup automático ativo.";
+    const BACKUP_PENDING_DOWNLOAD_MESSAGE = "Backup pendente: Clique em Definir Local de Salvamento";
+    const BACKUP_PERSISTENT_PERMISSION_HINT = "Se o Chrome/Edge oferecer, escolha \"Permitir em todas as visitas\" para manter o backup automático ativo.";
     const BACKUP_PENDING_TARGET_MESSAGE = "Backup pendente: aguardando salvamento automático em";
     const BACKUP_PENDING_UNAVAILABLE_MESSAGE = "Backup pendente: defina novamente o local ou clique em Salvar XLSX.";
     const BACKUP_TARGET_META_KEY = "backupTargetMeta";
@@ -5085,7 +5085,7 @@
     }
 
     function buildBackupPermissionMessage(target = {}) {
-      return `Local salvo: ${getBackupTargetDisplayName(target)}. Ao editar/salvar ou clicar em Salvar XLSX, escolha "Permitir em todos os acessos".`;
+      return `Local salvo: ${getBackupTargetDisplayName(target)}. Clique em Salvar XLSX ou Definir Local de Salvamento para reativar o backup automático. Se o Chrome/Edge oferecer, escolha "Permitir em todas as visitas".`;
     }
 
     function isBackupPermissionError(error) {
@@ -5527,27 +5527,6 @@
       }
     }
 
-    async function requestPendingBackupPermissionFromUserAction() {
-      if (SELF_TEST_MODE || !backupDirty) return false;
-
-      const target = await getStoredBackupTarget();
-      if (!target.dirHandle && !target.fileHandle) return false;
-
-      const permissionHandle = target.dirHandle?.queryPermission || target.dirHandle?.requestPermission
-        ? target.dirHandle
-        : target.fileHandle;
-      const currentPermission = await getBackupHandlePermission(permissionHandle, { requestIfNeeded: false });
-      if (currentPermission === "granted" && target.meta.status !== BACKUP_STATUS_PERMISSION_REQUIRED) {
-        return false;
-      }
-
-      return exportBackupXLSX({
-        reason: "user-edit-permission",
-        requestPermission: true,
-        allowDownloadFallback: false
-      });
-    }
-
     const CONFIG = { startHour: 0, endHour: 24, stepMinutes: 10 };
     const DAY_NAMES = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
     const DEFAULT_UI_PREFS = Object.freeze({ allowBrokenTimes: false });
@@ -5823,12 +5802,9 @@
       // Mantém nome para compatibilidade com o resto do código
       return await loadEventsFromDB();
     }
-    async function saveEvents({ requestBackupPermission = false } = {}) {
+    async function saveEvents() {
       await saveEventsToDB();
       await refreshBackupReminderUI();
-      if (requestBackupPermission) {
-        await requestPendingBackupPermissionFromUserAction();
-      }
     }
 
     function readStoredDateRange(key) {
@@ -5918,12 +5894,12 @@
       state.idBaseIndex = indexObj; state.idBaseMeta = metaObj; setBaseStatus(true, metaObj);
       await syncEventActivityIdsFromBase();
     }
-    async function clearAll() { state.events = []; await saveEvents({ requestBackupPermission: true }); renderAll(); }
+    async function clearAll() { state.events = []; await saveEvents(); renderAll(); }
     async function clearWeek() {
       const ws = toDateOnlyISO(state.weekStart), we = toDateOnlyISO(addDays(state.weekStart, 6));
       state.events = state.events.filter(ev => !(ev.day >= ws && ev.day <= we));
       try {
-        await saveEvents({ requestBackupPermission: true });
+        await saveEvents();
       } catch (error) {
         console.warn("Não foi possível salvar a limpeza da semana:", error);
       }
@@ -6722,7 +6698,7 @@
           }
           state.events[idx] = { ...state.events[idx], day: targetDayIso, start: start.toISOString(), end: end.toISOString() };
           try {
-            await saveEvents({ requestBackupPermission: true });
+            await saveEvents();
           } catch (error) {
             console.warn("Não foi possível salvar a alteração do evento:", error);
           }
@@ -6965,7 +6941,7 @@
       const idx = state.events.findIndex(ev => ev.id === eventId);
       if (idx < 0) return;
       state.events[idx] = { ...state.events[idx], artiaLaunched: Boolean(nextValue) };
-      await saveEvents({ requestBackupPermission: true });
+      await saveEvents();
       renderAll();
     }
 
@@ -9272,7 +9248,7 @@
         state.events.push({ id: genId(), start: sel.start.toISOString(), end: sel.end.toISOString(), day: dayIso, project, activityId, activityLabel, artiaLaunched, notes });
       }
 
-      await saveEvents({ requestBackupPermission: true });
+      await saveEvents();
       showModal(false);
       state.selection = null;
       state.editingEventId = null;
@@ -9292,7 +9268,7 @@
       state.selectedEventId = null;
       state.events = state.events.filter(e => e.id !== state.editingEventId);
       try {
-        await saveEvents({ requestBackupPermission: true });
+        await saveEvents();
       } catch (error) {
         console.warn("Não foi possível salvar a exclusão do evento:", error);
       }
@@ -10921,7 +10897,7 @@
           state.events = importSummary.events;
         }
 
-        await saveEvents({ requestBackupPermission: true });
+        await saveEvents();
         renderAll();
         const sheetName = getImportSheetNameByPath(sheetPath) || sheetPath;
         closeImportConfigAndReset();
