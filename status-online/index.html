@@ -264,7 +264,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 700px;
+      min-width: 860px;
       table-layout: fixed;
     }
 
@@ -364,42 +364,47 @@
 
     .peopleTable th:nth-child(1),
     .peopleTable td:nth-child(1) {
-      width: 26%;
+      width: 22%;
     }
 
     .peopleTable th:nth-child(2),
     .peopleTable td:nth-child(2) {
-      width: 18%;
+      width: 13%;
     }
 
     .peopleTable th:nth-child(3),
     .peopleTable td:nth-child(3) {
-      width: 18%;
+      width: 17%;
     }
 
     .peopleTable th:nth-child(4),
     .peopleTable td:nth-child(4) {
-      width: 19%;
+      width: 16%;
     }
 
     .peopleTable th:nth-child(5),
     .peopleTable td:nth-child(5) {
-      width: 19%;
+      width: 15%;
+    }
+
+    .peopleTable th:nth-child(6),
+    .peopleTable td:nth-child(6) {
+      width: 17%;
     }
 
     .deviceTable th:nth-child(1),
     .deviceTable td:nth-child(1) {
-      width: 24%;
+      width: 20%;
     }
 
     .deviceTable th:nth-child(2),
     .deviceTable td:nth-child(2) {
-      width: 17%;
+      width: 13%;
     }
 
     .deviceTable th:nth-child(3),
     .deviceTable td:nth-child(3) {
-      width: 18%;
+      width: 20%;
     }
 
     .deviceTable th:nth-child(4),
@@ -409,7 +414,12 @@
 
     .deviceTable th:nth-child(5),
     .deviceTable td:nth-child(5) {
-      width: 26%;
+      width: 13%;
+    }
+
+    .deviceTable th:nth-child(6),
+    .deviceTable td:nth-child(6) {
+      width: 19%;
     }
 
     tbody tr:hover {
@@ -476,6 +486,29 @@
       border-color: rgba(255, 204, 77, 0.35);
     }
 
+    .backupReady {
+      color: #d9ffe9;
+      background: rgba(73, 209, 125, 0.13);
+      border-color: rgba(73, 209, 125, 0.28);
+    }
+
+    .backupMissing {
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .backupIssue {
+      color: #151007;
+      background: rgba(255, 204, 77, 0.92);
+      border-color: rgba(255, 204, 77, 0.35);
+    }
+
+    .backupUnavailable {
+      color: #fff1f1;
+      background: rgba(255, 122, 122, 0.16);
+      border-color: rgba(255, 122, 122, 0.34);
+    }
+
     .metricStrong {
       font-weight: 800;
       color: var(--text);
@@ -499,6 +532,11 @@
       color: var(--muted);
       font-size: 11px;
       line-height: 1.35;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .backupLabel {
       overflow-wrap: anywhere;
       word-break: break-word;
     }
@@ -801,7 +839,7 @@
       }
 
       table {
-        min-width: 640px;
+        min-width: 820px;
       }
 
       .chartBackdrop {
@@ -946,11 +984,12 @@
                 </th>
                 <th>Dispositivos</th>
                 <th>Abas</th>
+                <th>Backup</th>
               </tr>
             </thead>
             <tbody id="peopleTableBody">
               <tr>
-                <td colspan="5" class="empty">Carregando dados do Firebase...</td>
+                <td colspan="6" class="empty">Carregando dados do Firebase...</td>
               </tr>
             </tbody>
           </table>
@@ -982,11 +1021,12 @@
                 <th>Último acesso</th>
                 <th>Abas</th>
                 <th>Identificadores</th>
+                <th>Backup</th>
               </tr>
             </thead>
             <tbody id="deviceList">
               <tr>
-                <td colspan="5" class="empty">Carregando dispositivos...</td>
+                <td colspan="6" class="empty">Carregando dispositivos...</td>
               </tr>
             </tbody>
           </table>
@@ -1008,6 +1048,16 @@
     const MAX_CHART_DAYS = 366;
     const STATUS_ONLINE_PASSWORD = "1234";
     const STATUS_ONLINE_UNLOCK_KEY = "statusOnlineUnlocked";
+    const BACKUP_STATUS_NONE = "not-configured";
+    const BACKUP_STATUS_READY = "ready";
+    const BACKUP_STATUS_PERMISSION_REQUIRED = "permission-required";
+    const BACKUP_STATUS_UNAVAILABLE = "unavailable";
+    const BACKUP_STATUSES = new Set([
+      BACKUP_STATUS_NONE,
+      BACKUP_STATUS_READY,
+      BACKUP_STATUS_PERMISSION_REQUIRED,
+      BACKUP_STATUS_UNAVAILABLE
+    ]);
 
     const firebaseConfig = {
       apiKey: "AIzaSyCbSEwEqqRW4M_5na2UKc-i3JOYgT40fDk",
@@ -1196,6 +1246,98 @@
       return Math.floor(valueMs / (60 * 60 * 1000));
     }
 
+    function normalizeBackupText(value, maxLength = 180) {
+      return String(value ?? "")
+        .trim()
+        .replace(/[\r\n\t]+/g, " ")
+        .slice(0, maxLength);
+    }
+
+    function normalizeBackupInfo(raw = {}) {
+      const rawStatus = normalizeBackupText(raw?.status, 40);
+      const status = BACKUP_STATUSES.has(rawStatus)
+        ? rawStatus
+        : (raw?.configured ? BACKUP_STATUS_READY : BACKUP_STATUS_NONE);
+      const folderName = normalizeBackupText(raw?.folderName, 120);
+      const fileName = normalizeBackupText(raw?.fileName, 120);
+      const fallbackLabel = folderName && fileName ? `${folderName}/${fileName}` : (fileName || folderName);
+      const label = normalizeBackupText(raw?.label || fallbackLabel, 240);
+      const configured = status !== BACKUP_STATUS_NONE && (raw?.configured !== false || Boolean(label));
+
+      return {
+        configured,
+        status: configured ? status : BACKUP_STATUS_NONE,
+        label: configured ? (label || "Local definido") : "",
+        folderName: configured ? folderName : "",
+        fileName: configured ? fileName : "",
+        updatedAt: configured ? normalizeBackupText(raw?.updatedAt, 40) : "",
+        lastBackupAt: configured ? normalizeBackupText(raw?.lastBackupAt, 40) : "",
+        hasWarning: configured && (status === BACKUP_STATUS_PERMISSION_REQUIRED || status === BACKUP_STATUS_UNAVAILABLE)
+      };
+    }
+
+    function getBackupStatusPresentation(backup = {}) {
+      if (!backup.configured) {
+        return { text: "Sem local", className: "backupMissing", detail: "Nenhum local de backup informado." };
+      }
+      if (backup.status === BACKUP_STATUS_PERMISSION_REQUIRED) {
+        return { text: "Reativar", className: "backupIssue", detail: "Local definido, mas aguardando permissão do navegador." };
+      }
+      if (backup.status === BACKUP_STATUS_UNAVAILABLE) {
+        return { text: "Indisponível", className: "backupUnavailable", detail: "Local definido, mas não acessível no último teste." };
+      }
+      return { text: "Ativo", className: "backupReady", detail: "Backup automático com local definido." };
+    }
+
+    function renderDeviceBackupCell(backup = {}) {
+      const presentation = getBackupStatusPresentation(backup);
+      if (!backup.configured) {
+        return `
+          <div class="stackCompact">
+            <span class="pill ${presentation.className}">${presentation.text}</span>
+            <div class="muted">Sem local definido</div>
+          </div>
+        `;
+      }
+
+      const freshnessText = backup.lastBackupAt
+        ? `Último backup: ${escapeHtml(formatDateTime(Date.parse(backup.lastBackupAt)))}`
+        : presentation.detail;
+      return `
+        <div class="stackCompact">
+          <span class="pill ${presentation.className}">${presentation.text}</span>
+          <div class="metricStrong backupLabel">${escapeHtml(backup.label)}</div>
+          <div class="muted">${freshnessText}</div>
+        </div>
+      `;
+    }
+
+    function renderPeopleBackupCell(entry = {}) {
+      if (!entry.backupClients) {
+        return `
+          <div class="stackCompact">
+            <span class="pill backupMissing">Sem local</span>
+            <div class="muted">Nenhum dispositivo com backup definido</div>
+          </div>
+        `;
+      }
+
+      const labels = Array.isArray(entry.backupLabels) ? entry.backupLabels : [];
+      const labelText = labels.length
+        ? labels.slice(0, 2).join(" • ") + (labels.length > 2 ? ` +${labels.length - 2}` : "")
+        : "Local definido";
+      const issueText = entry.backupWarning
+        ? "Há dispositivo pedindo revisão de permissão/local."
+        : `${entry.backupClients} de ${entry.totalClients} dispositivo(s) com backup.`;
+      return `
+        <div class="stackCompact">
+          <span class="pill ${entry.backupWarning ? "backupIssue" : "backupReady"}">Com backup</span>
+          <div class="metricStrong backupLabel">${escapeHtml(labelText)}</div>
+          <div class="muted">${escapeHtml(issueText)}</div>
+        </div>
+      `;
+    }
+
     function getPresenceCollections(rawPresence) {
       const root = rawPresence && typeof rawPresence === "object" ? rawPresence : {};
       const sessions = {};
@@ -1246,6 +1388,7 @@
         lastSeenMs: Number.isFinite(lastSeenMs) ? lastSeenMs : 0,
         lastSeenText: String(raw?.lastSeen || "").trim(),
         online: false,
+        backup: normalizeBackupInfo(raw?.backup),
         totalSessions: 0,
         onlineSessions: 0,
         recent24hSessions: 0,
@@ -1295,6 +1438,9 @@
           onlineClients: 0,
           totalSessions: 0,
           onlineSessions: 0,
+          backupClients: 0,
+          backupLabels: new Set(),
+          backupWarning: false,
           clientIds: []
         };
 
@@ -1302,13 +1448,24 @@
         if (client.online) group.onlineClients += 1;
         group.totalSessions += client.totalSessions;
         group.onlineSessions += client.onlineSessions;
+        if (client.backup?.configured) {
+          group.backupClients += 1;
+          if (client.backup.label) group.backupLabels.add(client.backup.label);
+          if (client.backup.hasWarning) group.backupWarning = true;
+        }
         if (client.lastSeenMs > group.lastSeenMs) group.lastSeenMs = client.lastSeenMs;
         if (client.online) group.online = true;
         group.clientIds.push(client.clientId);
         groupedMap.set(key, group);
       }
 
-      const grouped = Array.from(groupedMap.values())
+      const groupedEntries = Array.from(groupedMap.values())
+        .map((entry) => ({
+          ...entry,
+          backupLabels: Array.from(entry.backupLabels)
+        }));
+
+      const grouped = groupedEntries
         .sort(comparePeopleEntries)
         .filter((entry) => {
           if (!peopleFilter) return true;
@@ -1328,7 +1485,8 @@
         onlineDevices: clients.filter((client) => client.online).length,
         onlineSessions: sessions.filter((session) => session.online).length,
         recent7dUsers: Array.from(groupedMap.values())
-          .filter((entry) => entry.email && entry.lastSeenMs >= Date.now() - 7 * 24 * 60 * 60 * 1000).length
+          .filter((entry) => entry.email && entry.lastSeenMs >= Date.now() - 7 * 24 * 60 * 60 * 1000).length,
+        backupUsers: groupedEntries.filter((entry) => entry.email && entry.backupClients > 0).length
       };
 
       return { clients: filteredClients, grouped, stats };
@@ -1423,7 +1581,7 @@
       if (!grouped.length) {
         peopleTableBodyEl.innerHTML = `
           <tr>
-            <td colspan="5" class="empty">Nenhum e-mail encontrado para o filtro atual.</td>
+            <td colspan="6" class="empty">Nenhum e-mail encontrado para o filtro atual.</td>
           </tr>
         `;
         return;
@@ -1465,6 +1623,9 @@
                 <div class="muted">Total de abas deste e-mail</div>
               </div>
             </td>
+            <td>
+              ${renderPeopleBackupCell(entry)}
+            </td>
           </tr>
         `;
       }).join("");
@@ -1482,7 +1643,7 @@
       if (!clients.length) {
         deviceListEl.innerHTML = `
           <tr>
-            <td colspan="5" class="empty">Nenhum dispositivo encontrado para o filtro atual.</td>
+            <td colspan="6" class="empty">Nenhum dispositivo encontrado para o filtro atual.</td>
           </tr>
         `;
         return;
@@ -1526,6 +1687,9 @@
                 <div class="codeMeta">Client ID: ${escapeHtml(client.clientId)}</div>
                 <div class="codeMeta">Tabs: ${escapeHtml(client.sessionIds.slice(0, 3).join(", "))}${client.sessionIds.length > 3 ? "..." : ""}</div>
               </div>
+            </td>
+            <td>
+              ${renderDeviceBackupCell(client.backup)}
             </td>
           </tr>
         `;

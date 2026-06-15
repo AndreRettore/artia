@@ -3786,6 +3786,60 @@
       return String(localStorage.getItem("exportEmail") || "").trim();
     }
 
+    const PRESENCE_BACKUP_STATUSES = new Set([
+      "not-configured",
+      "ready",
+      "permission-required",
+      "unavailable"
+    ]);
+    let presenceBackupSummary = normalizePresenceBackupSummary(window.pendingPresenceBackupSummary);
+
+    function sanitizePresenceBackupText(value, maxLength = 180) {
+      return String(value ?? "")
+        .trim()
+        .replace(/[\r\n\t]+/g, " ")
+        .slice(0, maxLength);
+    }
+
+    function sanitizePresenceBackupNamePart(value, maxLength = 120) {
+      const text = sanitizePresenceBackupText(value, maxLength * 2);
+      if (!text) return "";
+      const lastSegment = text.split(/[\\/]/).filter(Boolean).pop() || text;
+      return lastSegment.slice(0, maxLength);
+    }
+
+    function normalizePresenceBackupSummary(raw = {}) {
+      const rawStatus = String(raw?.status || "").trim();
+      const status = PRESENCE_BACKUP_STATUSES.has(rawStatus)
+        ? rawStatus
+        : (raw?.configured ? "ready" : "not-configured");
+      const configured = Boolean(raw?.configured) && status !== "not-configured";
+      const folderName = configured ? sanitizePresenceBackupNamePart(raw?.folderName, 120) : "";
+      const fileName = configured ? sanitizePresenceBackupNamePart(raw?.fileName, 120) : "";
+      const labelFallback = sanitizePresenceBackupNamePart(raw?.label, 120);
+      const label = configured
+        ? (folderName && fileName ? `${folderName}/${fileName}` : (fileName || folderName || labelFallback || "Local definido"))
+        : "";
+
+      return {
+        configured,
+        status: configured ? status : "not-configured",
+        label,
+        folderName,
+        fileName,
+        updatedAt: configured ? sanitizePresenceBackupText(raw?.updatedAt, 40) : "",
+        lastBackupAt: configured ? sanitizePresenceBackupText(raw?.lastBackupAt, 40) : ""
+      };
+    }
+
+    window.setPresenceBackupSummary = function setPresenceBackupSummary(nextSummary = {}) {
+      presenceBackupSummary = normalizePresenceBackupSummary(nextSummary);
+      if (typeof syncPresenceMetadata === "function") {
+        syncPresenceMetadata().catch(() => { });
+      }
+      return { ...presenceBackupSummary };
+    };
+
     const PRESENCE_CLIENT_ID_KEY = "presenceClientId";
 
     function getOrCreatePresenceClientId() {
@@ -3819,7 +3873,8 @@
         email: getPresenceEmail(),
         lastSeen: formatBrasiliaLastSeen(now),
         lastSeenMs: now.getTime(),
-        lastTabId: sessionId
+        lastTabId: sessionId,
+        backup: { ...presenceBackupSummary }
       };
     }
 
@@ -5080,6 +5135,59 @@
       return safeFolder ? `${safeFolder}/${safeFile}` : safeFile;
     }
 
+    function sanitizeBackupPresenceName(value, maxLength = 120) {
+      const text = String(value ?? "")
+        .trim()
+        .replace(/[\r\n\t]+/g, " ");
+      if (!text) return "";
+      const lastSegment = text.split(/[\\/]/).filter(Boolean).pop() || text;
+      return lastSegment.slice(0, maxLength);
+    }
+
+    function buildBackupPresenceSummary(metaRaw = {}, { hasTarget = false } = {}) {
+      const meta = normalizeBackupMeta(metaRaw);
+      const knownStatuses = [BACKUP_STATUS_NONE, BACKUP_STATUS_READY, BACKUP_STATUS_PERMISSION_REQUIRED, BACKUP_STATUS_UNAVAILABLE];
+      const status = hasTarget && meta.status === BACKUP_STATUS_NONE
+        ? BACKUP_STATUS_READY
+        : (knownStatuses.includes(meta.status)
+          ? meta.status
+          : (hasTarget ? BACKUP_STATUS_READY : BACKUP_STATUS_NONE));
+      const configured = hasTarget || status !== BACKUP_STATUS_NONE;
+      const folderName = configured ? sanitizeBackupPresenceName(meta.folderName) : "";
+      const fileName = configured ? (sanitizeBackupPresenceName(meta.fileName) || "backup_artia.xlsx") : "";
+      const label = configured ? formatBackupTargetLabel(folderName, fileName) : "";
+
+      return {
+        configured,
+        status: configured ? status : BACKUP_STATUS_NONE,
+        label,
+        folderName,
+        fileName,
+        updatedAt: configured ? String(meta.updatedAt || "").trim().slice(0, 40) : "",
+        lastBackupAt: configured ? String(meta.lastBackupAt || "").trim().slice(0, 40) : ""
+      };
+    }
+
+    function publishBackupPresenceSummary(summary) {
+      window.pendingPresenceBackupSummary = summary;
+      if (typeof window.setPresenceBackupSummary === "function") {
+        return window.setPresenceBackupSummary(summary);
+      }
+      try { window.syncPresenceMetadata && window.syncPresenceMetadata().catch(() => { }); } catch { }
+      return summary;
+    }
+
+    async function syncPresenceBackupSummary() {
+      try {
+        const target = await getStoredBackupTarget();
+        return publishBackupPresenceSummary(buildBackupPresenceSummary(target.meta, {
+          hasTarget: !!(target.dirHandle || target.fileHandle)
+        }));
+      } catch {
+        return publishBackupPresenceSummary(buildBackupPresenceSummary({ status: BACKUP_STATUS_NONE }));
+      }
+    }
+
     function getBackupTargetDisplayName(target = {}) {
       return String(target.folderName || target.meta?.folderName || target.fileName || target.meta?.fileName || "local salvo").trim();
     }
@@ -5103,6 +5211,7 @@
         updatedAt: new Date().toISOString()
       }, current);
       await kvSet(BACKUP_TARGET_META_KEY, next);
+      publishBackupPresenceSummary(buildBackupPresenceSummary(next));
       return next;
     }
 
@@ -11841,6 +11950,19 @@
         await kvSet("backupFileHandle", { name: "backup_artia.xlsx" });
         const saveFolderName = "pasta_exemplo_com_nome_longo_para_validar_estabilidade_do_topo";
         await kvSet("backupFolderName", saveFolderName);
+        await persistBackupTargetMeta(BACKUP_STATUS_READY, {
+          folderName: saveFolderName,
+          fileName: "backup_artia.xlsx",
+          label: formatBackupTargetLabel(saveFolderName, "backup_artia.xlsx"),
+          lastError: ""
+        });
+        const backupPresenceSummary = await syncPresenceBackupSummary();
+        assert(backupPresenceSummary.configured === true, "Resumo de presença não marcou o backup como configurado.");
+        assert(backupPresenceSummary.status === BACKUP_STATUS_READY, "Resumo de presença não publicou o status seguro do backup.");
+        assert(backupPresenceSummary.label === `${saveFolderName}/backup_artia.xlsx`, "Resumo de presença não publicou o rótulo seguro do backup.");
+        assert(!("lastError" in backupPresenceSummary), "Resumo de presença publicou erro bruto do backup.");
+        assert(!("lastBackupFingerprint" in backupPresenceSummary), "Resumo de presença publicou fingerprint do backup.");
+        assert(!backupPresenceSummary.label.includes("/Users/"), "Resumo de presença expôs caminho local do usuário.");
         await updateSaveInfoUI("handle");
         await waitForSelfTest(40);
         const saveInfo = document.getElementById("lastSavedInfo").textContent.trim();
@@ -11971,6 +12093,7 @@
       syncTableDateRangeStorage();
       renderAll();
       await revalidateStoredBackupTarget({ requestPermission: false });
+      await syncPresenceBackupSummary();
       await syncBackupDirtyFromStoredMeta();
       await refreshBackupReminderUI();
       if (backupDirty) scheduleBackupExport(800);
