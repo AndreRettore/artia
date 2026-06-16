@@ -1414,6 +1414,102 @@
       opacity: 1;
     }
 
+    .workedTooltip {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 10000;
+      min-width: 190px;
+      max-width: min(300px, calc(100vw - 16px));
+      padding: 11px 13px;
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      border: 1px solid var(--line2);
+      box-shadow: var(--shadow);
+      color: var(--text);
+      font-size: 12px;
+      pointer-events: none;
+      opacity: 0;
+      transform: translate3d(-9999px, -9999px, 0);
+      transition: opacity .12s ease;
+      backdrop-filter: blur(10px);
+      will-change: transform;
+    }
+
+    .workedTooltip.show {
+      opacity: 1;
+    }
+
+    .workedTooltip.is-pinned {
+      pointer-events: auto;
+      user-select: text;
+    }
+
+    .workedTooltip__close {
+      position: absolute;
+      top: 6px;
+      right: 7px;
+      width: 20px;
+      height: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1;
+      cursor: pointer;
+      transition: color .12s ease, background .12s ease;
+    }
+
+    .workedTooltip__close:hover {
+      color: var(--text);
+      background: color-mix(in srgb, var(--text) 12%, transparent);
+    }
+
+    .workedTooltip__title {
+      margin: 0 0 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: .2px;
+    }
+
+    .workedTooltip.is-pinned .workedTooltip__title {
+      padding-right: 22px;
+    }
+
+    .workedTooltip__row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      line-height: 1.5;
+    }
+
+    .workedTooltip__label {
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .workedTooltip__value {
+      color: var(--accent2);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .workedTooltip__empty {
+      color: var(--muted);
+    }
+
+    .worked .chip {
+      cursor: pointer;
+    }
+
     .event {
       position: absolute;
       left: 4px;
@@ -6111,6 +6207,36 @@
       return pad2(h) + ":" + pad2(m);
     }
 
+    function inferWorkedLocation(notes) {
+      const m = (notes || "").match(/^\[(Escritorio|Casa|Cliente)\]\s*/i);
+      return m ? m[1] : "";
+    }
+
+    // Consolida os eventos do dia em intervalos contínuos: começa um novo
+    // intervalo quando há pausa (lacuna de horário) ou troca de local de trabalho.
+    function computeWorkedIntervalsForDay(dayIso) {
+      const evs = state.events
+        .filter(ev => ev.day === dayIso)
+        .map(ev => ({
+          startM: minutesFromDayStart(new Date(ev.start), dayIso),
+          endM: minutesFromDayStart(new Date(ev.end), dayIso),
+          location: inferWorkedLocation(ev.notes)
+        }))
+        .filter(ev => ev.endM > ev.startM)
+        .sort((a, b) => a.startM - b.startM || a.endM - b.endM);
+
+      const intervals = [];
+      for (const ev of evs) {
+        const cur = intervals[intervals.length - 1];
+        if (cur && ev.location === cur.location && ev.startM <= cur.endM) {
+          cur.endM = Math.max(cur.endM, ev.endM);
+        } else {
+          intervals.push({ startM: ev.startM, endM: ev.endM, location: ev.location });
+        }
+      }
+      return intervals;
+    }
+
     function renderHeader() {
       computeWeekDays();
       const hidePeriodControls = state.view === "directory";
@@ -6162,6 +6288,11 @@
         const worked = document.createElement("div");
         worked.className = "worked";
         worked.innerHTML = `<span class="chip"><span class="miniDot"></span>Tempo Trabalhado: <b>${formatWorkedHM(workedMin)}</b></span>`;
+        worked.dataset.dayIso = dayIso;
+        worked.addEventListener("mouseenter", e => showWorkedTooltip(dayIso, e.clientX, e.clientY));
+        worked.addEventListener("mousemove", e => { if (!workedTooltipPinned) positionFloatingTooltip(workedTooltipEl, e.clientX, e.clientY); });
+        worked.addEventListener("mouseleave", hideWorkedTooltip);
+        worked.addEventListener("click", e => pinWorkedTooltip(dayIso, e.clientX, e.clientY));
         cell.appendChild(worked);
 
         daysHeaderEl.appendChild(cell);
@@ -6317,26 +6448,30 @@
       return `${formatTimeFromMinutes(startM)} → ${formatTimeFromMinutes(endM)} - ${formatDurationHuman(durM)}`;
     }
 
-    function showDragTimeTooltip(text, clientX, clientY) {
-      const el = ensureDragTimeTooltip();
-      el.textContent = text;
-      el.classList.add("show");
-
+    function positionFloatingTooltip(el, clientX, clientY, offsetX = DRAG_TIME_TOOLTIP_OFFSET_X, offsetY = DRAG_TIME_TOOLTIP_OFFSET_Y) {
+      if (!el) return;
       const pad = 8;
       const rect = el.getBoundingClientRect();
-      let x = clientX + DRAG_TIME_TOOLTIP_OFFSET_X;
-      let y = clientY + DRAG_TIME_TOOLTIP_OFFSET_Y;
+      let x = clientX + offsetX;
+      let y = clientY + offsetY;
 
       if (x + rect.width > window.innerWidth - pad) {
-        x = clientX - rect.width - DRAG_TIME_TOOLTIP_OFFSET_X;
+        x = clientX - rect.width - offsetX;
       }
       if (y + rect.height > window.innerHeight - pad) {
-        y = clientY - rect.height - DRAG_TIME_TOOLTIP_OFFSET_Y;
+        y = clientY - rect.height - offsetY;
       }
 
       x = Math.max(pad, Math.min(window.innerWidth - rect.width - pad, x));
       y = Math.max(pad, Math.min(window.innerHeight - rect.height - pad, y));
       el.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
+    }
+
+    function showDragTimeTooltip(text, clientX, clientY) {
+      const el = ensureDragTimeTooltip();
+      el.textContent = text;
+      el.classList.add("show");
+      positionFloatingTooltip(el, clientX, clientY);
     }
 
     function showDragTimeTooltipForRange(startM, endM, clientX, clientY) {
@@ -6346,6 +6481,71 @@
     function hideDragTimeTooltip() {
       if (dragTimeTooltipEl) dragTimeTooltipEl.classList.remove("show");
     }
+
+    let workedTooltipEl = null;
+    let workedTooltipPinned = false;
+    function ensureWorkedTooltip() {
+      if (!workedTooltipEl) {
+        workedTooltipEl = document.createElement("div");
+        workedTooltipEl.className = "workedTooltip";
+        document.body.appendChild(workedTooltipEl);
+      }
+      return workedTooltipEl;
+    }
+
+    function buildWorkedTooltipHtml(dayIso, pinned) {
+      const intervals = computeWorkedIntervalsForDay(dayIso);
+      const title = `Intervalos — ${escapeHtml(formatDateBR(parseISOToLocalDate(dayIso)))}`;
+      const closeBtn = pinned ? `<button type="button" class="workedTooltip__close" aria-label="Fechar" title="Fechar">×</button>` : "";
+      const header = `<div class="workedTooltip__title">${title}</div>${closeBtn}`;
+      if (!intervals.length) {
+        return `${header}<div class="workedTooltip__empty">Sem registros</div>`;
+      }
+      const rows = intervals.map(iv => {
+        const loc = iv.location || "Sem local";
+        return `<div class="workedTooltip__row"><span class="workedTooltip__label">${escapeHtml(loc)}</span><span class="workedTooltip__value">${formatTimeFromMinutes(iv.startM)} → ${formatTimeFromMinutes(iv.endM)}</span></div>`;
+      }).join("");
+      return `${header}${rows}`;
+    }
+
+    function showWorkedTooltip(dayIso, clientX, clientY) {
+      if (workedTooltipPinned) return;
+      const el = ensureWorkedTooltip();
+      el.innerHTML = buildWorkedTooltipHtml(dayIso, false);
+      el.classList.add("show");
+      positionFloatingTooltip(el, clientX, clientY);
+    }
+
+    function hideWorkedTooltip() {
+      if (workedTooltipPinned) return;
+      if (workedTooltipEl) workedTooltipEl.classList.remove("show");
+    }
+
+    function pinWorkedTooltip(dayIso, clientX, clientY) {
+      const el = ensureWorkedTooltip();
+      workedTooltipPinned = true;
+      el.dataset.dayIso = dayIso;
+      el.innerHTML = buildWorkedTooltipHtml(dayIso, true);
+      el.classList.add("is-pinned", "show");
+      positionFloatingTooltip(el, clientX, clientY);
+    }
+
+    function closeWorkedTooltip() {
+      workedTooltipPinned = false;
+      if (workedTooltipEl) workedTooltipEl.classList.remove("show", "is-pinned");
+    }
+
+    // Fecha o resumo fixado ao clicar fora dele ou no X. Cliques dentro da
+    // caixa a mantêm aberta, permitindo selecionar/copiar os horários.
+    document.addEventListener("click", (e) => {
+      if (!workedTooltipPinned) return;
+      if (e.target.closest(".workedTooltip")) {
+        if (e.target.closest(".workedTooltip__close")) closeWorkedTooltip();
+        return;
+      }
+      if (e.target.closest(".worked")) return; // o clique no chip já re-fixa
+      closeWorkedTooltip();
+    });
 
     function getCalendarAutoScrollEdgePx() {
       const slotH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--slotH"));
@@ -11825,6 +12025,23 @@
         state.events = savedEventsForMergeTest;
         await saveEvents();
         notes.push("id-sync-ok");
+
+        const savedEventsForIntervalsTest = state.events;
+        state.events = [
+          { id: "iv_a", day: "2026-05-05", start: "2026-05-05T08:00:00", end: "2026-05-05T09:00:00", project: "1", activityId: "", activityLabel: "", notes: "[Escritorio] A" },
+          { id: "iv_b", day: "2026-05-05", start: "2026-05-05T09:00:00", end: "2026-05-05T10:00:00", project: "2", activityId: "", activityLabel: "", notes: "[Escritorio] B" },
+          { id: "iv_c", day: "2026-05-05", start: "2026-05-05T10:00:00", end: "2026-05-05T11:00:00", project: "3", activityId: "", activityLabel: "", notes: "[Casa] C" },
+          { id: "iv_d", day: "2026-05-05", start: "2026-05-05T13:00:00", end: "2026-05-05T14:00:00", project: "4", activityId: "", activityLabel: "", notes: "[Casa] D" },
+          { id: "iv_e", day: "2026-05-05", start: "2026-05-05T15:00:00", end: "2026-05-05T16:00:00", project: "5", activityId: "", activityLabel: "", notes: "sem marcação" }
+        ];
+        const ivs = computeWorkedIntervalsForDay("2026-05-05");
+        assert(ivs.length === 4, "Intervalos trabalhados: número de intervalos incorreto.");
+        assert(ivs[0].location === "Escritorio" && ivs[0].startM === 480 && ivs[0].endM === 600, "Intervalos trabalhados: não mesclou eventos contíguos do mesmo local.");
+        assert(ivs[1].location === "Casa" && ivs[1].startM === 600 && ivs[1].endM === 660, "Intervalos trabalhados: não separou por troca de local sem pausa.");
+        assert(ivs[2].startM === 780 && ivs[2].endM === 840, "Intervalos trabalhados: não separou por pausa.");
+        assert(ivs[3].location === "", "Intervalos trabalhados: não tratou apontamento sem local.");
+        state.events = savedEventsForIntervalsTest;
+        notes.push("worked-intervals-ok");
 
         showImportUploadModal(true);
         await waitForSelfTest(40);
